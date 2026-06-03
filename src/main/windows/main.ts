@@ -1,47 +1,46 @@
-import { BrowserWindow } from "electron";
-import { join } from "node:path";
+import { BrowserWindow } from 'electron'
+import { join } from 'node:path'
 
-import { createWindow } from "lib/electron-app/factories/windows/create";
-import { ENVIRONMENT } from "shared/constants";
-import { displayName } from "~/package.json";
+import { createWindow } from 'lib/electron-app/factories/windows/create'
 
 export async function MainWindow() {
   const window = createWindow({
-    id: "main",
-    title: "",
-    width: 1430,
-    height: 780,
-    minWidth: 1430,
-    minHeight: 780,
-    resizable: true,
+    id: 'main',
+    title: 'zsh-player',
+    width: 910,
+    height: 550,
+    minWidth: 910,
+    minHeight: 550,
+    resizable: false,
     show: false,
     autoHideMenuBar: true,
+    backgroundColor: '#18191f',
     center: true,
     movable: true,
-    titleBarStyle: "hiddenInset",
+    titleBarStyle: 'hiddenInset',
     trafficLightPosition: {
       x: 15,
       y: 12,
     },
 
     webPreferences: {
-      preload: join(__dirname, "../preload/index.js"),
+      preload: join(__dirname, '../preload/index.js'),
     },
-  });
+  })
 
-  window.webContents.on("did-finish-load", () => {
+  window.webContents.on('did-finish-load', () => {
     // if (ENVIRONMENT.IS_DEV) {
     //   window.webContents.openDevTools({ mode: "detach" });
     // }
 
-    window.show();
-  });
+    window.show()
+  })
 
-  window.on("close", () => {
+  window.on('close', () => {
     for (const window of BrowserWindow.getAllWindows()) {
-      window.destroy();
+      window.destroy()
     }
-  });
+  })
 
-  return window;
+  return window
 }
