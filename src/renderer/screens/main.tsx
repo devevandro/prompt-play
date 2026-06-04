@@ -1,349 +1,372 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Header } from "renderer/components/Header";
 
-import { NowPlaying } from 'renderer/components/music-player/now-playing'
-import { PlayerControls } from 'renderer/components/music-player/player-controls'
-import { TerminalHeader } from 'renderer/components/music-player/terminal-header'
-import { TerminalPrompt } from 'renderer/components/music-player/terminal-prompt'
-import { TerminalTabs } from 'renderer/components/music-player/terminal-tabs'
-import { TrackList } from 'renderer/components/music-player/track-list'
-import type { Track } from 'renderer/components/music-player/types'
-import { Visualizer } from 'renderer/components/music-player/visualizer'
-import { useAudioAnalyzer } from 'renderer/hooks/use-audio-analyzer'
+import { NowPlaying } from "renderer/components/music-player/now-playing";
+import { PlayerControls } from "renderer/components/music-player/player-controls";
+import { StatusFooter } from "renderer/components/music-player/status-footer";
+import { TerminalPrompt } from "renderer/components/music-player/terminal-prompt";
+import { TerminalTabs } from "renderer/components/music-player/terminal-tabs";
+import { TrackList } from "renderer/components/music-player/track-list";
+import type { Track } from "renderer/components/music-player/types";
+import { Visualizer } from "renderer/components/music-player/visualizer";
+import { useAudioAnalyzer } from "renderer/hooks/use-audio-analyzer";
 
 const SAMPLE_TRACKS: Track[] = [
   {
-    id: '1',
-    title: 'midnight_protocol.mp3',
-    artist: 'Cyber_Punk',
-    album: '~/music/synthwave',
+    id: "1",
+    title: "midnight_protocol.mp3",
+    artist: "Cyber_Punk",
+    album: "~/music/synthwave",
     duration: 245,
-    src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+    src: "/Users/evandro.carvalho/Downloads/aeo.mp3",
   },
   {
-    id: '2',
-    title: 'neon_dreams.wav',
-    artist: 'Terminal_Echo',
-    album: '~/music/ambient',
+    id: "2",
+    title: "neon_dreams.wav",
+    artist: "Terminal_Echo",
+    album: "~/music/ambient",
     duration: 312,
-    src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+    src: "/Users/evandro.carvalho/Downloads/aeo.mp3",
   },
   {
-    id: '3',
-    title: 'binary_sunset.flac',
-    artist: 'Root_Access',
-    album: '~/music/electronic',
+    id: "3",
+    title: "binary_sunset.flac",
+    artist: "Root_Access",
+    album: "~/music/electronic",
     duration: 198,
-    src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+    src: "/Users/evandro.carvalho/Downloads/aeo.mp3",
   },
   {
-    id: '4',
-    title: 'kernel_panic.ogg',
-    artist: 'Sudo_Beats',
-    album: '~/music/techno',
+    id: "4",
+    title: "kernel_panic.ogg",
+    artist: "Sudo_Beats",
+    album: "~/music/techno",
     duration: 276,
-    src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
+    src: "/Users/evandro.carvalho/Downloads/aeo.mp3",
   },
   {
-    id: '5',
-    title: 'recursive_loop.mp3',
-    artist: 'Bash_Master',
-    album: '~/music/lofi',
+    id: "5",
+    title: "recursive_loop.mp3",
+    artist: "Bash_Master",
+    album: "~/music/lofi",
     duration: 223,
-    src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3',
+    src: "/Users/evandro.carvalho/Downloads/aeo.mp3",
   },
   {
-    id: '6',
-    title: 'chmod_777.wav',
-    artist: 'Permission_Denied',
-    album: '~/music/dnb',
+    id: "6",
+    title: "chmod_777.wav",
+    artist: "Permission_Denied",
+    album: "~/music/dnb",
     duration: 189,
-    src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3',
+    src: "/Users/evandro.carvalho/Downloads/aeo.mp3",
   },
   {
-    id: '7',
-    title: 'pipe_dreams.mp3',
-    artist: 'Grep_Life',
-    album: '~/music/chillwave',
+    id: "7",
+    title: "pipe_dreams.mp3",
+    artist: "Grep_Life",
+    album: "~/music/chillwave",
     duration: 267,
-    src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3',
+    src: "/Users/evandro.carvalho/Downloads/aeo.mp3",
   },
   {
-    id: '8',
-    title: 'fork_bomb.flac',
-    artist: ':(){ :|:& };:',
-    album: '~/music/hardcore',
+    id: "8",
+    title: "fork_bomb.flac",
+    artist: ":(){ :|:& };:",
+    album: "~/music/hardcore",
     duration: 156,
-    src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
+    src: "/Users/evandro.carvalho/Downloads/aeo.mp3",
   },
-]
+];
 
 const TABS = [
-  { id: 'tracks', label: 'ls -la ~/music', shortcut: '⌘1' },
-  { id: 'now-playing', label: 'cat now_playing.txt', shortcut: '⌘2' },
-  { id: 'visualizer', label: './visualizer --mode=spectrum', shortcut: '⌘3' },
-  { id: 'controls', label: './player --controls', shortcut: '⌘4' },
-]
+  { id: "tracks", label: "ls -la ~/music", shortcut: "⌘1" },
+  { id: "now-playing", label: "cat now_playing.txt", shortcut: "⌘2" },
+  { id: "visualizer", label: "./visualizer --mode=spectrum", shortcut: "⌘3" },
+  { id: "controls", label: "./player --controls", shortcut: "⌘4" },
+];
 
 function generateProgressBar(progress: number, width = 30): string {
-  const filled = Math.floor((progress / 100) * width)
-  const empty = width - filled
+  const filled = Math.floor((progress / 100) * width);
+  const empty = width - filled;
 
-  return `[${'\u2588'.repeat(filled)}${'\u2591'.repeat(empty)}] ${progress}%`
+  return `[${"\u2588".repeat(filled)}${"\u2591".repeat(empty)}] ${progress}%`;
+}
+
+function normalizeAudioSrc(src: string): string {
+  if (
+    /^(file|https?|local-audio):\/\//.test(src) ||
+    src.startsWith("/assets/")
+  ) {
+    return src;
+  }
+
+  if (src.startsWith("/")) {
+    return `local-audio://${src
+      .split("/")
+      .map((part) => encodeURIComponent(part))
+      .join("/")}`;
+  }
+
+  return src;
 }
 
 export function MainScreen() {
-  const [tracks] = useState<Track[]>(SAMPLE_TRACKS)
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [volume, setVolume] = useState(0.7)
-  const [activeTab, setActiveTab] = useState('tracks')
+  const [tracks] = useState<Track[]>(SAMPLE_TRACKS);
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(0.7);
+  const [activeTab, setActiveTab] = useState("tracks");
   const [commandHistory, setCommandHistory] = useState<string[]>([
-    '[INFO] zsh-player v1.0.0',
-    "[HINT] Digite 'zsh-player --init' para iniciar ou 'help' para ajuda",
-    '$ ',
-  ])
-  const [isLoading, setIsLoading] = useState(false)
-  const audioRef = useRef<HTMLAudioElement>(null)
+    "[INFO] prompt play v1.0.0",
+    "[HINT] Digite 'prompt play --init' para iniciar ou 'help' para ajuda",
+    "$ ",
+  ]);
+  const [isLoading, setIsLoading] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
-    null
-  )
+    null,
+  );
   const { frequencyData, isConnected } = useAudioAnalyzer(
     audioElement,
-    isPlaying
-  )
+    isPlaying,
+  );
 
   useEffect(() => {
     if (audioRef.current) {
-      setAudioElement(audioRef.current)
+      setAudioElement(audioRef.current);
     }
-  }, [])
+  }, []);
 
   const addToHistory = useCallback((command: string) => {
-    setCommandHistory(prev => [...prev.slice(-30), command])
-  }, [])
+    setCommandHistory((prev) => [...prev.slice(-30), command]);
+  }, []);
 
   const simulateLoading = useCallback(
     async (
       messages: { text: string; delay: number }[],
-      onComplete?: () => void
+      onComplete?: () => void,
     ) => {
-      setIsLoading(true)
+      setIsLoading(true);
 
       for (const message of messages) {
-        addToHistory(message.text)
-        await new Promise(resolve => setTimeout(resolve, message.delay))
+        addToHistory(message.text);
+        await new Promise((resolve) => setTimeout(resolve, message.delay));
       }
 
       for (let progress = 0; progress <= 100; progress += 10) {
-        setCommandHistory(prev => {
-          const newHistory = [...prev]
+        setCommandHistory((prev) => {
+          const newHistory = [...prev];
 
-          if (newHistory[newHistory.length - 1]?.includes('[')) {
+          if (newHistory[newHistory.length - 1]?.includes("[")) {
             newHistory[newHistory.length - 1] =
-              `[LOADING] ${generateProgressBar(progress)}`
+              `[LOADING] ${generateProgressBar(progress)}`;
           } else {
-            newHistory.push(`[LOADING] ${generateProgressBar(progress)}`)
+            newHistory.push(`[LOADING] ${generateProgressBar(progress)}`);
           }
 
-          return newHistory.slice(-30)
-        })
-        await new Promise(resolve => setTimeout(resolve, 80))
+          return newHistory.slice(-30);
+        });
+        await new Promise((resolve) => setTimeout(resolve, 80));
       }
 
-      setIsLoading(false)
-      onComplete?.()
+      setIsLoading(false);
+      onComplete?.();
     },
-    [addToHistory]
-  )
+    [addToHistory],
+  );
 
   const playTrack = useCallback(
     (track: Track) => {
-      setCurrentTrack(track)
-      setIsPlaying(true)
-      addToHistory(`$ play "${track.title}"`)
-      addToHistory(`[PLAYING] ${track.artist} - ${track.title}`)
+      setCurrentTrack(track);
+      setIsPlaying(true);
+      addToHistory(`$ play "${track.title}"`);
+      addToHistory(`[PLAYING] ${track.artist} - ${track.title}`);
     },
-    [addToHistory]
-  )
+    [addToHistory],
+  );
 
   const togglePlay = useCallback(() => {
     if (!currentTrack) {
       if (tracks.length > 0) {
-        playTrack(tracks[0])
+        playTrack(tracks[0]);
       }
-      return
+      return;
     }
 
-    setIsPlaying(prev => {
-      const nextState = !prev
-      addToHistory(nextState ? '$ resume' : '$ pause')
+    setIsPlaying((prev) => {
+      const nextState = !prev;
+      addToHistory(nextState ? "$ resume" : "$ pause");
       addToHistory(
         nextState
-          ? '[PLAYING] Reprodução retomada'
-          : '[PAUSED] Reprodução pausada'
-      )
-      return nextState
-    })
-  }, [currentTrack, tracks, playTrack, addToHistory])
+          ? "[PLAYING] Reprodução retomada"
+          : "[PAUSED] Reprodução pausada",
+      );
+      return nextState;
+    });
+  }, [currentTrack, tracks, playTrack, addToHistory]);
 
   const nextTrack = useCallback(() => {
     if (!currentTrack) {
-      return
+      return;
     }
 
-    const currentIndex = tracks.findIndex(track => track.id === currentTrack.id)
-    const nextIndex = (currentIndex + 1) % tracks.length
-    addToHistory('$ next')
-    playTrack(tracks[nextIndex])
-  }, [currentTrack, tracks, playTrack, addToHistory])
+    const currentIndex = tracks.findIndex(
+      (track) => track.id === currentTrack.id,
+    );
+    const nextIndex = (currentIndex + 1) % tracks.length;
+    addToHistory("$ next");
+    playTrack(tracks[nextIndex]);
+  }, [currentTrack, tracks, playTrack, addToHistory]);
 
   const prevTrack = useCallback(() => {
     if (!currentTrack) {
-      return
+      return;
     }
 
-    const currentIndex = tracks.findIndex(track => track.id === currentTrack.id)
-    const prevIndex = currentIndex === 0 ? tracks.length - 1 : currentIndex - 1
-    addToHistory('$ prev')
-    playTrack(tracks[prevIndex])
-  }, [currentTrack, tracks, playTrack, addToHistory])
+    const currentIndex = tracks.findIndex(
+      (track) => track.id === currentTrack.id,
+    );
+    const prevIndex = currentIndex === 0 ? tracks.length - 1 : currentIndex - 1;
+    addToHistory("$ prev");
+    playTrack(tracks[prevIndex]);
+  }, [currentTrack, tracks, playTrack, addToHistory]);
 
   const handleSeek = useCallback((time: number) => {
     if (audioRef.current) {
-      audioRef.current.currentTime = time
-      setCurrentTime(time)
+      audioRef.current.currentTime = time;
+      setCurrentTime(time);
     }
-  }, [])
+  }, []);
 
   const handleVolumeChange = useCallback((newVolume: number) => {
-    setVolume(newVolume)
+    setVolume(newVolume);
 
     if (audioRef.current) {
-      audioRef.current.volume = newVolume
+      audioRef.current.volume = newVolume;
     }
-  }, [])
+  }, []);
 
   const handleCommand = useCallback(
     (command: string) => {
       if (isLoading) {
-        addToHistory(`$ ${command}`)
-        addToHistory('[ERROR] Aguarde o processo atual terminar...')
-        return
+        addToHistory(`$ ${command}`);
+        addToHistory("[ERROR] Aguarde o processo atual terminar...");
+        return;
       }
 
-      addToHistory(`$ ${command}`)
+      addToHistory(`$ ${command}`);
 
-      const cmd = command.toLowerCase().trim()
+      const cmd = command.toLowerCase().trim();
 
-      if (cmd === 'zsh-player --init' || cmd === 'init') {
+      if (cmd === "zsh-player --init" || cmd === "init") {
         simulateLoading(
           [
-            { text: '[INFO] Iniciando zsh-player...', delay: 200 },
-            { text: '[INFO] Carregando módulos de áudio...', delay: 300 },
-            { text: '[INFO] Conectando Web Audio API...', delay: 250 },
-            { text: '[INFO] Escaneando biblioteca de música...', delay: 200 },
+            { text: "[INFO] Iniciando zsh-player...", delay: 200 },
+            { text: "[INFO] Carregando módulos de áudio...", delay: 300 },
+            { text: "[INFO] Conectando Web Audio API...", delay: 250 },
+            { text: "[INFO] Escaneando biblioteca de música...", delay: 200 },
           ],
           () => {
-            addToHistory('[OK] Player inicializado com sucesso!')
-            addToHistory(`[INFO] ${tracks.length} faixas encontradas`)
+            addToHistory("[OK] Player inicializado com sucesso!");
+            addToHistory(`[INFO] ${tracks.length} faixas encontradas`);
             addToHistory(
-              "[HINT] Use 'play' para começar ou 'list' para ver faixas"
-            )
-          }
-        )
-        return
+              "[HINT] Use 'play' para começar ou 'list' para ver faixas",
+            );
+          },
+        );
+        return;
       }
 
-      if (cmd === 'zsh-player --version' || cmd === 'version') {
-        addToHistory('[INFO] zsh-player v1.0.0')
-        addToHistory('[INFO] Audio Engine: Web Audio API')
-        addToHistory('[INFO] Visualizer: FFT 48-band Spectrum')
-        return
+      if (cmd === "zsh-player --version" || cmd === "version") {
+        addToHistory("[INFO] zsh-player v1.0.0");
+        addToHistory("[INFO] Audio Engine: Web Audio API");
+        addToHistory("[INFO] Visualizer: FFT 48-band Spectrum");
+        return;
       }
 
-      if (cmd === 'play' || cmd === 'resume') {
+      if (cmd === "play" || cmd === "resume") {
         if (currentTrack) {
-          setIsPlaying(true)
-          addToHistory('[PLAYING] Reprodução retomada')
+          setIsPlaying(true);
+          addToHistory("[PLAYING] Reprodução retomada");
         } else if (tracks.length > 0) {
-          playTrack(tracks[0])
+          playTrack(tracks[0]);
         }
-      } else if (cmd === 'pause' || cmd === 'stop') {
-        setIsPlaying(false)
-        addToHistory('[PAUSED] Reprodução pausada')
-      } else if (cmd === 'next' || cmd === 'n') {
-        nextTrack()
-      } else if (cmd === 'prev' || cmd === 'p') {
-        prevTrack()
-      } else if (cmd.startsWith('play ')) {
-        const query = cmd.slice(5).replace(/"/g, '')
+      } else if (cmd === "pause" || cmd === "stop") {
+        setIsPlaying(false);
+        addToHistory("[PAUSED] Reprodução pausada");
+      } else if (cmd === "next" || cmd === "n") {
+        nextTrack();
+      } else if (cmd === "prev" || cmd === "p") {
+        prevTrack();
+      } else if (cmd.startsWith("play ")) {
+        const query = cmd.slice(5).replace(/"/g, "");
         const found = tracks.find(
-          track =>
+          (track) =>
             track.title.toLowerCase().includes(query) ||
-            track.artist.toLowerCase().includes(query)
-        )
+            track.artist.toLowerCase().includes(query),
+        );
 
         if (found) {
-          playTrack(found)
+          playTrack(found);
         } else {
-          addToHistory(`[ERROR] Faixa não encontrada: ${query}`)
+          addToHistory(`[ERROR] Faixa não encontrada: ${query}`);
         }
-      } else if (cmd === 'list' || cmd === 'ls') {
-        addToHistory('[INFO] Listando faixas...')
+      } else if (cmd === "list" || cmd === "ls") {
+        addToHistory("[INFO] Listando faixas...");
         tracks.forEach((track, index) => {
-          const prefix = currentTrack?.id === track.id ? '▶' : ' '
-          addToHistory(`  ${prefix} ${index + 1}. ${track.title}`)
-        })
-      } else if (cmd === 'clear' || cmd === 'cls') {
-        setCommandHistory(['$ '])
-      } else if (cmd === 'help' || cmd === 'h' || cmd === '?') {
-        addToHistory('[HELP] Comandos disponíveis:')
-        addToHistory('  zsh-player --init  Inicializar player')
-        addToHistory('  play [nome]        Tocar faixa')
-        addToHistory('  pause/stop         Pausar reprodução')
-        addToHistory('  next/n             Próxima faixa')
-        addToHistory('  prev/p             Faixa anterior')
-        addToHistory('  list/ls            Listar faixas')
-        addToHistory('  status             Status atual')
-        addToHistory('  volume [0-100]     Ajustar volume')
-        addToHistory('  tab [1-4]          Mudar aba')
-        addToHistory('  clear/cls          Limpar terminal')
-        addToHistory('[HINT] Use Tab para autocomplete, ↑↓ para histórico')
-      } else if (cmd === 'status' || cmd === 'info') {
+          const prefix = currentTrack?.id === track.id ? "▶" : " ";
+          addToHistory(`  ${prefix} ${index + 1}. ${track.title}`);
+        });
+      } else if (cmd === "clear" || cmd === "cls") {
+        setCommandHistory(["$ "]);
+      } else if (cmd === "help" || cmd === "h" || cmd === "?") {
+        addToHistory("[HELP] Comandos disponíveis:");
+        addToHistory("  zsh-player --init  Inicializar player");
+        addToHistory("  play [nome]        Tocar faixa");
+        addToHistory("  pause/stop         Pausar reprodução");
+        addToHistory("  next/n             Próxima faixa");
+        addToHistory("  prev/p             Faixa anterior");
+        addToHistory("  list/ls            Listar faixas");
+        addToHistory("  status             Status atual");
+        addToHistory("  volume [0-100]     Ajustar volume");
+        addToHistory("  tab [1-4]          Mudar aba");
+        addToHistory("  clear/cls          Limpar terminal");
+        addToHistory("[HINT] Use Tab para autocomplete, ↑↓ para histórico");
+      } else if (cmd === "status" || cmd === "info") {
         if (currentTrack) {
-          addToHistory(`[STATUS] Tocando: ${currentTrack.title}`)
-          addToHistory(`[STATUS] Artista: ${currentTrack.artist}`)
-          addToHistory(`[STATUS] Volume: ${Math.round(volume * 100)}%`)
+          addToHistory(`[STATUS] Tocando: ${currentTrack.title}`);
+          addToHistory(`[STATUS] Artista: ${currentTrack.artist}`);
+          addToHistory(`[STATUS] Volume: ${Math.round(volume * 100)}%`);
           addToHistory(
-            `[STATUS] Audio API: ${isConnected ? 'Conectada' : 'Procedural'}`
-          )
+            `[STATUS] Audio API: ${isConnected ? "Conectada" : "Procedural"}`,
+          );
         } else {
-          addToHistory('[STATUS] Nenhuma faixa em reprodução')
+          addToHistory("[STATUS] Nenhuma faixa em reprodução");
         }
-      } else if (cmd.startsWith('volume ')) {
-        const newVolume = Number.parseInt(cmd.slice(7), 10)
+      } else if (cmd.startsWith("volume ")) {
+        const newVolume = Number.parseInt(cmd.slice(7), 10);
 
         if (!Number.isNaN(newVolume) && newVolume >= 0 && newVolume <= 100) {
-          handleVolumeChange(newVolume / 100)
-          addToHistory(`[OK] Volume ajustado para ${newVolume}%`)
+          handleVolumeChange(newVolume / 100);
+          addToHistory(`[OK] Volume ajustado para ${newVolume}%`);
         } else {
-          addToHistory('[ERROR] Volume deve estar entre 0 e 100')
+          addToHistory("[ERROR] Volume deve estar entre 0 e 100");
         }
-      } else if (cmd.startsWith('tab ')) {
-        const tabNumber = Number.parseInt(cmd.slice(4), 10)
+      } else if (cmd.startsWith("tab ")) {
+        const tabNumber = Number.parseInt(cmd.slice(4), 10);
 
         if (tabNumber >= 1 && tabNumber <= 4) {
-          const tabIds = ['tracks', 'now-playing', 'visualizer', 'controls']
-          setActiveTab(tabIds[tabNumber - 1])
-          addToHistory(`[OK] Aba ${tabNumber} selecionada`)
+          const tabIds = ["tracks", "now-playing", "visualizer", "controls"];
+          setActiveTab(tabIds[tabNumber - 1]);
+          addToHistory(`[OK] Aba ${tabNumber} selecionada`);
         } else {
-          addToHistory('[ERROR] Número da aba deve estar entre 1 e 4')
+          addToHistory("[ERROR] Número da aba deve estar entre 1 e 4");
         }
       } else if (cmd) {
-        addToHistory(`[ERROR] Comando não reconhecido: ${cmd}`)
-        addToHistory("[HINT] Digite 'help' para ver comandos disponíveis")
+        addToHistory(`[ERROR] Comando não reconhecido: ${cmd}`);
+        addToHistory("[HINT] Digite 'help' para ver comandos disponíveis");
       }
     },
     [
@@ -358,91 +381,90 @@ export function MainScreen() {
       isLoading,
       handleVolumeChange,
       isConnected,
-    ]
-  )
+    ],
+  );
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey)) {
-        return
+        return;
       }
 
       const tabMap: Record<string, string> = {
-        '1': 'tracks',
-        '2': 'now-playing',
-        '3': 'visualizer',
-        '4': 'controls',
-      }
+        "1": "tracks",
+        "2": "now-playing",
+        "3": "visualizer",
+        "4": "controls",
+      };
 
       if (tabMap[event.key]) {
-        event.preventDefault()
-        setActiveTab(tabMap[event.key])
+        event.preventDefault();
+        setActiveTab(tabMap[event.key]);
       }
-    }
+    };
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
-    const audio = audioRef.current
+    const audio = audioRef.current;
 
     if (!audio) {
-      return
+      return;
     }
 
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime)
-    const handleLoadedMetadata = () => setDuration(audio.duration)
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handleLoadedMetadata = () => setDuration(audio.duration);
     const handleEnded = () => {
-      addToHistory('[INFO] Faixa finalizada')
-      nextTrack()
-    }
+      addToHistory("[INFO] Faixa finalizada");
+      nextTrack();
+    };
 
-    audio.addEventListener('timeupdate', handleTimeUpdate)
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata)
-    audio.addEventListener('ended', handleEnded)
+    audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+    audio.addEventListener("ended", handleEnded);
 
     return () => {
-      audio.removeEventListener('timeupdate', handleTimeUpdate)
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
-      audio.removeEventListener('ended', handleEnded)
-    }
-  }, [nextTrack, addToHistory])
+      audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      audio.removeEventListener("ended", handleEnded);
+    };
+  }, [nextTrack, addToHistory]);
 
   useEffect(() => {
-    const audio = audioRef.current
+    const audio = audioRef.current;
 
     if (!audio || !currentTrack) {
-      return
+      return;
     }
 
-    audio.src = currentTrack.src
-    audio.volume = volume
-
-    if (isPlaying) {
-      audio.play().catch(() => {
-        addToHistory('[ERROR] Falha ao reproduzir áudio')
-      })
-    }
-  }, [currentTrack, addToHistory, volume, isPlaying])
+    audio.src = normalizeAudioSrc(currentTrack.src);
+    audio.volume = volume;
+    audio.load();
+  }, [currentTrack, volume]);
 
   useEffect(() => {
-    const audio = audioRef.current
+    const audio = audioRef.current;
 
-    if (!audio) {
-      return
+    if (!audio || !currentTrack) {
+      return;
     }
 
     if (isPlaying) {
-      audio.play().catch(() => undefined)
+      audio.play().catch((error: unknown) => {
+        console.error("[audio] playback failed:", error);
+        setIsPlaying(false);
+        addToHistory("[ERROR] Falha ao reproduzir áudio");
+      });
     } else {
-      audio.pause()
+      audio.pause();
     }
-  }, [isPlaying])
+  }, [currentTrack, addToHistory, isPlaying]);
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'tracks':
+      case "tracks":
         return (
           <TrackList
             currentTrack={currentTrack}
@@ -450,10 +472,10 @@ export function MainScreen() {
             onSelectTrack={playTrack}
             tracks={tracks}
           />
-        )
-      case 'now-playing':
-        return <NowPlaying isPlaying={isPlaying} track={currentTrack} />
-      case 'visualizer':
+        );
+      case "now-playing":
+        return <NowPlaying isPlaying={isPlaying} track={currentTrack} />;
+      case "visualizer":
         return (
           <Visualizer
             currentTime={currentTime}
@@ -461,8 +483,8 @@ export function MainScreen() {
             isAudioConnected={isConnected}
             isPlaying={isPlaying}
           />
-        )
-      case 'controls':
+        );
+      case "controls":
         return (
           <PlayerControls
             currentTime={currentTime}
@@ -475,32 +497,38 @@ export function MainScreen() {
             onVolumeChange={handleVolumeChange}
             volume={volume}
           />
-        )
+        );
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background p-4 md:p-8">
-      <div className="min-h-0 w-full max-w-4xl">
-        <div className="flex h-[calc(100vh-2rem)] max-h-[520px] min-h-[500px] flex-col overflow-hidden rounded-lg bg-background shadow-2xl md:h-[calc(100vh-4rem)]">
-          <TerminalHeader />
-          <TerminalTabs
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            tabs={TABS}
-          />
-          <div className="min-h-0 flex-1 overflow-hidden bg-background">
-            {renderTabContent()}
+    <>
+      <Header />
+      <main className="flex items-center justify-center bg-background">
+        <div className="min-h-0 w-full max-w-4xl">
+          <div className="flex h-[calc(100vh-2rem)] max-h-130 min-h-125 flex-col overflow-hidden rounded-lg bg-background shadow-2xl md:h-[calc(100vh-4rem)]">
+            <TerminalTabs
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              tabs={TABS}
+            />
+            <div className="min-h-0 flex-1 overflow-hidden bg-background">
+              {renderTabContent()}
+            </div>
+            <TerminalPrompt
+              history={commandHistory}
+              onCommand={handleCommand}
+            />
+            <StatusFooter volume={volume} />
           </div>
-          <TerminalPrompt history={commandHistory} onCommand={handleCommand} />
-        </div>
 
-        <audio crossOrigin="anonymous" preload="metadata" ref={audioRef}>
-          <track kind="captions" />
-        </audio>
-      </div>
-    </main>
-  )
+          <audio preload="metadata" ref={audioRef}>
+            <track kind="captions" />
+          </audio>
+        </div>
+      </main>
+    </>
+  );
 }
