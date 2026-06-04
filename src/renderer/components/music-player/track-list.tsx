@@ -47,7 +47,7 @@ export function TrackList({
         <span className="col-span-2 text-right">duração</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="custom-scrollbar flex-1 overflow-y-auto">
         {tracks.map((track, index) => {
           const isActive = currentTrack?.id === track.id
           const isCurrentlyPlaying = isActive && isPlaying

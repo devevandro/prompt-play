@@ -16,7 +16,7 @@ export function NowPlaying({ track, isPlaying }: NowPlayingProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 font-mono">
+      <div className="custom-scrollbar flex-1 overflow-y-auto p-4 font-mono">
         {!track ? (
           <div className="space-y-2">
             <div className="text-sm text-terminal-red">
