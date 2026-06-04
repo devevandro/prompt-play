@@ -2,26 +2,27 @@ import { BrowserWindow } from "electron";
 import { join } from "node:path";
 
 import { createWindow } from "lib/electron-app/factories/windows/create";
-import { ENVIRONMENT } from "shared/constants";
-import { displayName } from "~/package.json";
 
 export async function MainWindow() {
   const window = createWindow({
     id: "main",
-    title: "",
-    width: 1430,
-    height: 780,
-    minWidth: 1430,
-    minHeight: 780,
+    title: "prompt play",
+    width: 910,
+    height: 550,
+    minWidth: 910,
+    minHeight: 550,
+    maxWidth: 910,
+    maxHeight: 550,
     resizable: true,
     show: false,
     autoHideMenuBar: true,
+    backgroundColor: "#18191f",
     center: true,
     movable: true,
     titleBarStyle: "hiddenInset",
     trafficLightPosition: {
       x: 15,
-      y: 12,
+      y: 13,
     },
 
     webPreferences: {

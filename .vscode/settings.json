@@ -31,5 +31,8 @@
     "*.css": "tailwindcss"
   },
 
-  "tailwindCSS.experimental.configFile": "src/renderer/globals.css"
+  "tailwindCSS.experimental.configFile": "src/renderer/globals.css",
+  "[tailwindcss]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
 }
