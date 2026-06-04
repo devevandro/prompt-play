@@ -1,4 +1,4 @@
-import { app, net, protocol } from 'electron'
+import { app, ipcMain, net, protocol } from 'electron'
 import { pathToFileURL } from 'node:url'
 
 import { makeAppWithSingleInstanceLock } from 'lib/electron-app/factories/app/instance'
@@ -22,6 +22,10 @@ protocol.registerSchemesAsPrivileged([
 
 makeAppWithSingleInstanceLock(async () => {
   await app.whenReady()
+
+  ipcMain.handle('app:quit', () => {
+    app.quit()
+  })
 
   protocol.handle('local-audio', request => {
     try {
