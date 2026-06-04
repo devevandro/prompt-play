@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Header } from 'renderer/components/Header'
 
 import { NowPlaying } from 'renderer/components/music-player/now-playing'
 import { PlayerControls } from 'renderer/components/music-player/player-controls'
-import { TerminalHeader } from 'renderer/components/music-player/terminal-header'
+import { StatusFooter } from 'renderer/components/music-player/status-footer'
 import { TerminalPrompt } from 'renderer/components/music-player/terminal-prompt'
 import { TerminalTabs } from 'renderer/components/music-player/terminal-tabs'
 import { TrackList } from 'renderer/components/music-player/track-list'
 import type { Track } from 'renderer/components/music-player/types'
 import { Visualizer } from 'renderer/components/music-player/visualizer'
+import { getThemeById, THEMES, type ThemeId } from 'renderer/lib/themes'
 import { useAudioAnalyzer } from 'renderer/hooks/use-audio-analyzer'
 
 const SAMPLE_TRACKS: Track[] = [
@@ -17,7 +20,7 @@ const SAMPLE_TRACKS: Track[] = [
     artist: 'Cyber_Punk',
     album: '~/music/synthwave',
     duration: 245,
-    src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+    src: '/Users/evandro.carvalho/Downloads/aeo.mp3',
   },
   {
     id: '2',
@@ -25,7 +28,7 @@ const SAMPLE_TRACKS: Track[] = [
     artist: 'Terminal_Echo',
     album: '~/music/ambient',
     duration: 312,
-    src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+    src: '/Users/evandro.carvalho/Downloads/aeo.mp3',
   },
   {
     id: '3',
@@ -33,7 +36,7 @@ const SAMPLE_TRACKS: Track[] = [
     artist: 'Root_Access',
     album: '~/music/electronic',
     duration: 198,
-    src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+    src: '/Users/evandro.carvalho/Downloads/aeo.mp3',
   },
   {
     id: '4',
@@ -41,7 +44,7 @@ const SAMPLE_TRACKS: Track[] = [
     artist: 'Sudo_Beats',
     album: '~/music/techno',
     duration: 276,
-    src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
+    src: '/Users/evandro.carvalho/Downloads/aeo.mp3',
   },
   {
     id: '5',
@@ -49,7 +52,7 @@ const SAMPLE_TRACKS: Track[] = [
     artist: 'Bash_Master',
     album: '~/music/lofi',
     duration: 223,
-    src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3',
+    src: '/Users/evandro.carvalho/Downloads/aeo.mp3',
   },
   {
     id: '6',
@@ -57,7 +60,7 @@ const SAMPLE_TRACKS: Track[] = [
     artist: 'Permission_Denied',
     album: '~/music/dnb',
     duration: 189,
-    src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3',
+    src: '/Users/evandro.carvalho/Downloads/aeo.mp3',
   },
   {
     id: '7',
@@ -65,7 +68,7 @@ const SAMPLE_TRACKS: Track[] = [
     artist: 'Grep_Life',
     album: '~/music/chillwave',
     duration: 267,
-    src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3',
+    src: '/Users/evandro.carvalho/Downloads/aeo.mp3',
   },
   {
     id: '8',
@@ -73,7 +76,7 @@ const SAMPLE_TRACKS: Track[] = [
     artist: ':(){ :|:& };:',
     album: '~/music/hardcore',
     duration: 156,
-    src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
+    src: '/Users/evandro.carvalho/Downloads/aeo.mp3',
   },
 ]
 
@@ -81,7 +84,7 @@ const TABS = [
   { id: 'tracks', label: 'ls -la ~/music', shortcut: '⌘1' },
   { id: 'now-playing', label: 'cat now_playing.txt', shortcut: '⌘2' },
   { id: 'visualizer', label: './visualizer --mode=spectrum', shortcut: '⌘3' },
-  { id: 'controls', label: './player --controls', shortcut: '⌘4' },
+  { id: 'controls', label: './player-controls', shortcut: '⌘4' },
 ]
 
 function generateProgressBar(progress: number, width = 30): string {
@@ -91,8 +94,30 @@ function generateProgressBar(progress: number, width = 30): string {
   return `[${'\u2588'.repeat(filled)}${'\u2591'.repeat(empty)}] ${progress}%`
 }
 
+function normalizeAudioSrc(src: string): string {
+  if (
+    /^(file|https?|local-audio):\/\//.test(src) ||
+    src.startsWith('/assets/')
+  ) {
+    return src
+  }
+
+  if (src.startsWith('/')) {
+    return `local-audio://${src
+      .split('/')
+      .map(part => encodeURIComponent(part))
+      .join('/')}`
+  }
+
+  return src
+}
+
 export function MainScreen() {
+  const navigate = useNavigate()
   const [tracks] = useState<Track[]>(SAMPLE_TRACKS)
+  const [activeTheme, setActiveTheme] = useState<ThemeId>('default')
+  const [isThemePickerOpen, setIsThemePickerOpen] = useState(false)
+  const [selectedThemeIndex, setSelectedThemeIndex] = useState(0)
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
@@ -100,8 +125,8 @@ export function MainScreen() {
   const [volume, setVolume] = useState(0.7)
   const [activeTab, setActiveTab] = useState('tracks')
   const [commandHistory, setCommandHistory] = useState<string[]>([
-    '[INFO] zsh-player v1.0.0',
-    "[HINT] Digite 'zsh-player --init' para iniciar ou 'help' para ajuda",
+    '[INFO] prompt play v1.0.0',
+    "[HINT] Digite 'prompt play --init' para iniciar ou 'help' para ajuda",
     '$ ',
   ])
   const [isLoading, setIsLoading] = useState(false)
@@ -119,6 +144,21 @@ export function MainScreen() {
       setAudioElement(audioRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    const storedTheme = localStorage.getItem('prompt-play-theme')
+    const theme = storedTheme ? getThemeById(storedTheme) : undefined
+
+    if (theme) {
+      setActiveTheme(theme.id)
+      setSelectedThemeIndex(THEMES.findIndex(item => item.id === theme.id))
+    }
+  }, [])
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = activeTheme
+    localStorage.setItem('prompt-play-theme', activeTheme)
+  }, [activeTheme])
 
   const addToHistory = useCallback((command: string) => {
     setCommandHistory(prev => [...prev.slice(-30), command])
@@ -225,6 +265,41 @@ export function MainScreen() {
     }
   }, [])
 
+  const applyTheme = useCallback(
+    (themeId: string) => {
+      const theme = getThemeById(themeId)
+
+      if (!theme) {
+        addToHistory(`[ERROR] Theme not found: ${themeId}`)
+        addToHistory("[HINT] Use 'theme list' to see available themes")
+        return
+      }
+
+      setActiveTheme(theme.id)
+      setSelectedThemeIndex(THEMES.findIndex(item => item.id === theme.id))
+      setIsThemePickerOpen(false)
+      addToHistory(`[INFO] Theme changed to ${theme.name}.`)
+    },
+    [addToHistory]
+  )
+
+  const moveThemeSelection = useCallback((direction: 'next' | 'prev') => {
+    setSelectedThemeIndex(prev => {
+      if (direction === 'next') {
+        return (prev + 1) % THEMES.length
+      }
+
+      return prev === 0 ? THEMES.length - 1 : prev - 1
+    })
+  }, [])
+
+  const selectTheme = useCallback(
+    (index = selectedThemeIndex) => {
+      applyTheme(THEMES[index]?.id ?? activeTheme)
+    },
+    [activeTheme, applyTheme, selectedThemeIndex]
+  )
+
   const handleCommand = useCallback(
     (command: string) => {
       if (isLoading) {
@@ -256,14 +331,40 @@ export function MainScreen() {
         return
       }
 
-      if (cmd === 'zsh-player --version' || cmd === 'version') {
-        addToHistory('[INFO] zsh-player v1.0.0')
+      if (cmd === 'pp version') {
+        addToHistory('[INFO] Prompt Play v0.1.0')
         addToHistory('[INFO] Audio Engine: Web Audio API')
         addToHistory('[INFO] Visualizer: FFT 48-band Spectrum')
         return
       }
 
-      if (cmd === 'play' || cmd === 'resume') {
+      if (cmd === 'theme list') {
+        setSelectedThemeIndex(
+          Math.max(
+            0,
+            THEMES.findIndex(theme => theme.id === activeTheme)
+          )
+        )
+        setIsThemePickerOpen(true)
+      } else if (cmd.startsWith('theme use ')) {
+        const themeId = cmd.slice(10).trim()
+        applyTheme(themeId)
+      } else if (cmd === 'pp home' || cmd === 'pp exit') {
+        navigate('/')
+      } else if (cmd === 'pp quit') {
+        window.App.quit()
+      } else if (cmd === 'pp clear') {
+        setCommandHistory(['$ '])
+      } else if (cmd === 'pp open now-playing') {
+        setActiveTab('now-playing')
+        addToHistory('[OK] Aba cat now_playing.txt selecionada')
+      } else if (cmd === 'pp open visualizer') {
+        setActiveTab('visualizer')
+        addToHistory('[OK] Aba ./visualizer --mode=spectrum selecionada')
+      } else if (cmd === 'pp open controls') {
+        setActiveTab('controls')
+        addToHistory('[OK] Aba ./player-controls selecionada')
+      } else if (cmd === 'play' || cmd === 'resume') {
         if (currentTrack) {
           setIsPlaying(true)
           addToHistory('[PLAYING] Reprodução retomada')
@@ -296,8 +397,6 @@ export function MainScreen() {
           const prefix = currentTrack?.id === track.id ? '▶' : ' '
           addToHistory(`  ${prefix} ${index + 1}. ${track.title}`)
         })
-      } else if (cmd === 'clear' || cmd === 'cls') {
-        setCommandHistory(['$ '])
       } else if (cmd === 'help' || cmd === 'h' || cmd === '?') {
         addToHistory('[HELP] Comandos disponíveis:')
         addToHistory('  zsh-player --init  Inicializar player')
@@ -307,9 +406,17 @@ export function MainScreen() {
         addToHistory('  prev/p             Faixa anterior')
         addToHistory('  list/ls            Listar faixas')
         addToHistory('  status             Status atual')
-        addToHistory('  volume [0-100]     Ajustar volume')
-        addToHistory('  tab [1-4]          Mudar aba')
-        addToHistory('  clear/cls          Limpar terminal')
+        addToHistory('  vol [0-100]        Ajustar volume')
+        addToHistory('  pp home            Abrir primeiro acesso')
+        addToHistory('  pp exit            Voltar para janela inicial')
+        addToHistory('  pp quit            Fechar aplicação')
+        addToHistory('  pp clear           Limpar terminal')
+        addToHistory('  pp version         Versão do projeto')
+        addToHistory('  pp open now-playing Abrir now playing')
+        addToHistory('  pp open visualizer Abrir visualizer')
+        addToHistory('  pp open controls   Abrir controles')
+        addToHistory('  theme list         Listar temas')
+        addToHistory('  theme use [nome]   Aplicar tema')
         addToHistory('[HINT] Use Tab para autocomplete, ↑↓ para histórico')
       } else if (cmd === 'status' || cmd === 'info') {
         if (currentTrack) {
@@ -322,8 +429,8 @@ export function MainScreen() {
         } else {
           addToHistory('[STATUS] Nenhuma faixa em reprodução')
         }
-      } else if (cmd.startsWith('volume ')) {
-        const newVolume = Number.parseInt(cmd.slice(7), 10)
+      } else if (cmd.startsWith('vol ')) {
+        const newVolume = Number.parseInt(cmd.slice(4), 10)
 
         if (!Number.isNaN(newVolume) && newVolume >= 0 && newVolume <= 100) {
           handleVolumeChange(newVolume / 100)
@@ -348,6 +455,9 @@ export function MainScreen() {
     },
     [
       currentTrack,
+      activeTheme,
+      applyTheme,
+      navigate,
       tracks,
       playTrack,
       nextTrack,
@@ -416,29 +526,28 @@ export function MainScreen() {
       return
     }
 
-    audio.src = currentTrack.src
+    audio.src = normalizeAudioSrc(currentTrack.src)
     audio.volume = volume
-
-    if (isPlaying) {
-      audio.play().catch(() => {
-        addToHistory('[ERROR] Falha ao reproduzir áudio')
-      })
-    }
-  }, [currentTrack, addToHistory, volume, isPlaying])
+    audio.load()
+  }, [currentTrack, volume])
 
   useEffect(() => {
     const audio = audioRef.current
 
-    if (!audio) {
+    if (!audio || !currentTrack) {
       return
     }
 
     if (isPlaying) {
-      audio.play().catch(() => undefined)
+      audio.play().catch((error: unknown) => {
+        console.error('[audio] playback failed:', error)
+        setIsPlaying(false)
+        addToHistory('[ERROR] Falha ao reproduzir áudio')
+      })
     } else {
       audio.pause()
     }
-  }, [isPlaying])
+  }, [currentTrack, addToHistory, isPlaying])
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -482,25 +591,48 @@ export function MainScreen() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background p-4 md:p-8">
-      <div className="min-h-0 w-full max-w-4xl">
-        <div className="flex h-[calc(100vh-2rem)] max-h-[520px] min-h-[500px] flex-col overflow-hidden rounded-lg bg-background shadow-2xl md:h-[calc(100vh-4rem)]">
-          <TerminalHeader />
-          <TerminalTabs
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            tabs={TABS}
-          />
-          <div className="min-h-0 flex-1 overflow-hidden bg-background">
-            {renderTabContent()}
+    <>
+      <Header />
+      <main className="flex items-center justify-center bg-background">
+        <div className="min-h-0 w-full max-w-4xl">
+          <div className="flex h-[calc(100vh-2rem)] max-h-130 min-h-125 flex-col overflow-hidden rounded-lg bg-background shadow-2xl md:h-[calc(100vh-4rem)]">
+            <TerminalTabs
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              tabs={TABS}
+            />
+            <div className="min-h-0 flex-1 overflow-hidden bg-background">
+              {renderTabContent()}
+            </div>
+            <TerminalPrompt
+              history={commandHistory}
+              onCommand={handleCommand}
+              themePicker={
+                isThemePickerOpen
+                  ? {
+                      activeThemeId: activeTheme,
+                      options: THEMES,
+                      selectedIndex: selectedThemeIndex,
+                      onCancel: () => setIsThemePickerOpen(false),
+                      onMove: moveThemeSelection,
+                      onSelect: selectTheme,
+                    }
+                  : undefined
+              }
+            />
+            <StatusFooter
+              activeTab={activeTab}
+              currentTrack={currentTrack}
+              tracks={tracks}
+              volume={volume}
+            />
           </div>
-          <TerminalPrompt history={commandHistory} onCommand={handleCommand} />
-        </div>
 
-        <audio crossOrigin="anonymous" preload="metadata" ref={audioRef}>
-          <track kind="captions" />
-        </audio>
-      </div>
-    </main>
+          <audio preload="metadata" ref={audioRef}>
+            <track kind="captions" />
+          </audio>
+        </div>
+      </main>
+    </>
   )
 }

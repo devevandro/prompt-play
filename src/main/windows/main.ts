@@ -1,46 +1,48 @@
-import { BrowserWindow } from 'electron'
-import { join } from 'node:path'
+import { BrowserWindow } from "electron";
+import { join } from "node:path";
 
-import { createWindow } from 'lib/electron-app/factories/windows/create'
+import { createWindow } from "lib/electron-app/factories/windows/create";
 
 export async function MainWindow() {
   const window = createWindow({
-    id: 'main',
-    title: 'zsh-player',
+    id: "main",
+    title: "prompt play",
     width: 910,
     height: 550,
     minWidth: 910,
     minHeight: 550,
-    resizable: false,
+    maxWidth: 910,
+    maxHeight: 550,
+    resizable: true,
     show: false,
     autoHideMenuBar: true,
-    backgroundColor: '#18191f',
+    backgroundColor: "#18191f",
     center: true,
     movable: true,
-    titleBarStyle: 'hiddenInset',
+    titleBarStyle: "hiddenInset",
     trafficLightPosition: {
       x: 15,
-      y: 12,
+      y: 13,
     },
 
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, "../preload/index.js"),
     },
-  })
+  });
 
-  window.webContents.on('did-finish-load', () => {
+  window.webContents.on("did-finish-load", () => {
     // if (ENVIRONMENT.IS_DEV) {
     //   window.webContents.openDevTools({ mode: "detach" });
     // }
 
-    window.show()
-  })
+    window.show();
+  });
 
-  window.on('close', () => {
+  window.on("close", () => {
     for (const window of BrowserWindow.getAllWindows()) {
-      window.destroy()
+      window.destroy();
     }
-  })
+  });
 
-  return window
+  return window;
 }

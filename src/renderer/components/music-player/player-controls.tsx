@@ -68,7 +68,7 @@ export function PlayerControls({
         <div className="font-mono text-sm">
           <span className="text-terminal-green">➜</span>{' '}
           <span className="text-terminal-cyan">~/music</span>{' '}
-          <span className="text-terminal-white">./player --controls</span>
+          <span className="text-terminal-white">./player-controls</span>
         </div>
       </div>
 
