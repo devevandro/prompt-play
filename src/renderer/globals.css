@@ -78,6 +78,30 @@
   --sidebar-ring: oklch(0.75 0.18 145);
 }
 
+[data-theme="default"] {
+  --background: oklch(0.17 0.01 180);
+  --card: oklch(0.2 0.01 180);
+  --muted: oklch(0.25 0.01 180);
+}
+
+[data-theme="tokyo-night"] {
+  --background: oklch(0.16 0.02 270);
+  --card: oklch(0.19 0.02 270);
+  --muted: oklch(0.24 0.02 270);
+}
+
+[data-theme="dark-soul"] {
+  --background: oklch(0.15 0.012 240);
+  --card: oklch(0.18 0.012 240);
+  --muted: oklch(0.23 0.012 240);
+}
+
+[data-theme="dark-petroleum-blue"] {
+  --background: oklch(0.18 0.015 250);
+  --card: oklch(0.21 0.015 250);
+  --muted: oklch(0.26 0.015 250);
+}
+
 @theme inline {
   --font-sans: ui-sans-serif, system-ui, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;

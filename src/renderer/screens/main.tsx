@@ -9,6 +9,7 @@ import { TerminalTabs } from "renderer/components/music-player/terminal-tabs";
 import { TrackList } from "renderer/components/music-player/track-list";
 import type { Track } from "renderer/components/music-player/types";
 import { Visualizer } from "renderer/components/music-player/visualizer";
+import { getThemeById, THEMES, type ThemeId } from "renderer/lib/themes";
 import { useAudioAnalyzer } from "renderer/hooks/use-audio-analyzer";
 
 const SAMPLE_TRACKS: Track[] = [
@@ -112,6 +113,9 @@ function normalizeAudioSrc(src: string): string {
 
 export function MainScreen() {
   const [tracks] = useState<Track[]>(SAMPLE_TRACKS);
+  const [activeTheme, setActiveTheme] = useState<ThemeId>("default");
+  const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
+  const [selectedThemeIndex, setSelectedThemeIndex] = useState(0);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -138,6 +142,21 @@ export function MainScreen() {
       setAudioElement(audioRef.current);
     }
   }, []);
+
+  useEffect(() => {
+    const storedTheme = localStorage.getItem("prompt-play-theme");
+    const theme = storedTheme ? getThemeById(storedTheme) : undefined;
+
+    if (theme) {
+      setActiveTheme(theme.id);
+      setSelectedThemeIndex(THEMES.findIndex((item) => item.id === theme.id));
+    }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = activeTheme;
+    localStorage.setItem("prompt-play-theme", activeTheme);
+  }, [activeTheme]);
 
   const addToHistory = useCallback((command: string) => {
     setCommandHistory((prev) => [...prev.slice(-30), command]);
@@ -248,6 +267,41 @@ export function MainScreen() {
     }
   }, []);
 
+  const applyTheme = useCallback(
+    (themeId: string) => {
+      const theme = getThemeById(themeId);
+
+      if (!theme) {
+        addToHistory(`[ERROR] Theme not found: ${themeId}`);
+        addToHistory("[HINT] Use 'theme list' to see available themes");
+        return;
+      }
+
+      setActiveTheme(theme.id);
+      setSelectedThemeIndex(THEMES.findIndex((item) => item.id === theme.id));
+      setIsThemePickerOpen(false);
+      addToHistory(`[INFO] Theme changed to ${theme.name}.`);
+    },
+    [addToHistory],
+  );
+
+  const moveThemeSelection = useCallback((direction: "next" | "prev") => {
+    setSelectedThemeIndex((prev) => {
+      if (direction === "next") {
+        return (prev + 1) % THEMES.length;
+      }
+
+      return prev === 0 ? THEMES.length - 1 : prev - 1;
+    });
+  }, []);
+
+  const selectTheme = useCallback(
+    (index = selectedThemeIndex) => {
+      applyTheme(THEMES[index]?.id ?? activeTheme);
+    },
+    [activeTheme, applyTheme, selectedThemeIndex],
+  );
+
   const handleCommand = useCallback(
     (command: string) => {
       if (isLoading) {
@@ -286,7 +340,18 @@ export function MainScreen() {
         return;
       }
 
-      if (cmd === "play" || cmd === "resume") {
+      if (cmd === "theme list") {
+        setSelectedThemeIndex(
+          Math.max(
+            0,
+            THEMES.findIndex((theme) => theme.id === activeTheme),
+          ),
+        );
+        setIsThemePickerOpen(true);
+      } else if (cmd.startsWith("theme use ")) {
+        const themeId = cmd.slice(10).trim();
+        applyTheme(themeId);
+      } else if (cmd === "play" || cmd === "resume") {
         if (currentTrack) {
           setIsPlaying(true);
           addToHistory("[PLAYING] Reprodução retomada");
@@ -332,6 +397,8 @@ export function MainScreen() {
         addToHistory("  status             Status atual");
         addToHistory("  volume [0-100]     Ajustar volume");
         addToHistory("  tab [1-4]          Mudar aba");
+        addToHistory("  theme list         Listar temas");
+        addToHistory("  theme use [nome]   Aplicar tema");
         addToHistory("  clear/cls          Limpar terminal");
         addToHistory("[HINT] Use Tab para autocomplete, ↑↓ para histórico");
       } else if (cmd === "status" || cmd === "info") {
@@ -371,6 +438,8 @@ export function MainScreen() {
     },
     [
       currentTrack,
+      activeTheme,
+      applyTheme,
       tracks,
       playTrack,
       nextTrack,
@@ -520,6 +589,18 @@ export function MainScreen() {
             <TerminalPrompt
               history={commandHistory}
               onCommand={handleCommand}
+              themePicker={
+                isThemePickerOpen
+                  ? {
+                      activeThemeId: activeTheme,
+                      options: THEMES,
+                      selectedIndex: selectedThemeIndex,
+                      onCancel: () => setIsThemePickerOpen(false),
+                      onMove: moveThemeSelection,
+                      onSelect: selectTheme,
+                    }
+                  : undefined
+              }
             />
             <StatusFooter volume={volume} />
           </div>
