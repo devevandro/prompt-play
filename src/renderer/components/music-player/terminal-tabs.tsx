@@ -16,7 +16,7 @@ export function TerminalTabs({
   onTabChange,
 }: TerminalTabsProps) {
   return (
-    <div className="flex items-center gap-0.5 overflow-x-auto bg-background px-3 py-1">
+    <div className="custom-scrollbar flex items-center gap-0.5 overflow-x-auto bg-background px-3 py-1">
       {tabs.map(tab => {
         const isActive = activeTab === tab.id
 
