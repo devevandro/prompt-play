@@ -1,8 +1,8 @@
-import type { Track } from './types'
+import type { Track } from "./types";
 
 interface NowPlayingProps {
-  track: Track | null
-  isPlaying: boolean
+  track: Track | null;
+  isPlaying: boolean;
 }
 
 export function NowPlaying({ track, isPlaying }: NowPlayingProps) {
@@ -10,8 +10,8 @@ export function NowPlaying({ track, isPlaying }: NowPlayingProps) {
     <div className="flex h-full flex-col">
       <div className="px-4 py-3">
         <div className="font-mono text-sm">
-          <span className="text-terminal-green">➜</span>{' '}
-          <span className="text-terminal-cyan">~/music</span>{' '}
+          <span className="text-terminal-green">➜</span>{" "}
+          <span className="text-terminal-cyan">~/music</span>{" "}
           <span className="text-terminal-white">cat now_playing.txt</span>
         </div>
       </div>
@@ -34,10 +34,10 @@ export function NowPlaying({ track, isPlaying }: NowPlayingProps) {
               <span className="w-24 text-terminal-cyan">status:</span>
               <span
                 className={
-                  isPlaying ? 'text-terminal-green' : 'text-terminal-yellow'
+                  isPlaying ? "text-terminal-green" : "text-terminal-yellow"
                 }
               >
-                {isPlaying ? '▶ PLAYING' : '▐▐ PAUSED'}
+                {isPlaying ? "▶ PLAYING" : "▐▐ PAUSED"}
               </span>
             </div>
             <div className="flex gap-2">
@@ -56,7 +56,7 @@ export function NowPlaying({ track, isPlaying }: NowPlayingProps) {
               <span className="w-24 text-terminal-cyan">duração:</span>
               <span className="text-terminal-yellow">
                 {Math.floor(track.duration / 60)}:
-                {(track.duration % 60).toString().padStart(2, '0')}
+                {(track.duration % 60).toString().padStart(2, "0")}
               </span>
             </div>
             <div className="text-terminal-gray">---</div>
@@ -80,18 +80,6 @@ export function NowPlaying({ track, isPlaying }: NowPlayingProps) {
           </div>
         )}
       </div>
-
-      <div className="bg-muted/30 px-4 py-2 font-mono text-terminal-gray text-xs">
-        {track ? (
-          <span>
-            <span className="text-terminal-green">●</span> arquivo carregado
-          </span>
-        ) : (
-          <span>
-            <span className="text-terminal-yellow">○</span> aguardando seleção
-          </span>
-        )}
-      </div>
     </div>
-  )
+  );
 }
