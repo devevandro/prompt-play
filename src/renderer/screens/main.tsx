@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Header } from 'renderer/components/Header'
 
 import { NowPlaying } from 'renderer/components/music-player/now-playing'
@@ -112,6 +113,7 @@ function normalizeAudioSrc(src: string): string {
 }
 
 export function MainScreen() {
+  const navigate = useNavigate()
   const [tracks] = useState<Track[]>(SAMPLE_TRACKS)
   const [activeTheme, setActiveTheme] = useState<ThemeId>('default')
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false)
@@ -329,8 +331,8 @@ export function MainScreen() {
         return
       }
 
-      if (cmd === 'zsh-player --version' || cmd === 'version') {
-        addToHistory('[INFO] zsh-player v1.0.0')
+      if (cmd === 'pp version') {
+        addToHistory('[INFO] Prompt Play v0.1.0')
         addToHistory('[INFO] Audio Engine: Web Audio API')
         addToHistory('[INFO] Visualizer: FFT 48-band Spectrum')
         return
@@ -347,13 +349,19 @@ export function MainScreen() {
       } else if (cmd.startsWith('theme use ')) {
         const themeId = cmd.slice(10).trim()
         applyTheme(themeId)
-      } else if (cmd === 'pp now_playing.txt') {
+      } else if (cmd === 'pp home' || cmd === 'pp exit') {
+        navigate('/')
+      } else if (cmd === 'pp quit') {
+        window.App.quit()
+      } else if (cmd === 'pp clear') {
+        setCommandHistory(['$ '])
+      } else if (cmd === 'pp open now-playing') {
         setActiveTab('now-playing')
         addToHistory('[OK] Aba cat now_playing.txt selecionada')
-      } else if (cmd === 'pp ./visualizer --mode=spectrum') {
+      } else if (cmd === 'pp open visualizer') {
         setActiveTab('visualizer')
         addToHistory('[OK] Aba ./visualizer --mode=spectrum selecionada')
-      } else if (cmd === './player-controls') {
+      } else if (cmd === 'pp open controls') {
         setActiveTab('controls')
         addToHistory('[OK] Aba ./player-controls selecionada')
       } else if (cmd === 'play' || cmd === 'resume') {
@@ -389,8 +397,6 @@ export function MainScreen() {
           const prefix = currentTrack?.id === track.id ? '▶' : ' '
           addToHistory(`  ${prefix} ${index + 1}. ${track.title}`)
         })
-      } else if (cmd === 'clear' || cmd === 'cls') {
-        setCommandHistory(['$ '])
       } else if (cmd === 'help' || cmd === 'h' || cmd === '?') {
         addToHistory('[HELP] Comandos disponíveis:')
         addToHistory('  zsh-player --init  Inicializar player')
@@ -400,14 +406,17 @@ export function MainScreen() {
         addToHistory('  prev/p             Faixa anterior')
         addToHistory('  list/ls            Listar faixas')
         addToHistory('  status             Status atual')
-        addToHistory('  volume [0-100]     Ajustar volume')
-        addToHistory('  tab [1-4]          Mudar aba')
-        addToHistory('  pp now_playing.txt Abrir now playing')
-        addToHistory('  pp ./visualizer --mode=spectrum Abrir visualizer')
-        addToHistory('  ./player-controls  Abrir controles')
+        addToHistory('  vol [0-100]        Ajustar volume')
+        addToHistory('  pp home            Abrir primeiro acesso')
+        addToHistory('  pp exit            Voltar para janela inicial')
+        addToHistory('  pp quit            Fechar aplicação')
+        addToHistory('  pp clear           Limpar terminal')
+        addToHistory('  pp version         Versão do projeto')
+        addToHistory('  pp open now-playing Abrir now playing')
+        addToHistory('  pp open visualizer Abrir visualizer')
+        addToHistory('  pp open controls   Abrir controles')
         addToHistory('  theme list         Listar temas')
         addToHistory('  theme use [nome]   Aplicar tema')
-        addToHistory('  clear/cls          Limpar terminal')
         addToHistory('[HINT] Use Tab para autocomplete, ↑↓ para histórico')
       } else if (cmd === 'status' || cmd === 'info') {
         if (currentTrack) {
@@ -420,8 +429,8 @@ export function MainScreen() {
         } else {
           addToHistory('[STATUS] Nenhuma faixa em reprodução')
         }
-      } else if (cmd.startsWith('volume ')) {
-        const newVolume = Number.parseInt(cmd.slice(7), 10)
+      } else if (cmd.startsWith('vol ')) {
+        const newVolume = Number.parseInt(cmd.slice(4), 10)
 
         if (!Number.isNaN(newVolume) && newVolume >= 0 && newVolume <= 100) {
           handleVolumeChange(newVolume / 100)
@@ -448,6 +457,7 @@ export function MainScreen() {
       currentTrack,
       activeTheme,
       applyTheme,
+      navigate,
       tracks,
       playTrack,
       nextTrack,
