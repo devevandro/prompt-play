@@ -15,6 +15,10 @@ export const THEMES = [
     id: 'dark-petroleum-blue',
     name: 'Dark Petroleum Blue',
   },
+  {
+    id: 'shell-pink',
+    name: 'shell pink',
+  },
 ] as const
 
 export type ThemeId = (typeof THEMES)[number]['id']
