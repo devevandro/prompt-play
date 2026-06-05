@@ -33,7 +33,7 @@ export function TerminalTabs({
           >
             <span
               className={`h-2 w-2 rounded-sm ${
-                isActive ? 'bg-terminal-green' : 'bg-terminal-yellow'
+                isActive ? 'bg-terminal-green' : 'bg-terminal-tab-inactive'
               }`}
             />
             <span className="max-w-32 truncate">{tab.label}</span>
