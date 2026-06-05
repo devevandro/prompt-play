@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Header } from "renderer/components/Header";
+import { Header } from "renderer/components/header";
 import { version } from "../../../package.json";
 
 export function HomeScreen() {

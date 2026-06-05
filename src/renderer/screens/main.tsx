@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Header } from "renderer/components/Header";
+import { Header } from "renderer/components/header";
 
 import { NowPlaying } from "renderer/components/music-player/now-playing";
 import { PlayerControls } from "renderer/components/music-player/player-controls";
@@ -8,7 +8,7 @@ import { StatusFooter } from "renderer/components/music-player/status-footer";
 import { TerminalPrompt } from "renderer/components/music-player/terminal-prompt";
 import { TerminalTabs } from "renderer/components/music-player/terminal-tabs";
 import { TrackList } from "renderer/components/music-player/track-list";
-import type { Track } from "renderer/components/music-player/types";
+import type { Track } from "shared/types";
 import { Visualizer } from "renderer/components/music-player/visualizer";
 import { getThemeById, THEMES, type ThemeId } from "renderer/lib/themes";
 import { useAudioAnalyzer } from "renderer/hooks/use-audio-analyzer";
