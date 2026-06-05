@@ -1,18 +1,19 @@
-import type { BrowserWindow, IpcMainInvokeEvent } from 'electron'
-
-import type { registerRoute } from 'lib/electron-router-dom'
-
-export type BrowserWindowOrNull = Electron.BrowserWindow | null
-
-type Route = Parameters<typeof registerRoute>[0]
-
-export interface WindowProps extends Electron.BrowserWindowConstructorOptions {
-  id: Route['id']
-  query?: Route['query']
+export interface Track {
+  id: string;
+  title: string;
+  artist: string;
+  album: string;
+  duration: number;
+  src: string;
 }
 
-export interface WindowCreationByIPC {
-  channel: string
-  window(): BrowserWindowOrNull
-  callback(window: BrowserWindow, event: IpcMainInvokeEvent): void
+export interface Radio {
+  id: string;
+  name: string;
+  img: string;
+  state: string;
+  region: string;
+  city: string;
+  frequency: string;
+  url: string;
 }
