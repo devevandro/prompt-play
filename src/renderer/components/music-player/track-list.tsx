@@ -52,6 +52,15 @@ export function TrackList({
       </div>
 
       <div className="custom-scrollbar flex-1 overflow-y-auto">
+        {items.length === 0 && (
+          <div className="space-y-2 px-4 py-6 font-mono text-xs">
+            <div className="text-terminal-yellow">
+              No recent {source.label} items
+            </div>
+            <div className="text-terminal-gray">{source.emptyHint}</div>
+          </div>
+        )}
+
         {items.map((item, index) => {
           const isActive = currentItem?.id === item.id
           const isCurrentlyPlaying = isActive && isPlaying

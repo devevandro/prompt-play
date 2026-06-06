@@ -43,6 +43,10 @@ export interface PlayerQueueItem {
   duration: number | null
   src: string
   sourceDetail?: string
+  details?: {
+    label: string
+    value: string
+  }[]
 }
 
 export interface Track extends PlayerQueueItem {

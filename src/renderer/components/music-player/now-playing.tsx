@@ -79,6 +79,12 @@ export function NowPlaying({ item, isPlaying, source }: NowPlayingProps) {
                 {formatDuration(item.duration, source)}
               </span>
             </div>
+            {item.details?.map(detail => (
+              <div className="flex gap-2" key={detail.label}>
+                <span className="w-24 text-terminal-cyan">{detail.label}:</span>
+                <span className="text-terminal-white">{detail.value}</span>
+              </div>
+            ))}
             <div className="text-terminal-gray">---</div>
 
             <div className="mt-6 whitespace-pre text-[10px] text-terminal-green/60 leading-tight">
