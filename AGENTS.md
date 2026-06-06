@@ -11,6 +11,21 @@ and helpers belong in `src/shared`. Reusable renderer components are grouped in
 resources and build icons live under `src/resources`. Electron app helpers,
 release scripts, and factories are in `src/lib/electron-app`.
 
+## Music Player Architecture
+
+The music player supports three listening modes: local computer files, online
+radio streams, and YouTube playlists. Keep renderer components in
+`src/renderer/components/music-player` source-agnostic: they should receive
+`PlayerSource` and `PlayerQueueItem` values from `src/shared/types` instead of
+hard-coding music-file labels such as track, artist, album, or duration.
+
+When adding player behavior, update the source configuration in
+`src/renderer/screens/main.tsx` and keep commands working against the active
+source. The current commands are `sources`, `source local`, `source radio`,
+`source yt`, `play`, `list`, `status`, `next`, and `prev`. Radio is live
+streaming and should not expose seek controls; local files and YouTube
+playlists can expose duration and seeking.
+
 ## Build, Test, and Development Commands
 
 Use Yarn 1.22.22, as declared in `package.json`.

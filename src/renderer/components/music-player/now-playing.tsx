@@ -1,30 +1,41 @@
-import type { Track } from './types'
+import type { PlayerQueueItem, PlayerSource } from '../../../shared/types'
 
 interface NowPlayingProps {
-  track: Track | null
+  item: PlayerQueueItem | null
   isPlaying: boolean
+  source: PlayerSource
 }
 
-export function NowPlaying({ track, isPlaying }: NowPlayingProps) {
+function formatDuration(seconds: number | null, source: PlayerSource): string {
+  if (source.isLive || seconds === null) {
+    return 'live'
+  }
+
+  return `${Math.floor(seconds / 60)}:${(seconds % 60)
+    .toString()
+    .padStart(2, '0')}`
+}
+
+export function NowPlaying({ item, isPlaying, source }: NowPlayingProps) {
   return (
     <div className="flex h-full flex-col">
       <div className="px-4 py-3">
         <div className="font-mono text-sm">
           <span className="text-terminal-green">➜</span>{' '}
-          <span className="text-terminal-cyan">~/music</span>{' '}
+          <span className="text-terminal-cyan">{source.locationLabel}</span>{' '}
           <span className="text-terminal-white">cat now_playing.txt</span>
         </div>
       </div>
 
       <div className="custom-scrollbar flex-1 overflow-y-auto p-4 font-mono">
-        {!track ? (
+        {!item ? (
           <div className="space-y-2">
             <div className="text-sm text-terminal-red">
-              cat: now_playing.txt: Nenhuma faixa selecionada
+              cat: now_playing.txt: {source.emptyTitle}
             </div>
             <div className="mt-4 text-terminal-gray text-xs">
-              <span className="text-terminal-cyan"># DICA:</span> Selecione uma
-              faixa na aba de músicas ou digite 'play' no terminal
+              <span className="text-terminal-cyan"># DICA:</span>{' '}
+              {source.emptyHint}
             </div>
           </div>
         ) : (
@@ -41,22 +52,31 @@ export function NowPlaying({ track, isPlaying }: NowPlayingProps) {
               </span>
             </div>
             <div className="flex gap-2">
-              <span className="w-24 text-terminal-cyan">título:</span>
-              <span className="text-terminal-white">{track.title}</span>
+              <span className="w-24 text-terminal-cyan">
+                {source.itemLabel}:
+              </span>
+              <span className="text-terminal-white">{item.title}</span>
             </div>
             <div className="flex gap-2">
-              <span className="w-24 text-terminal-cyan">artista:</span>
-              <span className="text-terminal-magenta">{track.artist}</span>
+              <span className="w-24 text-terminal-cyan">
+                {source.creatorLabel}:
+              </span>
+              <span className="text-terminal-magenta">{item.artist}</span>
             </div>
             <div className="flex gap-2">
-              <span className="w-24 text-terminal-cyan">álbum:</span>
-              <span className="text-terminal-blue">{track.album}</span>
+              <span className="w-24 text-terminal-cyan">
+                {source.contextLabel}:
+              </span>
+              <span className="text-terminal-blue">
+                {item.sourceDetail ?? item.album ?? source.label}
+              </span>
             </div>
             <div className="flex gap-2">
-              <span className="w-24 text-terminal-cyan">duração:</span>
+              <span className="w-24 text-terminal-cyan">
+                {source.timeLabel}:
+              </span>
               <span className="text-terminal-yellow">
-                {Math.floor(track.duration / 60)}:
-                {(track.duration % 60).toString().padStart(2, '0')}
+                {formatDuration(item.duration, source)}
               </span>
             </div>
             <div className="text-terminal-gray">---</div>

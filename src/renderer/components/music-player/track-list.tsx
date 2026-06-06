@@ -1,13 +1,18 @@
-import type { Track } from './types'
+import type { PlayerQueueItem, PlayerSource } from '../../../shared/types'
 
 interface TrackListProps {
-  tracks: Track[]
-  currentTrack: Track | null
-  onSelectTrack: (track: Track) => void
+  currentItem: PlayerQueueItem | null
   isPlaying: boolean
+  items: PlayerQueueItem[]
+  onSelectItem: (item: PlayerQueueItem) => void
+  source: PlayerSource
 }
 
-function formatDuration(seconds: number): string {
+function formatDuration(seconds: number | null, source: PlayerSource): string {
+  if (source.isLive || seconds === null) {
+    return 'live'
+  }
+
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60
 
@@ -21,35 +26,34 @@ function getFilePermissions(index: number): string {
 }
 
 export function TrackList({
-  tracks,
-  currentTrack,
-  onSelectTrack,
+  currentItem,
   isPlaying,
+  items,
+  onSelectItem,
+  source,
 }: TrackListProps) {
   return (
     <div className="flex h-full flex-col">
       <div className="px-4 py-3">
         <div className="font-mono text-sm">
           <span className="text-terminal-green">➜</span>{' '}
-          <span className="text-terminal-cyan">~/music</span>{' '}
-          <span className="text-terminal-yellow">git:(main)</span>{' '}
-          <span className="text-terminal-white">
-            ls -la *.mp3 *.wav *.flac *.ogg
-          </span>
+          <span className="text-terminal-cyan">{source.locationLabel}</span>{' '}
+          <span className="text-terminal-yellow">{source.label}</span>{' '}
+          <span className="text-terminal-white">{source.listCommand}</span>
         </div>
       </div>
 
       <div className="grid grid-cols-12 gap-2 bg-muted/30 px-4 py-2 font-mono text-terminal-gray text-xs">
         <span className="col-span-1">#</span>
-        <span className="col-span-2">perm</span>
-        <span className="col-span-4">arquivo</span>
-        <span className="col-span-3">artista</span>
-        <span className="col-span-2 text-right">duração</span>
+        <span className="col-span-2">{source.contextLabel}</span>
+        <span className="col-span-4">{source.itemLabel}</span>
+        <span className="col-span-3">{source.creatorLabel}</span>
+        <span className="col-span-2 text-right">{source.timeLabel}</span>
       </div>
 
       <div className="custom-scrollbar flex-1 overflow-y-auto">
-        {tracks.map((track, index) => {
-          const isActive = currentTrack?.id === track.id
+        {items.map((item, index) => {
+          const isActive = currentItem?.id === item.id
           const isCurrentlyPlaying = isActive && isPlaying
 
           return (
@@ -59,8 +63,8 @@ export function TrackList({
                   ? 'bg-terminal-green/10 text-terminal-green'
                   : 'text-terminal-white hover:bg-muted/50'
               }`}
-              key={track.id}
-              onClick={() => onSelectTrack(track)}
+              key={item.id}
+              onClick={() => onSelectItem(item)}
               type="button"
             >
               <span className="col-span-1 text-terminal-gray">
@@ -73,20 +77,20 @@ export function TrackList({
                 )}
               </span>
               <span className="col-span-2 text-[10px] text-terminal-gray">
-                {getFilePermissions(index)}
+                {item.sourceDetail ?? getFilePermissions(index)}
               </span>
               <span
                 className={`col-span-4 truncate ${
                   isActive ? 'text-terminal-cyan' : 'text-terminal-white'
                 }`}
               >
-                {track.title}
+                {item.title}
               </span>
               <span className="col-span-3 truncate text-terminal-magenta">
-                {track.artist}
+                {item.artist}
               </span>
               <span className="col-span-2 text-right text-terminal-yellow">
-                {formatDuration(track.duration)}
+                {formatDuration(item.duration, source)}
               </span>
             </button>
           )
