@@ -9,11 +9,14 @@ import {
   VolumeX,
 } from 'lucide-react'
 
+import type { PlayerSource } from '../../../shared/types'
+
 interface PlayerControlsProps {
   isPlaying: boolean
   currentTime: number
   duration: number
   volume: number
+  source: PlayerSource
   onTogglePlay: () => void
   onNext: () => void
   onPrev: () => void
@@ -37,15 +40,21 @@ export function PlayerControls({
   currentTime,
   duration,
   volume,
+  source,
   onTogglePlay,
   onNext,
   onPrev,
   onSeek,
   onVolumeChange,
 }: PlayerControlsProps) {
-  const progress = duration ? (currentTime / duration) * 100 : 0
+  const canSeek = source.supportsSeek && duration > 0
+  const progress = canSeek ? (currentTime / duration) * 100 : 0
 
   const handleProgressClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (!canSeek) {
+      return
+    }
+
     const rect = event.currentTarget.getBoundingClientRect()
     const percentage = (event.clientX - rect.left) / rect.width
 
@@ -67,7 +76,7 @@ export function PlayerControls({
       <div className="px-4 py-3">
         <div className="font-mono text-sm">
           <span className="text-terminal-green">➜</span>{' '}
-          <span className="text-terminal-cyan">~/music</span>{' '}
+          <span className="text-terminal-cyan">{source.locationLabel}</span>{' '}
           <span className="text-terminal-white">./player-controls</span>
         </div>
       </div>
@@ -83,7 +92,7 @@ export function PlayerControls({
           </button>
 
           <button
-            aria-label="Faixa anterior"
+            aria-label="Previous item"
             className="rounded bg-muted/50 p-3 text-terminal-white transition-colors hover:bg-terminal-cyan/10 hover:text-terminal-cyan"
             onClick={onPrev}
             type="button"
@@ -92,7 +101,7 @@ export function PlayerControls({
           </button>
 
           <button
-            aria-label={isPlaying ? 'Pausar' : 'Reproduzir'}
+            aria-label={isPlaying ? 'Pause' : 'Play'}
             className="rounded-full bg-terminal-green p-5 text-background transition-colors hover:bg-terminal-cyan"
             onClick={onTogglePlay}
             type="button"
@@ -105,7 +114,7 @@ export function PlayerControls({
           </button>
 
           <button
-            aria-label="Próxima faixa"
+            aria-label="Next item"
             className="rounded bg-muted/50 p-3 text-terminal-white transition-colors hover:bg-terminal-cyan/10 hover:text-terminal-cyan"
             onClick={onNext}
             type="button"
@@ -124,8 +133,11 @@ export function PlayerControls({
 
         <div className="space-y-2 px-4">
           <button
-            aria-label="Ajustar progresso"
-            className="group h-2 w-full cursor-pointer rounded bg-muted"
+            aria-disabled={!canSeek}
+            aria-label="Adjust progress"
+            className={`group h-2 w-full rounded bg-muted ${
+              canSeek ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'
+            }`}
             onClick={handleProgressClick}
             type="button"
           >
@@ -136,20 +148,22 @@ export function PlayerControls({
           </button>
 
           <div className="flex justify-between font-mono text-terminal-gray text-xs">
-            <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
+            <span>{canSeek ? formatTime(currentTime) : 'live'}</span>
+            <span>{canSeek ? formatTime(duration) : source.label}</span>
           </div>
 
           <div className="text-center font-mono text-[11px] text-terminal-gray">
-            [{'\u2588'.repeat(Math.floor(progress / 5))}
-            {'\u2591'.repeat(20 - Math.floor(progress / 5))}]{' '}
-            {Math.floor(progress)}%
+            {canSeek
+              ? `[${'\u2588'.repeat(Math.floor(progress / 5))}${'\u2591'.repeat(
+                  20 - Math.floor(progress / 5)
+                )}] ${Math.floor(progress)}%`
+              : `[${'\u2588'.repeat(20)}] streaming`}
           </div>
         </div>
 
         <div className="flex items-center justify-center gap-3 px-4">
           <button
-            aria-label={volume > 0 ? 'Silenciar' : 'Ativar som'}
+            aria-label={volume > 0 ? 'Mute' : 'Unmute'}
             className="p-1 text-terminal-gray transition-colors hover:text-terminal-white"
             onClick={() => onVolumeChange(volume > 0 ? 0 : 0.7)}
             type="button"
@@ -162,7 +176,7 @@ export function PlayerControls({
           </button>
 
           <button
-            aria-label="Ajustar volume"
+            aria-label="Adjust volume"
             className="group h-2 w-32 cursor-pointer rounded bg-muted"
             onClick={handleVolumeClick}
             type="button"
@@ -184,7 +198,8 @@ export function PlayerControls({
           <kbd className="text-terminal-cyan">space</kbd> play/pause
         </span>
         <span>
-          <kbd className="text-terminal-cyan">←/→</kbd> seek
+          <kbd className="text-terminal-cyan">←/→</kbd>{' '}
+          {source.supportsSeek ? 'seek' : 'stream'}
         </span>
         <span>
           <kbd className="text-terminal-cyan">↑/↓</kbd> volume

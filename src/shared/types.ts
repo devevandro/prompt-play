@@ -1,18 +1,67 @@
-import type { BrowserWindow, IpcMainInvokeEvent } from 'electron'
+import type {
+  BrowserWindow,
+  BrowserWindowConstructorOptions,
+  IpcMainInvokeEvent,
+} from 'electron'
 
-import type { registerRoute } from 'lib/electron-router-dom'
+export type BrowserWindowOrNull = BrowserWindow | null
 
-export type BrowserWindowOrNull = Electron.BrowserWindow | null
-
-type Route = Parameters<typeof registerRoute>[0]
-
-export interface WindowProps extends Electron.BrowserWindowConstructorOptions {
-  id: Route['id']
-  query?: Route['query']
+export interface WindowProps extends BrowserWindowConstructorOptions {
+  id: 'main' | 'about'
 }
 
 export interface WindowCreationByIPC {
   channel: string
-  window(): BrowserWindowOrNull
-  callback(window: BrowserWindow, event: IpcMainInvokeEvent): void
+  window?: () => BrowserWindowOrNull
+  callback?: (window: BrowserWindow, event: IpcMainInvokeEvent) => void
+}
+
+export type PlayerSourceMode = 'local' | 'radio' | 'yt'
+
+export interface PlayerSource {
+  mode: PlayerSourceMode
+  label: string
+  description: string
+  locationLabel: string
+  listCommand: string
+  itemLabel: string
+  creatorLabel: string
+  contextLabel: string
+  timeLabel: string
+  emptyTitle: string
+  emptyHint: string
+  isLive: boolean
+  supportsSeek: boolean
+}
+
+export interface PlayerQueueItem {
+  id: string
+  mode: PlayerSourceMode
+  title: string
+  artist: string
+  album?: string
+  duration: number | null
+  src: string
+  sourceDetail?: string
+  details?: {
+    label: string
+    value: string
+  }[]
+}
+
+export interface Track extends PlayerQueueItem {
+  mode: 'local'
+  album: string
+  duration: number
+}
+
+export interface Radio {
+  id: string
+  name: string
+  img: string
+  state: string
+  region: string
+  city: string
+  frequency: string
+  url: string
 }

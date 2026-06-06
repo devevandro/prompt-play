@@ -12,7 +12,8 @@ type WindowWithWebkitAudio = Window &
 
 export function useAudioAnalyzer(
   audioElement: HTMLAudioElement | null,
-  isPlaying: boolean
+  isPlaying: boolean,
+  enabled = true
 ) {
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
@@ -62,6 +63,9 @@ export function useAudioAnalyzer(
       animationRef.current = null
     }
 
+    sourceRef.current?.disconnect()
+    analyserRef.current?.disconnect()
+
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
       audioContextRef.current.close()
     }
@@ -73,13 +77,18 @@ export function useAudioAnalyzer(
   }, [])
 
   useEffect(() => {
+    if (!enabled) {
+      disconnect()
+      return
+    }
+
     if (audioElement && !sourceRef.current) {
       connect()
     }
-  }, [audioElement, connect])
+  }, [audioElement, connect, disconnect, enabled])
 
   useEffect(() => {
-    if (!analyserRef.current || !isPlaying) {
+    if (!enabled || !analyserRef.current || !isPlaying) {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
         animationRef.current = null

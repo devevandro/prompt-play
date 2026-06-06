@@ -1,11 +1,13 @@
 import { Terminal } from 'lucide-react'
 
-import type { Track } from './types'
+import type { PlayerQueueItem, PlayerSource } from '../../../shared/types'
 
 interface StatusFooterProps {
   activeTab: string
-  currentTrack: Track | null
-  tracks: Track[]
+  currentItem: PlayerQueueItem | null
+  isPlaying: boolean
+  items: PlayerQueueItem[]
+  source: PlayerSource
   volume: number
 }
 
@@ -18,19 +20,29 @@ function formatDuration(seconds: number): string {
 
 export function StatusFooter({
   activeTab,
-  currentTrack,
-  tracks,
+  currentItem,
+  isPlaying,
+  items,
+  source,
   volume,
 }: StatusFooterProps) {
-  const totalDuration = tracks.reduce((acc, track) => acc + track.duration, 0)
+  const totalDuration = items.reduce(
+    (acc, item) => acc + (item.duration ?? 0),
+    0
+  )
+  const sourceStatus = `${source.label} ${items.length} items`
 
   const statusByTab: Record<string, string> = {
-    tracks: `total ${tracks.length} arquivos  duração total ${formatDuration(totalDuration)}`,
-    'now-playing': currentTrack
-      ? 'track: arquivo carregado'
-      : 'track: aguardando seleção',
-    visualizer: 'idle fft: 48 bands sr: 44.1khz 16bit',
-    controls: 'player-controls pronto',
+    tracks: source.isLive
+      ? `${sourceStatus} live streaming`
+      : `${sourceStatus} total duration ${formatDuration(totalDuration)}`,
+    'now-playing': currentItem
+      ? `${source.itemLabel}: ${isPlaying ? 'playing' : 'paused'}`
+      : `${source.itemLabel}: waiting for selection`,
+    visualizer: `${source.label} fft: 48 bands sr: 44.1khz 16bit`,
+    controls: 'player-controls ready',
+    'radio-list': 'radio list open, press :q to close',
+    help: 'help open, press :q to close',
   }
 
   return (
@@ -41,6 +53,7 @@ export function StatusFooter({
       </div>
 
       <div className="flex shrink-0 items-center gap-4">
+        <span>{source.mode}</span>
         <span>vol: {Math.round(volume * 100)}%</span>
       </div>
     </footer>
