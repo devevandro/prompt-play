@@ -54,6 +54,7 @@ const COMMANDS = [
 interface TerminalPromptProps {
   history: string[]
   onCommand: (command: string) => void
+  onArrowNavigation?: (direction: 'down' | 'up') => void
   onCycleTab: () => void
   promptContext: string
   themePicker?: {
@@ -80,6 +81,7 @@ type HistoryBlock = {
 export function TerminalPrompt({
   history,
   onCommand,
+  onArrowNavigation,
   onCycleTab,
   promptContext,
   themePicker,
@@ -172,6 +174,16 @@ export function TerminalPrompt({
         themePicker.onCancel()
         return
       }
+    }
+
+    if (
+      onArrowNavigation &&
+      !showSuggestions &&
+      (event.key === 'ArrowDown' || event.key === 'ArrowUp')
+    ) {
+      event.preventDefault()
+      onArrowNavigation(event.key === 'ArrowDown' ? 'down' : 'up')
+      return
     }
 
     if (event.key === 'Tab') {

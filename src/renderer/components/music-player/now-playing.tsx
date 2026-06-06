@@ -1,19 +1,19 @@
-import type { PlayerQueueItem, PlayerSource } from '../../../shared/types'
+import type { PlayerQueueItem, PlayerSource } from "../../../shared/types";
 
 interface NowPlayingProps {
-  item: PlayerQueueItem | null
-  isPlaying: boolean
-  source: PlayerSource
+  item: PlayerQueueItem | null;
+  isPlaying: boolean;
+  source: PlayerSource;
 }
 
 function formatDuration(seconds: number | null, source: PlayerSource): string {
   if (source.isLive || seconds === null) {
-    return 'live'
+    return "live";
   }
 
   return `${Math.floor(seconds / 60)}:${(seconds % 60)
     .toString()
-    .padStart(2, '0')}`
+    .padStart(2, "0")}`;
 }
 
 export function NowPlaying({ item, isPlaying, source }: NowPlayingProps) {
@@ -21,8 +21,8 @@ export function NowPlaying({ item, isPlaying, source }: NowPlayingProps) {
     <div className="flex h-full flex-col">
       <div className="px-4 py-3">
         <div className="font-mono text-sm">
-          <span className="text-terminal-green">➜</span>{' '}
-          <span className="text-terminal-cyan">{source.locationLabel}</span>{' '}
+          <span className="text-terminal-green">➜</span>{" "}
+          <span className="text-terminal-cyan">{source.locationLabel}</span>{" "}
           <span className="text-terminal-white">cat now_playing.txt</span>
         </div>
       </div>
@@ -34,7 +34,7 @@ export function NowPlaying({ item, isPlaying, source }: NowPlayingProps) {
               cat: now_playing.txt: {source.emptyTitle}
             </div>
             <div className="mt-4 text-terminal-gray text-xs">
-              <span className="text-terminal-cyan"># DICA:</span>{' '}
+              <span className="text-terminal-cyan"># DICA:</span>{" "}
               {source.emptyHint}
             </div>
           </div>
@@ -45,10 +45,10 @@ export function NowPlaying({ item, isPlaying, source }: NowPlayingProps) {
               <span className="w-24 text-terminal-cyan">status:</span>
               <span
                 className={
-                  isPlaying ? 'text-terminal-green' : 'text-terminal-yellow'
+                  isPlaying ? "text-terminal-green" : "text-terminal-yellow"
                 }
               >
-                {isPlaying ? '▶ PLAYING' : '▐▐ PAUSED'}
+                {isPlaying ? "▶ PLAYING" : "▐▐ PAUSED"}
               </span>
             </div>
             <div className="flex gap-2">
@@ -79,33 +79,16 @@ export function NowPlaying({ item, isPlaying, source }: NowPlayingProps) {
                 {formatDuration(item.duration, source)}
               </span>
             </div>
-            {item.details?.map(detail => (
+            {item.details?.map((detail) => (
               <div className="flex gap-2" key={detail.label}>
                 <span className="w-24 text-terminal-cyan">{detail.label}:</span>
                 <span className="text-terminal-white">{detail.value}</span>
               </div>
             ))}
             <div className="text-terminal-gray">---</div>
-
-            <div className="mt-6 whitespace-pre text-[10px] text-terminal-green/60 leading-tight">
-              {`    +====================================+
-    |                                    |
-    |     ♪ ♫ ♪ ♫ ♪ ♫ ♪ ♫ ♪ ♫ ♪        |
-    |                                    |
-    |        +-----------------+         |
-    |        |  #############  |         |
-    |        |  #############  |         |
-    |        |  #############  |         |
-    |        |  #############  |         |
-    |        +-----------------+         |
-    |                                    |
-    |     ♪ ♫ ♪ ♫ ♪ ♫ ♪ ♫ ♪ ♫ ♪        |
-    |                                    |
-    +====================================+`}
-            </div>
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }
