@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Header } from 'renderer/components/header'
 
 import { NowPlaying } from 'renderer/components/music-player/now-playing'
@@ -24,45 +24,45 @@ const PLAYER_SOURCES: Record<PlayerSourceMode, PlayerSource> = {
   local: {
     mode: 'local',
     label: 'local files',
-    description: 'Músicas presentes no computador',
+    description: 'Music files on this computer',
     locationLabel: '~/music',
-    listCommand: 'ls -la *.mp3 *.wav *.flac *.ogg',
-    itemLabel: 'arquivo',
-    creatorLabel: 'artista',
+    listCommand: 'ls -la audio/aac *.mp3 *.aac *.wav *.flac *.ogg',
+    itemLabel: 'file',
+    creatorLabel: 'artist',
     contextLabel: 'perm',
-    timeLabel: 'duração',
-    emptyTitle: 'Nenhuma faixa local selecionada',
-    emptyHint: "Selecione uma faixa local ou digite 'play' no terminal",
+    timeLabel: 'duration',
+    emptyTitle: 'No local file selected',
+    emptyHint: "Select a local file or type 'play' in the terminal",
     isLive: false,
     supportsSeek: true,
   },
   radio: {
     mode: 'radio',
     label: 'radio',
-    description: 'Rádios FM e web rádios',
+    description: 'FM and web radio streams',
     locationLabel: '~/radio',
-    listCommand: 'scan --fm --web',
-    itemLabel: 'estação',
-    creatorLabel: 'cidade',
+    listCommand: 'ls -la audio/aac *.mp3 *.aac *.m3u *.pls stream',
+    itemLabel: 'station',
+    creatorLabel: 'city',
     contextLabel: 'freq',
     timeLabel: 'status',
-    emptyTitle: 'Nenhuma rádio selecionada',
-    emptyHint: "Selecione uma rádio ou use 'source radio' e 'play'",
+    emptyTitle: 'No radio selected',
+    emptyHint: "Select a radio or use 'source radio' and 'play'",
     isLive: true,
     supportsSeek: false,
   },
   yt: {
     mode: 'yt',
     label: 'youtube',
-    description: 'Playlists do YouTube',
+    description: 'YouTube playlists',
     locationLabel: '~/youtube',
     listCommand: 'yt playlists',
     itemLabel: 'playlist',
-    creatorLabel: 'canal',
-    contextLabel: 'origem',
-    timeLabel: 'duração',
-    emptyTitle: 'Nenhuma playlist selecionada',
-    emptyHint: "Selecione uma playlist ou use 'source yt' e 'play'",
+    creatorLabel: 'channel',
+    contextLabel: 'origin',
+    timeLabel: 'duration',
+    emptyTitle: 'No playlist selected',
+    emptyHint: "Select a playlist or use 'source yt' and 'play'",
     isLive: false,
     supportsSeek: true,
   },
@@ -174,7 +174,7 @@ const YOUTUBE_PLAYLISTS: PlayerQueueItem[] = [
   },
 ]
 
-const RADIO_ITEMS: PlayerQueueItem[] = radios.slice(0, 8).map(radio => ({
+const RADIO_ITEMS: PlayerQueueItem[] = radios.map(radio => ({
   id: radio.id,
   mode: 'radio',
   title: radio.name,
@@ -183,6 +183,13 @@ const RADIO_ITEMS: PlayerQueueItem[] = radios.slice(0, 8).map(radio => ({
   duration: null,
   sourceDetail: radio.frequency,
   src: radio.url,
+  details: [
+    { label: 'name', value: radio.name },
+    { label: 'city', value: radio.city },
+    { label: 'frequency', value: radio.frequency },
+    { label: 'region', value: radio.region },
+    { label: 'stage', value: radio.state },
+  ],
 }))
 
 const PLAYER_ITEMS: PlayerQueueItem[] = [
@@ -191,13 +198,27 @@ const PLAYER_ITEMS: PlayerQueueItem[] = [
   ...YOUTUBE_PLAYLISTS,
 ]
 
-function getTabs(source: PlayerSource) {
-  return [
+function getTabs(
+  source: PlayerSource,
+  showHelpTab: boolean,
+  showRadioListTab: boolean
+) {
+  const tabs = [
     { id: 'tracks', label: source.listCommand, shortcut: '⌘1' },
     { id: 'now-playing', label: 'cat now_playing.txt', shortcut: '⌘2' },
     { id: 'visualizer', label: './visualizer --mode=spectrum', shortcut: '⌘3' },
     { id: 'controls', label: './player-controls', shortcut: '⌘4' },
   ]
+
+  if (showRadioListTab) {
+    tabs.push({ id: 'radio-list', label: 'radio list', shortcut: ':q' })
+  }
+
+  if (showHelpTab) {
+    tabs.push({ id: 'help', label: 'Prompt Play Help', shortcut: ':q' })
+  }
+
+  return tabs
 }
 
 function generateProgressBar(progress: number, width = 30): string {
@@ -225,10 +246,161 @@ function normalizeAudioSrc(src: string): string {
   return src
 }
 
+function clampVolumePercent(volumePercent: number): number {
+  return Math.max(0, Math.min(100, volumePercent))
+}
+
+function HelpTab({ source }: { source: PlayerSource }) {
+  const sourceCommands: Record<PlayerSourceMode, string[]> = {
+    local: ['music', 'source local', 'play', 'play 1', 'list', 'next', 'prev'],
+    radio: [
+      'radio',
+      'fm',
+      'source radio',
+      'radio list',
+      'ls -ra',
+      'play',
+      'play 1',
+      'list',
+      'next',
+      'prev',
+    ],
+    yt: ['source yt', 'play', 'play 1', 'list', 'next', 'prev'],
+  }
+
+  return (
+    <div className="custom-scrollbar h-full overflow-y-auto p-5 font-mono text-sm">
+      <div className="mb-5 text-terminal-cyan">Prompt Play Help</div>
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <section className="space-y-2">
+          <h2 className="text-terminal-yellow text-xs">Core Commands</h2>
+          {['help', 'home', 'exit', 'quit', ':q'].map(command => (
+            <div className="text-terminal-white" key={command}>
+              {command}
+            </div>
+          ))}
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="text-terminal-yellow text-xs">
+            {source.label} Commands
+          </h2>
+          {sourceCommands[source.mode].map(command => (
+            <div className="text-terminal-white" key={command}>
+              {command}
+            </div>
+          ))}
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="text-terminal-yellow text-xs">Theme Commands</h2>
+          {['theme list', 'ls -th', 'theme use [name]'].map(command => (
+            <div className="text-terminal-white" key={command}>
+              {command}
+            </div>
+          ))}
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="text-terminal-yellow text-xs">Volume Commands</h2>
+          {['vol 0-100', 'vol +10', 'vol -10'].map(command => (
+            <div className="text-terminal-white" key={command}>
+              {command}
+            </div>
+          ))}
+        </section>
+      </div>
+
+      <div className="mt-6 text-terminal-gray text-xs">Press :q to close</div>
+    </div>
+  )
+}
+
+function RadioListTab({
+  currentItem,
+  isPlaying,
+  items,
+  onSelectItem,
+}: {
+  currentItem: PlayerQueueItem | null
+  isPlaying: boolean
+  items: PlayerQueueItem[]
+  onSelectItem: (item: PlayerQueueItem) => void
+}) {
+  return (
+    <div className="flex h-full flex-col">
+      <div className="px-4 py-3">
+        <div className="font-mono text-sm">
+          <span className="text-terminal-green">➜</span>{' '}
+          <span className="text-terminal-cyan">~/radio</span>{' '}
+          <span className="text-terminal-white">radio list</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-12 gap-2 bg-muted/30 px-4 py-2 font-mono text-terminal-gray text-xs">
+        <span className="col-span-1">#</span>
+        <span className="col-span-2">freq</span>
+        <span className="col-span-4">station</span>
+        <span className="col-span-3">city</span>
+        <span className="col-span-2 text-right">status</span>
+      </div>
+
+      <div className="custom-scrollbar flex-1 overflow-y-auto">
+        {items.map((item, index) => {
+          const isActive = currentItem?.id === item.id
+          const isCurrentlyPlaying = isActive && isPlaying
+
+          return (
+            <button
+              className={`grid w-full grid-cols-12 items-center gap-2 px-4 py-2.5 text-left font-mono text-xs transition-colors ${
+                isActive
+                  ? 'bg-terminal-green/10 text-terminal-green'
+                  : 'text-terminal-white hover:bg-muted/50'
+              }`}
+              key={item.id}
+              onClick={() => onSelectItem(item)}
+              type="button"
+            >
+              <span className="col-span-1 text-terminal-gray">
+                {isCurrentlyPlaying ? (
+                  <span className="animate-pulse text-terminal-green">▶</span>
+                ) : isActive ? (
+                  <span className="text-terminal-yellow">▐▐</span>
+                ) : (
+                  index + 1
+                )}
+              </span>
+              <span className="col-span-2 truncate text-[10px] text-terminal-gray">
+                {item.sourceDetail}
+              </span>
+              <span
+                className={`col-span-4 truncate ${
+                  isActive ? 'text-terminal-cyan' : 'text-terminal-white'
+                }`}
+              >
+                {item.title}
+              </span>
+              <span className="col-span-3 truncate text-terminal-magenta">
+                {item.artist}
+              </span>
+              <span className="col-span-2 text-right text-terminal-yellow">
+                live
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export function MainScreen() {
   const navigate = useNavigate()
-  const [activeSourceMode, setActiveSourceMode] =
-    useState<PlayerSourceMode>('local')
+  const [searchParams] = useSearchParams()
+  const [activeSourceMode, setActiveSourceMode] = useState<PlayerSourceMode>(
+    () => (searchParams.get('source') === 'radio' ? 'radio' : 'local')
+  )
   const [items] = useState<PlayerQueueItem[]>(PLAYER_ITEMS)
   const [activeTheme, setActiveTheme] = useState<ThemeId>('default')
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false)
@@ -239,32 +411,66 @@ export function MainScreen() {
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(0.7)
   const [activeTab, setActiveTab] = useState('tracks')
+  const [showHelpTab, setShowHelpTab] = useState(false)
+  const [showRadioListTab, setShowRadioListTab] = useState(false)
+  const [recentRadioIds, setRecentRadioIds] = useState<string[]>([])
   const [commandHistory, setCommandHistory] = useState<string[]>([
     `[INFO] prompt play v${version}`,
-    "[HINT] Digite 'prompt play --init' para iniciar ou 'help' para ajuda",
+    "[HINT] Type 'prompt play --init' to start or 'help' for help",
     '$ ',
   ])
   const [isLoading, setIsLoading] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
+  const connectionTimersRef = useRef<number[]>([])
+  const previousTabRef = useRef('tracks')
+  const volumeRef = useRef(volume)
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
     null
   )
+  const activeSource = PLAYER_SOURCES[activeSourceMode]
+  const canAnalyzeAudio = activeSource.supportsSeek
   const { frequencyData, isConnected } = useAudioAnalyzer(
     audioElement,
-    isPlaying
+    isPlaying,
+    canAnalyzeAudio
   )
-  const activeSource = PLAYER_SOURCES[activeSourceMode]
   const activeItems = useMemo(
     () => items.filter(item => item.mode === activeSourceMode),
     [activeSourceMode, items]
   )
-  const tabs = useMemo(() => getTabs(activeSource), [activeSource])
+  const radioItems = useMemo(
+    () => items.filter(item => item.mode === 'radio'),
+    [items]
+  )
+  const recentRadioItems = useMemo(
+    () =>
+      recentRadioIds
+        .map(id => radioItems.find(item => item.id === id))
+        .filter((item): item is PlayerQueueItem => Boolean(item)),
+    [radioItems, recentRadioIds]
+  )
+  const visibleItems =
+    activeSourceMode === 'radio' ? recentRadioItems : activeItems
+  const tabs = useMemo(
+    () => getTabs(activeSource, showHelpTab, showRadioListTab),
+    [activeSource, showHelpTab, showRadioListTab]
+  )
+
+  const cycleTab = useCallback(() => {
+    setActiveTab(currentTab => {
+      const currentIndex = tabs.findIndex(tab => tab.id === currentTab)
+      const nextIndex =
+        currentIndex === -1 ? 0 : (currentIndex + 1) % tabs.length
+
+      return tabs[nextIndex]?.id ?? 'tracks'
+    })
+  }, [tabs])
 
   useEffect(() => {
     if (audioRef.current) {
       setAudioElement(audioRef.current)
     }
-  }, [])
+  }, [activeSourceMode])
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('prompt-play-theme')
@@ -284,6 +490,45 @@ export function MainScreen() {
   const addToHistory = useCallback((command: string) => {
     setCommandHistory(prev => [...prev.slice(-30), command])
   }, [])
+
+  const clearConnectionTimers = useCallback(() => {
+    connectionTimersRef.current.forEach(timerId => {
+      window.clearTimeout(timerId)
+    })
+    connectionTimersRef.current = []
+  }, [])
+
+  useEffect(() => {
+    return () => clearConnectionTimers()
+  }, [clearConnectionTimers])
+
+  const closeHelpTab = useCallback(() => {
+    setShowHelpTab(false)
+    setActiveTab(previousTabRef.current)
+    addToHistory('[OK] Help tab closed')
+  }, [addToHistory])
+
+  const closeRadioListTab = useCallback(() => {
+    setShowRadioListTab(false)
+    setActiveTab(previousTabRef.current)
+    addToHistory('[OK] Radio list tab closed')
+  }, [addToHistory])
+
+  const openHelpTab = useCallback(() => {
+    previousTabRef.current =
+      activeTab === 'help' ? previousTabRef.current : activeTab
+    setShowHelpTab(true)
+    setActiveTab('help')
+    addToHistory('[HELP] Opened Prompt Play Help')
+  }, [activeTab, addToHistory])
+
+  const openRadioListTab = useCallback(() => {
+    previousTabRef.current =
+      activeTab === 'radio-list' ? previousTabRef.current : activeTab
+    setShowRadioListTab(true)
+    setActiveTab('radio-list')
+    addToHistory('[INFO] Opened radio list')
+  }, [activeTab, addToHistory])
 
   const simulateLoading = useCallback(
     async (
@@ -321,6 +566,7 @@ export function MainScreen() {
 
   const selectSource = useCallback(
     (mode: PlayerSourceMode) => {
+      clearConnectionTimers()
       const nextSource = PLAYER_SOURCES[mode]
 
       setActiveSourceMode(mode)
@@ -328,14 +574,16 @@ export function MainScreen() {
       setCurrentTime(0)
       setDuration(0)
       setIsPlaying(false)
-      addToHistory(`[INFO] Fonte ativa: ${nextSource.label}`)
+      addToHistory(`[INFO] Active source: ${nextSource.label}`)
       addToHistory(`[INFO] ${nextSource.description}`)
     },
-    [addToHistory]
+    [addToHistory, clearConnectionTimers]
   )
 
   const playItem = useCallback(
     (item: PlayerQueueItem) => {
+      clearConnectionTimers()
+
       if (item.mode !== activeSourceMode) {
         setActiveSourceMode(item.mode)
       }
@@ -346,11 +594,28 @@ export function MainScreen() {
       setDuration(item.duration ?? 0)
       setIsPlaying(true)
       addToHistory(`$ play "${item.title}"`)
+
+      if (item.mode === 'radio') {
+        setRecentRadioIds(prev =>
+          [item.id, ...prev.filter(radioId => radioId !== item.id)].slice(0, 5)
+        )
+        addToHistory(`[LOADING] Connecting to ${item.title}...`)
+        connectionTimersRef.current = [
+          window.setTimeout(() => {
+            addToHistory('[LOADING] Buffering...')
+          }, 1800),
+          window.setTimeout(() => {
+            addToHistory(`[PLAYING] Connected to ${item.title}`)
+          }, 4000),
+        ]
+        return
+      }
+
       addToHistory(
         `[PLAYING] ${itemSource.label}: ${item.artist} - ${item.title}`
       )
     },
-    [activeSourceMode, addToHistory]
+    [activeSourceMode, addToHistory, clearConnectionTimers]
   )
 
   const togglePlay = useCallback(() => {
@@ -364,14 +629,15 @@ export function MainScreen() {
     setIsPlaying(prev => {
       const nextState = !prev
       addToHistory(nextState ? '$ resume' : '$ pause')
+      if (!nextState) {
+        clearConnectionTimers()
+      }
       addToHistory(
-        nextState
-          ? '[PLAYING] Reprodução retomada'
-          : '[PAUSED] Reprodução pausada'
+        nextState ? '[PLAYING] Playback resumed' : '[PAUSED] Playback paused'
       )
       return nextState
     })
-  }, [activeItems, currentItem, playItem, addToHistory])
+  }, [activeItems, currentItem, playItem, addToHistory, clearConnectionTimers])
 
   const nextItem = useCallback(() => {
     if (!currentItem || activeItems.length === 0) {
@@ -408,6 +674,7 @@ export function MainScreen() {
   }, [])
 
   const handleVolumeChange = useCallback((newVolume: number) => {
+    volumeRef.current = newVolume
     setVolume(newVolume)
 
     if (audioRef.current) {
@@ -452,30 +719,45 @@ export function MainScreen() {
 
   const handleCommand = useCallback(
     (command: string) => {
+      const cmd = command.toLowerCase().trim()
+
+      if (cmd === ':q') {
+        if (activeTab === 'help' && showHelpTab) {
+          closeHelpTab()
+        } else if (activeTab === 'radio-list' && showRadioListTab) {
+          closeRadioListTab()
+        } else if (showHelpTab) {
+          closeHelpTab()
+        } else if (showRadioListTab) {
+          closeRadioListTab()
+        } else {
+          addToHistory('[INFO] No temporary tab is open')
+        }
+        return
+      }
+
       if (isLoading) {
         addToHistory(`$ ${command}`)
-        addToHistory('[ERROR] Aguarde o processo atual terminar...')
+        addToHistory('[ERROR] Wait for the current process to finish')
         return
       }
 
       addToHistory(`$ ${command}`)
 
-      const cmd = command.toLowerCase().trim()
-
       if (cmd === 'zsh-player --init' || cmd === 'init') {
         simulateLoading(
           [
-            { text: '[INFO] Iniciando zsh-player...', delay: 200 },
-            { text: '[INFO] Carregando módulos de áudio...', delay: 300 },
-            { text: '[INFO] Conectando Web Audio API...', delay: 250 },
-            { text: '[INFO] Escaneando biblioteca de música...', delay: 200 },
+            { text: '[INFO] Starting zsh-player...', delay: 200 },
+            { text: '[INFO] Loading audio modules...', delay: 300 },
+            { text: '[INFO] Connecting Web Audio API...', delay: 250 },
+            { text: '[INFO] Scanning music library...', delay: 200 },
           ],
           () => {
-            addToHistory('[OK] Player inicializado com sucesso!')
-            addToHistory(`[INFO] Fonte ativa: ${activeSource.label}`)
-            addToHistory(`[INFO] ${activeItems.length} itens disponíveis`)
+            addToHistory('[OK] Player initialized successfully')
+            addToHistory(`[INFO] Active source: ${activeSource.label}`)
+            addToHistory(`[INFO] ${activeItems.length} items available`)
             addToHistory(
-              "[HINT] Use 'sources' para ver modos ou 'list' para ver itens"
+              "[HINT] Use 'sources' to see modes or 'list' to see items"
             )
           }
         )
@@ -487,7 +769,7 @@ export function MainScreen() {
         return
       }
 
-      if (cmd === 'theme list') {
+      if (cmd === 'theme list' || cmd === 'ls -th') {
         setSelectedThemeIndex(
           Math.max(
             0,
@@ -498,27 +780,42 @@ export function MainScreen() {
       } else if (cmd.startsWith('theme use ')) {
         const themeId = cmd.slice(10).trim()
         applyTheme(themeId)
-      } else if (cmd === 'pp home' || cmd === 'pp exit') {
+      } else if (cmd === 'pp music' || cmd === 'music') {
+        selectSource('local')
+      } else if (cmd === 'pp radio' || cmd === 'radio' || cmd === 'fm') {
+        selectSource('radio')
+      } else if (
+        cmd === 'pp home' ||
+        cmd === 'pp exit' ||
+        cmd === 'home' ||
+        cmd === 'exit'
+      ) {
         navigate('/')
-      } else if (cmd === 'pp quit') {
+      } else if (cmd === 'pp quit' || cmd === 'quit') {
         window.App.quit()
       } else if (cmd === 'pp clear') {
         setCommandHistory(['$ '])
       } else if (cmd === 'pp open now-playing') {
         setActiveTab('now-playing')
-        addToHistory('[OK] Aba cat now_playing.txt selecionada')
+        addToHistory('[OK] Selected cat now_playing.txt tab')
       } else if (cmd === 'pp open visualizer') {
         setActiveTab('visualizer')
-        addToHistory('[OK] Aba ./visualizer --mode=spectrum selecionada')
+        addToHistory('[OK] Selected ./visualizer --mode=spectrum tab')
       } else if (cmd === 'pp open controls') {
         setActiveTab('controls')
-        addToHistory('[OK] Aba ./player-controls selecionada')
+        addToHistory('[OK] Selected ./player-controls tab')
+      } else if (cmd === 'radio list' || cmd === 'ls -ra') {
+        selectSource('radio')
+        openRadioListTab()
+      } else if (cmd === 'ls -la') {
+        setActiveTab('tracks')
+        addToHistory('[OK] Selected ls -la tab')
       } else if (cmd === 'sources') {
         addToHistory('[INFO] Available sources:')
         Object.values(PLAYER_SOURCES).forEach(source => {
           const prefix = source.mode === activeSourceMode ? '▶' : ' '
           addToHistory(
-            `  ${prefix} ${source.mode.padEnd(5)} ${source.description}`
+            `[INFO] ${prefix} ${source.mode.padEnd(5)} ${source.description}`
           )
         })
       } else if (cmd.startsWith('source ')) {
@@ -527,103 +824,111 @@ export function MainScreen() {
         if (mode in PLAYER_SOURCES) {
           selectSource(mode)
         } else {
-          addToHistory(`[ERROR] Fonte não encontrada: ${mode}`)
-          addToHistory("[HINT] Use 'sources' para ver fontes disponíveis")
+          addToHistory(`[ERROR] Source not found: ${mode}`)
+          addToHistory("[HINT] Use 'sources' to see available sources")
         }
       } else if (cmd === 'play' || cmd === 'resume') {
         if (currentItem) {
           setIsPlaying(true)
-          addToHistory('[PLAYING] Reprodução retomada')
+          addToHistory('[PLAYING] Playback resumed')
         } else if (activeItems.length > 0) {
           playItem(activeItems[0])
         }
       } else if (cmd === 'pause' || cmd === 'stop') {
+        clearConnectionTimers()
         setIsPlaying(false)
-        addToHistory('[PAUSED] Reprodução pausada')
+        addToHistory('[PAUSED] Playback paused')
       } else if (cmd === 'next' || cmd === 'n') {
         nextItem()
       } else if (cmd === 'prev' || cmd === 'p') {
         prevItem()
       } else if (cmd.startsWith('play ')) {
         const query = cmd.slice(5).replace(/"/g, '')
-        const found = activeItems.find(
-          item =>
-            item.title.toLowerCase().includes(query) ||
-            item.artist.toLowerCase().includes(query)
-        )
+        const itemIndex = Number.parseInt(query, 10)
+        const found =
+          Number.isInteger(itemIndex) &&
+          itemIndex >= 1 &&
+          itemIndex <= activeItems.length
+            ? activeItems[itemIndex - 1]
+            : activeItems.find(
+                item =>
+                  item.title.toLowerCase().includes(query) ||
+                  item.artist.toLowerCase().includes(query)
+              )
 
         if (found) {
           playItem(found)
         } else {
           addToHistory(
-            `[ERROR] Item não encontrado em ${activeSource.label}: ${query}`
+            `[ERROR] Item not found in ${activeSource.label}: ${query}`
           )
         }
       } else if (cmd === 'list' || cmd === 'ls') {
-        addToHistory(`[INFO] Listando ${activeSource.label}...`)
-        activeItems.forEach((item, index) => {
+        addToHistory(`[INFO] Listing ${activeSource.label}...`)
+        const listedItems =
+          activeSourceMode === 'radio' ? recentRadioItems : activeItems
+
+        if (listedItems.length === 0 && activeSourceMode === 'radio') {
+          addToHistory('[INFO] No recently played radios yet')
+          addToHistory("[HINT] Use 'radio list' or 'ls -ra' to see all radios")
+          return
+        }
+
+        listedItems.forEach((item, index) => {
           const prefix = currentItem?.id === item.id ? '▶' : ' '
-          addToHistory(`  ${prefix} ${index + 1}. ${item.title}`)
+          const context =
+            item.mode === 'radio'
+              ? ` - ${item.artist} - ${item.sourceDetail}`
+              : ''
+          addToHistory(`[INFO] ${prefix} ${index + 1}. ${item.title}${context}`)
         })
       } else if (cmd === 'help' || cmd === 'h' || cmd === '?') {
-        addToHistory('[HELP] Comandos disponíveis:')
-        addToHistory('  zsh-player --init  Inicializar player')
-        addToHistory('  sources            Listar modos do player')
-        addToHistory('  source [modo]      Usar local, radio ou yt')
-        addToHistory('  play [nome]        Tocar item da fonte ativa')
-        addToHistory('  pause/stop         Pausar reprodução')
-        addToHistory('  next/n             Próximo item')
-        addToHistory('  prev/p             Item anterior')
-        addToHistory('  list/ls            Listar fonte ativa')
-        addToHistory('  status             Status atual')
-        addToHistory('  vol [0-100]        Ajustar volume')
-        addToHistory('  pp home            Abrir primeiro acesso')
-        addToHistory('  pp exit            Voltar para janela inicial')
-        addToHistory('  pp quit            Fechar aplicação')
-        addToHistory('  pp clear           Limpar terminal')
-        addToHistory('  pp version         Versão do projeto')
-        addToHistory('  pp open now-playing Abrir now playing')
-        addToHistory('  pp open visualizer Abrir visualizer')
-        addToHistory('  pp open controls   Abrir controles')
-        addToHistory('  theme list         Listar temas')
-        addToHistory('  theme use [nome]   Aplicar tema')
-        addToHistory('[HINT] Use Tab para autocomplete, ↑↓ para histórico')
+        openHelpTab()
       } else if (cmd === 'status' || cmd === 'info') {
-        addToHistory(`[STATUS] Fonte: ${activeSource.label}`)
+        addToHistory(`[STATUS] Source: ${activeSource.label}`)
         if (currentItem) {
-          addToHistory(`[STATUS] Tocando: ${currentItem.title}`)
+          addToHistory(`[STATUS] Playing: ${currentItem.title}`)
           addToHistory(
             `[STATUS] ${activeSource.creatorLabel}: ${currentItem.artist}`
           )
           addToHistory(`[STATUS] Volume: ${Math.round(volume * 100)}%`)
           addToHistory(
-            `[STATUS] Audio API: ${isConnected ? 'Conectada' : 'Procedural'}`
+            `[STATUS] Audio API: ${isConnected ? 'Connected' : 'Procedural'}`
           )
         } else {
-          addToHistory('[STATUS] Nenhum item em reprodução')
+          addToHistory('[STATUS] No item is playing')
         }
       } else if (cmd.startsWith('vol ')) {
-        const newVolume = Number.parseInt(cmd.slice(4), 10)
+        const volumeInput = cmd.slice(4).trim()
+        const relativeMatch = /^([+-])\s*(\d+)$/.exec(volumeInput)
+        const newVolume = relativeMatch
+          ? clampVolumePercent(
+              Math.round(volume * 100) +
+                (relativeMatch[1] === '+' ? 1 : -1) *
+                  Number.parseInt(relativeMatch[2], 10)
+            )
+          : Number.parseInt(volumeInput, 10)
 
         if (!Number.isNaN(newVolume) && newVolume >= 0 && newVolume <= 100) {
           handleVolumeChange(newVolume / 100)
-          addToHistory(`[OK] Volume ajustado para ${newVolume}%`)
+          addToHistory(`[OK] Volume set to ${newVolume}%`)
         } else {
-          addToHistory('[ERROR] Volume deve estar entre 0 e 100')
+          addToHistory('[ERROR] Use vol 0-100, vol +10, or vol -10')
         }
       } else if (cmd.startsWith('tab ')) {
         const tabNumber = Number.parseInt(cmd.slice(4), 10)
 
-        if (tabNumber >= 1 && tabNumber <= 4) {
-          const tabIds = ['tracks', 'now-playing', 'visualizer', 'controls']
-          setActiveTab(tabIds[tabNumber - 1])
-          addToHistory(`[OK] Aba ${tabNumber} selecionada`)
+        if (tabNumber >= 1 && tabNumber <= tabs.length) {
+          setActiveTab(tabs[tabNumber - 1].id)
+          addToHistory(`[OK] Selected tab ${tabNumber}`)
         } else {
-          addToHistory('[ERROR] Número da aba deve estar entre 1 e 4')
+          addToHistory(
+            `[ERROR] Tab number must be between 1 and ${tabs.length}`
+          )
         }
       } else if (cmd) {
-        addToHistory(`[ERROR] Comando não reconhecido: ${cmd}`)
-        addToHistory("[HINT] Digite 'help' para ver comandos disponíveis")
+        addToHistory(`[ERROR] Unknown command: ${cmd}`)
+        addToHistory("[HINT] Type 'help' to see available commands")
       }
     },
     [
@@ -632,23 +937,39 @@ export function MainScreen() {
       activeSourceMode,
       activeTheme,
       applyTheme,
+      activeTab,
+      closeHelpTab,
+      closeRadioListTab,
       currentItem,
       navigate,
+      openHelpTab,
+      openRadioListTab,
       playItem,
       nextItem,
       prevItem,
       selectSource,
       volume,
       addToHistory,
+      clearConnectionTimers,
       simulateLoading,
       isLoading,
       handleVolumeChange,
       isConnected,
+      showHelpTab,
+      showRadioListTab,
+      tabs,
+      recentRadioItems,
     ]
   )
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Tab' && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault()
+        cycleTab()
+        return
+      }
+
       if (!(event.metaKey || event.ctrlKey)) {
         return
       }
@@ -668,7 +989,7 @@ export function MainScreen() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [cycleTab])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -682,7 +1003,7 @@ export function MainScreen() {
       setDuration(Number.isFinite(audio.duration) ? audio.duration : 0)
     }
     const handleEnded = () => {
-      addToHistory('[INFO] Item finalizado')
+      addToHistory('[INFO] Item ended')
       nextItem()
     }
 
@@ -705,9 +1026,20 @@ export function MainScreen() {
     }
 
     audio.src = normalizeAudioSrc(currentItem.src)
-    audio.volume = volume
+    audio.volume = volumeRef.current
     audio.load()
-  }, [currentItem, volume])
+  }, [currentItem])
+
+  useEffect(() => {
+    const audio = audioRef.current
+
+    if (!audio) {
+      return
+    }
+
+    audio.volume = volume
+    volumeRef.current = volume
+  }, [volume])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -719,13 +1051,14 @@ export function MainScreen() {
     if (isPlaying) {
       audio.play().catch((error: unknown) => {
         console.error('[audio] playback failed:', error)
+        clearConnectionTimers()
         setIsPlaying(false)
-        addToHistory('[ERROR] Falha ao reproduzir áudio')
+        addToHistory('[ERROR] Failed to play audio')
       })
     } else {
       audio.pause()
     }
-  }, [currentItem, addToHistory, isPlaying])
+  }, [currentItem, addToHistory, clearConnectionTimers, isPlaying])
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -734,7 +1067,7 @@ export function MainScreen() {
           <TrackList
             currentItem={currentItem}
             isPlaying={isPlaying}
-            items={activeItems}
+            items={visibleItems}
             onSelectItem={playItem}
             source={activeSource}
           />
@@ -772,6 +1105,17 @@ export function MainScreen() {
             volume={volume}
           />
         )
+      case 'radio-list':
+        return (
+          <RadioListTab
+            currentItem={currentItem}
+            isPlaying={isPlaying}
+            items={radioItems}
+            onSelectItem={playItem}
+          />
+        )
+      case 'help':
+        return <HelpTab source={activeSource} />
       default:
         return null
     }
@@ -794,6 +1138,10 @@ export function MainScreen() {
             <TerminalPrompt
               history={commandHistory}
               onCommand={handleCommand}
+              onCycleTab={cycleTab}
+              promptContext={
+                activeSourceMode === 'local' ? 'music' : activeSourceMode
+              }
               themePicker={
                 isThemePickerOpen
                   ? {
@@ -810,13 +1158,14 @@ export function MainScreen() {
             <StatusFooter
               activeTab={activeTab}
               currentItem={currentItem}
+              isPlaying={isPlaying}
               items={activeItems}
               source={activeSource}
               volume={volume}
             />
           </div>
 
-          <audio preload="metadata" ref={audioRef}>
+          <audio key={activeSourceMode} preload="metadata" ref={audioRef}>
             <track kind="captions" />
           </audio>
         </div>

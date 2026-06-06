@@ -92,7 +92,7 @@ export function PlayerControls({
           </button>
 
           <button
-            aria-label="Faixa anterior"
+            aria-label="Previous item"
             className="rounded bg-muted/50 p-3 text-terminal-white transition-colors hover:bg-terminal-cyan/10 hover:text-terminal-cyan"
             onClick={onPrev}
             type="button"
@@ -101,7 +101,7 @@ export function PlayerControls({
           </button>
 
           <button
-            aria-label={isPlaying ? 'Pausar' : 'Reproduzir'}
+            aria-label={isPlaying ? 'Pause' : 'Play'}
             className="rounded-full bg-terminal-green p-5 text-background transition-colors hover:bg-terminal-cyan"
             onClick={onTogglePlay}
             type="button"
@@ -114,7 +114,7 @@ export function PlayerControls({
           </button>
 
           <button
-            aria-label="Próxima faixa"
+            aria-label="Next item"
             className="rounded bg-muted/50 p-3 text-terminal-white transition-colors hover:bg-terminal-cyan/10 hover:text-terminal-cyan"
             onClick={onNext}
             type="button"
@@ -134,7 +134,7 @@ export function PlayerControls({
         <div className="space-y-2 px-4">
           <button
             aria-disabled={!canSeek}
-            aria-label="Ajustar progresso"
+            aria-label="Adjust progress"
             className={`group h-2 w-full rounded bg-muted ${
               canSeek ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'
             }`}
@@ -163,7 +163,7 @@ export function PlayerControls({
 
         <div className="flex items-center justify-center gap-3 px-4">
           <button
-            aria-label={volume > 0 ? 'Silenciar' : 'Ativar som'}
+            aria-label={volume > 0 ? 'Mute' : 'Unmute'}
             className="p-1 text-terminal-gray transition-colors hover:text-terminal-white"
             onClick={() => onVolumeChange(volume > 0 ? 0 : 0.7)}
             type="button"
@@ -176,7 +176,7 @@ export function PlayerControls({
           </button>
 
           <button
-            aria-label="Ajustar volume"
+            aria-label="Adjust volume"
             className="group h-2 w-32 cursor-pointer rounded bg-muted"
             onClick={handleVolumeClick}
             type="button"

@@ -44,7 +44,7 @@ export function TerminalTabs({
         )
       })}
       <button
-        aria-label="Nova aba"
+        aria-label="New tab"
         className="ml-1 px-2 py-1.5 text-terminal-gray text-xs transition-colors hover:text-terminal-white"
         type="button"
       >

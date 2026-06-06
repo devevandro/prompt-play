@@ -5,6 +5,7 @@ import type { PlayerQueueItem, PlayerSource } from '../../../shared/types'
 interface StatusFooterProps {
   activeTab: string
   currentItem: PlayerQueueItem | null
+  isPlaying: boolean
   items: PlayerQueueItem[]
   source: PlayerSource
   volume: number
@@ -20,6 +21,7 @@ function formatDuration(seconds: number): string {
 export function StatusFooter({
   activeTab,
   currentItem,
+  isPlaying,
   items,
   source,
   volume,
@@ -28,17 +30,19 @@ export function StatusFooter({
     (acc, item) => acc + (item.duration ?? 0),
     0
   )
-  const sourceStatus = `${source.label} ${items.length} itens`
+  const sourceStatus = `${source.label} ${items.length} items`
 
   const statusByTab: Record<string, string> = {
     tracks: source.isLive
-      ? `${sourceStatus} streaming ao vivo`
-      : `${sourceStatus} duração total ${formatDuration(totalDuration)}`,
+      ? `${sourceStatus} live streaming`
+      : `${sourceStatus} total duration ${formatDuration(totalDuration)}`,
     'now-playing': currentItem
-      ? `${source.itemLabel}: carregado`
-      : `${source.itemLabel}: aguardando seleção`,
+      ? `${source.itemLabel}: ${isPlaying ? 'playing' : 'paused'}`
+      : `${source.itemLabel}: waiting for selection`,
     visualizer: `${source.label} fft: 48 bands sr: 44.1khz 16bit`,
-    controls: 'player-controls pronto',
+    controls: 'player-controls ready',
+    'radio-list': 'radio list open, press :q to close',
+    help: 'help open, press :q to close',
   }
 
   return (
