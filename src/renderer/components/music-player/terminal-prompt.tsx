@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Prompt } from '../prompt'
 
 const COMMANDS = [
   'play',
@@ -11,17 +12,28 @@ const COMMANDS = [
   'p',
   'list',
   'ls',
+  'ls -la',
+  'ls -ra',
+  'ls -th',
   'sources',
   'source local',
   'source radio',
   'source yt',
+  'radio',
+  'radio list',
+  'fm',
+  'home',
+  'exit',
+  'quit',
   'help',
   'h',
   '?',
+  ':q',
   'status',
   'info',
   'vol',
-  'pp home',
+  'pp music',
+  'pp radio',
   'pp exit',
   'pp quit',
   'pp clear',
@@ -42,6 +54,9 @@ const COMMANDS = [
 interface TerminalPromptProps {
   history: string[]
   onCommand: (command: string) => void
+  onArrowNavigation?: (direction: 'down' | 'up') => void
+  onCycleTab: () => void
+  promptContext: string
   themePicker?: {
     activeThemeId: string
     options: readonly {
@@ -55,28 +70,20 @@ interface TerminalPromptProps {
   }
 }
 
-type HistoryBlock =
-  | {
-      type: 'output'
-      id: string
-      lines: {
-        id: string
-        text: string
-      }[]
-    }
-  | {
-      type: 'command'
-      id: string
-      command: string
-      output: {
-        id: string
-        text: string
-      }[]
-    }
+type HistoryBlock = {
+  id: string
+  lines: {
+    id: string
+    text: string
+  }[]
+}
 
 export function TerminalPrompt({
   history,
   onCommand,
+  onArrowNavigation,
+  onCycleTab,
+  promptContext,
   themePicker,
 }: TerminalPromptProps) {
   const [input, setInput] = useState('')
@@ -137,6 +144,12 @@ export function TerminalPrompt({
   }
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Tab' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault()
+      onCycleTab()
+      return
+    }
+
     if (themePicker && !showSuggestions) {
       if (event.key === 'ArrowDown') {
         event.preventDefault()
@@ -161,6 +174,16 @@ export function TerminalPrompt({
         themePicker.onCancel()
         return
       }
+    }
+
+    if (
+      onArrowNavigation &&
+      !showSuggestions &&
+      (event.key === 'ArrowDown' || event.key === 'ArrowUp')
+    ) {
+      event.preventDefault()
+      onArrowNavigation(event.key === 'ArrowDown' ? 'down' : 'up')
+      return
     }
 
     if (event.key === 'Tab') {
@@ -233,7 +256,7 @@ export function TerminalPrompt({
 
   const historyBlocks = history.reduce<HistoryBlock[]>(
     (blocks, line, lineIndex) => {
-      if (line.trim() === '$') {
+      if (!/^\[[A-Z]+\]/.test(line)) {
         return blocks
       }
 
@@ -242,30 +265,14 @@ export function TerminalPrompt({
         text: line,
       }
 
-      if (line.startsWith('$')) {
-        blocks.push({
-          type: 'command',
-          id: lineItem.id,
-          command: line.slice(1).trimStart(),
-          output: [],
-        })
-        return blocks
-      }
-
       const lastBlock = blocks.at(-1)
 
-      if (lastBlock?.type === 'command') {
-        lastBlock.output.push(lineItem)
-        return blocks
-      }
-
-      if (lastBlock?.type === 'output') {
+      if (lastBlock) {
         lastBlock.lines.push(lineItem)
         return blocks
       }
 
       blocks.push({
-        type: 'output',
         id: lineItem.id,
         lines: [lineItem],
       })
@@ -311,47 +318,21 @@ export function TerminalPrompt({
     <div className="cursor-text bg-muted/30" onPointerDown={focusInput}>
       <form onSubmit={handleSubmit}>
         <div
-          className="custom-scrollbar h-31 overflow-y-auto px-3 py-2 font-mono text-xs"
+          className="custom-scrollbar h-20 overflow-y-auto px-3 py-2 font-mono text-xs"
           ref={containerRef}
         >
           <div className="flex flex-col gap-1">
-            {historyBlocks.map(block => {
-              if (block.type === 'output') {
-                return (
-                  <div className="px-1 leading-5" key={block.id}>
-                    {block.lines.map(line => (
-                      <div key={line.id}>{formatLine(line.text)}</div>
-                    ))}
-                  </div>
-                )
-              }
-
-              return (
-                <div
-                  className="rounded-md bg-background/35 px-2 py-1 leading-5"
-                  key={block.id}
-                >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="text-terminal-green">➜</span>
-                    <span className="text-terminal-cyan">~</span>
-                    <span className="truncate text-terminal-white">
-                      {block.command}
-                    </span>
-                  </div>
-                  {block.output.length > 0 && (
-                    <div className="mt-0.5 pl-8">
-                      {block.output.map(line => (
-                        <div key={line.id}>{formatLine(line.text)}</div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+            {historyBlocks.map(block => (
+              <div className="px-1 leading-5" key={block.id}>
+                {block.lines.map(line => (
+                  <div key={line.id}>{formatLine(line.text)}</div>
+                ))}
+              </div>
+            ))}
 
             <div className="flex items-center gap-2 rounded-md bg-background/35 px-2 py-1 leading-5">
-              <span className="text-terminal-green">➜</span>
-              <span className="text-terminal-cyan">~</span>
+              <Prompt text={`pp:${promptContext}`} />
+              <Prompt text=">" />
               <div className="relative flex flex-1 items-center">
                 <input
                   autoComplete="off"
@@ -359,7 +340,7 @@ export function TerminalPrompt({
                   onChange={event => setInput(event.target.value)}
                   onKeyDown={handleKeyDown}
                   onPointerDown={focusInput}
-                  placeholder="digite 'help' para ver os comandos"
+                  placeholder="type 'help' to show commands"
                   ref={inputRef}
                   spellCheck={false}
                   type="text"
@@ -414,7 +395,7 @@ export function TerminalPrompt({
             })}
           </div>
           <div className="mt-2 text-[10px] text-terminal-gray">
-            ↑↓ selecionar · Enter aplicar · Esc cancelar
+            ↑↓ select · Enter apply · Esc cancel
           </div>
         </div>
       )}

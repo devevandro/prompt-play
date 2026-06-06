@@ -22,9 +22,13 @@ hard-coding music-file labels such as track, artist, album, or duration.
 When adding player behavior, update the source configuration in
 `src/renderer/screens/main.tsx` and keep commands working against the active
 source. The current commands are `sources`, `source local`, `source radio`,
-`source yt`, `play`, `list`, `status`, `next`, and `prev`. Radio is live
-streaming and should not expose seek controls; local files and YouTube
-playlists can expose duration and seeking.
+`source yt`, `play`, `list`, `ls`, `ls -la`, `status`, `next`, `prev`,
+`theme list`, `ls -th`, `radio list`, `ls -ra`, `help`, and `:q`. Radio is
+live streaming and should not expose seek controls; local files and YouTube
+playlists can expose duration and seeking. The radio `ls -la` source tab shows
+the 5 most recently played radios, while `radio list` and `ls -ra` open a
+temporary full radio-list tab next to `./player-controls`, following the same
+temporary-tab pattern as help.
 
 ## Build, Test, and Development Commands
 

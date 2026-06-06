@@ -7,16 +7,22 @@ interface Tab {
 interface TerminalTabsProps {
   tabs: Tab[]
   activeTab: string
+  mouseEnabled?: boolean
   onTabChange: (tabId: string) => void
 }
 
 export function TerminalTabs({
   tabs,
   activeTab,
+  mouseEnabled = true,
   onTabChange,
 }: TerminalTabsProps) {
   return (
-    <div className="custom-scrollbar flex items-center gap-0.5 overflow-x-auto bg-background px-3 py-1">
+    <div
+      className={`custom-scrollbar flex items-center gap-0.5 overflow-x-auto bg-background px-3 py-1 ${
+        mouseEnabled ? '' : 'pointer-events-none'
+      }`}
+    >
       {tabs.map(tab => {
         const isActive = activeTab === tab.id
 
@@ -44,7 +50,7 @@ export function TerminalTabs({
         )
       })}
       <button
-        aria-label="Nova aba"
+        aria-label="New tab"
         className="ml-1 px-2 py-1.5 text-terminal-gray text-xs transition-colors hover:text-terminal-white"
         type="button"
       >
