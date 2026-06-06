@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 
+import type { PlayerSource } from '../../../shared/types'
+
 const BAR_IDS = Array.from({ length: 48 }, (_, index) => `bar-${index}`)
 
 interface VisualizerProps {
   isPlaying: boolean
   currentTime: number
+  source: PlayerSource
   frequencyData?: Uint8Array
   isAudioConnected?: boolean
 }
@@ -12,6 +15,7 @@ interface VisualizerProps {
 export function Visualizer({
   isPlaying,
   currentTime,
+  source,
   frequencyData,
   isAudioConnected = false,
 }: VisualizerProps) {
@@ -74,7 +78,7 @@ export function Visualizer({
       <div className="px-4 py-3">
         <div className="font-mono text-sm">
           <span className="text-terminal-green">➜</span>{' '}
-          <span className="text-terminal-cyan">~/music</span>{' '}
+          <span className="text-terminal-cyan">{source.locationLabel}</span>{' '}
           <span className="text-terminal-white">
             ./visualizer --mode=spectrum
           </span>

@@ -1,37 +1,45 @@
-import { Terminal } from "lucide-react";
+import { Terminal } from 'lucide-react'
 
-import type { Track } from "../../../shared/types";
+import type { PlayerQueueItem, PlayerSource } from '../../../shared/types'
 
 interface StatusFooterProps {
-  activeTab: string;
-  currentTrack: Track | null;
-  tracks: Track[];
-  volume: number;
+  activeTab: string
+  currentItem: PlayerQueueItem | null
+  items: PlayerQueueItem[]
+  source: PlayerSource
+  volume: number
 }
 
 function formatDuration(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
 
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
+  return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
 export function StatusFooter({
   activeTab,
-  currentTrack,
-  tracks,
+  currentItem,
+  items,
+  source,
   volume,
 }: StatusFooterProps) {
-  const totalDuration = tracks.reduce((acc, track) => acc + track.duration, 0);
+  const totalDuration = items.reduce(
+    (acc, item) => acc + (item.duration ?? 0),
+    0
+  )
+  const sourceStatus = `${source.label} ${items.length} itens`
 
   const statusByTab: Record<string, string> = {
-    tracks: `total ${tracks.length} arquivos  duração total ${formatDuration(totalDuration)}`,
-    "now-playing": currentTrack
-      ? "track: arquivo carregado"
-      : "track: aguardando seleção",
-    visualizer: "idle fft: 48 bands sr: 44.1khz 16bit",
-    controls: "player-controls pronto",
-  };
+    tracks: source.isLive
+      ? `${sourceStatus} streaming ao vivo`
+      : `${sourceStatus} duração total ${formatDuration(totalDuration)}`,
+    'now-playing': currentItem
+      ? `${source.itemLabel}: carregado`
+      : `${source.itemLabel}: aguardando seleção`,
+    visualizer: `${source.label} fft: 48 bands sr: 44.1khz 16bit`,
+    controls: 'player-controls pronto',
+  }
 
   return (
     <footer className="flex h-5 shrink-0 items-center justify-between bg-[#1b3a24] px-3 font-mono text-[11px] text-terminal-cyan">
@@ -41,8 +49,9 @@ export function StatusFooter({
       </div>
 
       <div className="flex shrink-0 items-center gap-4">
+        <span>{source.mode}</span>
         <span>vol: {Math.round(volume * 100)}%</span>
       </div>
     </footer>
-  );
+  )
 }
