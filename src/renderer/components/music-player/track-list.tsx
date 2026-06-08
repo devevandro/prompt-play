@@ -9,8 +9,12 @@ interface TrackListProps {
 }
 
 function formatDuration(seconds: number | null, source: PlayerSource): string {
-  if (source.isLive || seconds === null) {
+  if (source.isLive) {
     return 'live'
+  }
+
+  if (seconds === null) {
+    return '--:--'
   }
 
   const mins = Math.floor(seconds / 60)
@@ -54,9 +58,7 @@ export function TrackList({
       <div className="custom-scrollbar flex-1 overflow-y-auto">
         {items.length === 0 && (
           <div className="space-y-2 px-4 py-6 font-mono text-xs">
-            <div className="text-terminal-yellow">
-              No recent {source.label} items
-            </div>
+            <div className="text-terminal-yellow">{source.emptyTitle}</div>
             <div className="text-terminal-gray">{source.emptyHint}</div>
           </div>
         )}

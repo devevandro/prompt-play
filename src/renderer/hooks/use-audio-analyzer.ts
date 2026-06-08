@@ -77,14 +77,14 @@ export function useAudioAnalyzer(
   }, [])
 
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || !audioElement) {
       disconnect()
       return
     }
 
-    if (audioElement && !sourceRef.current) {
-      connect()
-    }
+    connect()
+
+    return () => disconnect()
   }, [audioElement, connect, disconnect, enabled])
 
   useEffect(() => {

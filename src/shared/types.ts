@@ -65,3 +65,11 @@ export interface Radio {
   frequency: string
   url: string
 }
+
+export interface MusicLibrary {
+  id: string
+  name: string
+  path: string
+  musicCount: number
+  items: PlayerQueueItem[]
+}

@@ -22,13 +22,34 @@ hard-coding music-file labels such as track, artist, album, or duration.
 When adding player behavior, update the source configuration in
 `src/renderer/screens/main.tsx` and keep commands working against the active
 source. The current commands are `sources`, `source local`, `source radio`,
-`source yt`, `play`, `list`, `ls`, `ls -la`, `status`, `next`, `prev`,
-`theme list`, `ls -th`, `radio list`, `ls -ra`, `help`, and `:q`. Radio is
-live streaming and should not expose seek controls; local files and YouTube
-playlists can expose duration and seeking. The radio `ls -la` source tab shows
-the 5 most recently played radios, while `radio list` and `ls -ra` open a
-temporary full radio-list tab next to `./player-controls`, following the same
-temporary-tab pattern as help.
+`source yt`, `pp music`, `music`, `pp radio`, `radio`, `fm`,
+`music -- path [path]`, `radio -- path [path]`, `music config`, `music list`,
+`play`, `play [number]`, `play [name]`, `resume`, `pause`, `stop`, `list`,
+`ls`, `ls -la`, `status`, `info`, `next`, `n`, `prev`, `p`, `vol [0-100]`,
+`vol +[number]`, `vol -[number]`, `theme list`, `ls -th`,
+`theme use [theme]`, `radio list`, `ls -ra`, `pp open now-playing`,
+`pp open visualizer`, `pp open controls`, `tab [number]`, `help`, `h`, `?`,
+and `:q`.
+
+Radio is live streaming and should not expose seek controls; local files and
+YouTube playlists can expose duration and seeking. The radio `ls -la` source
+tab shows the 5 most recently played radios, while `radio list` and `ls -ra`
+open a temporary full radio-list tab next to `./player-controls`, following the
+same temporary-tab pattern as help. Local music folders are configured with
+`music -- path [path]` or `music config`; `music list` opens a temporary
+`music lists` tab and shows suggested `~/Music` and `~/Downloads` paths when no
+library has been stored.
+
+Local audio files must be played through the privileged `local-audio:` protocol
+registered in `src/main/index.ts`, not directly through `file://`. The protocol
+supports range requests, CORS headers, and CSP `media-src` access for the native
+audio element and Web Audio visualizer. Keep CSP changes in
+`src/renderer/index.html` aligned with any custom media schemes. Local music
+metadata is populated during folder scans in the main process: MP3 files may use
+ID3 title, artist, album, and estimated duration; the renderer also updates
+duration from browser `loadedmetadata` when available. Stored libraries live in
+`localStorage` under `prompt-play-music-libraries` and are refreshed on player
+startup.
 
 ## Build, Test, and Development Commands
 

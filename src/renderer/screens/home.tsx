@@ -91,7 +91,7 @@ export function HomeScreen() {
                   <p>
                     <span className="text-terminal-cyan">yt</span>
                     <span className="ml-13.5">
-                      - Listen to YouTube playlists
+                      - Listen to YouTube playlists (comming soon)
                     </span>
                   </p>
                 </div>

@@ -20,9 +20,31 @@ export function Visualizer({
   isAudioConnected = false,
 }: VisualizerProps) {
   const [animatedBars, setAnimatedBars] = useState<number[]>(Array(48).fill(5))
+  const [visualTime, setVisualTime] = useState(0)
+
+  useEffect(() => {
+    if (!isPlaying) {
+      setVisualTime(0)
+      return
+    }
+
+    let frameId = 0
+    const startTime = performance.now()
+
+    const tick = (timestamp: number) => {
+      setVisualTime((timestamp - startTime) / 1000)
+      frameId = window.requestAnimationFrame(tick)
+    }
+
+    frameId = window.requestAnimationFrame(tick)
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [isPlaying])
 
   const bars = useMemo(() => {
-    if (frequencyData && frequencyData.length > 0 && isAudioConnected) {
+    const hasFrequencySignal = frequencyData?.some(value => value > 0)
+
+    if (frequencyData && hasFrequencySignal && isAudioConnected) {
       const barCount = 48
       const step = Math.floor(frequencyData.length / barCount)
 
@@ -39,19 +61,19 @@ export function Visualizer({
         return 5
       }
 
-      const time = currentTime * 2
-      const wave1 = Math.sin(time + index * 0.3) * 0.3
-      const wave2 = Math.sin(time * 1.5 + index * 0.5) * 0.2
-      const wave3 = Math.sin(time * 0.7 + index * 0.15) * 0.25
-      const wave4 = Math.cos(time * 2.1 + index * 0.4) * 0.15
-      const bassBoost = index < 8 ? 0.2 : 0
-      const trebleBoost = index > 36 ? 0.1 : 0
+      const time = (currentTime + visualTime * 2.8) * 4
+      const wave1 = Math.sin(time + index * 0.34) * 0.34
+      const wave2 = Math.sin(time * 1.9 + index * 0.62) * 0.22
+      const wave3 = Math.sin(time * 1.3 + index * 0.18) * 0.24
+      const wave4 = Math.cos(time * 2.7 + index * 0.46) * 0.18
+      const bassBoost = index < 8 ? 0.24 : 0
+      const trebleBoost = index > 36 ? 0.14 : 0
       const combined =
         wave1 + wave2 + wave3 + wave4 + bassBoost + trebleBoost + 0.5
 
       return Math.max(5, Math.min(100, combined * 100))
     })
-  }, [frequencyData, isAudioConnected, isPlaying, currentTime])
+  }, [frequencyData, isAudioConnected, isPlaying, currentTime, visualTime])
 
   useEffect(() => {
     if (!isPlaying) {
@@ -59,18 +81,23 @@ export function Visualizer({
       return
     }
 
-    const interval = window.setInterval(() => {
+    let frameId = 0
+
+    const animate = () => {
       setAnimatedBars(prev =>
         prev.map((bar, index) => {
           const target = bars[index]
           const diff = target - bar
 
-          return bar + diff * 0.3
+          return bar + diff * 0.62
         })
       )
-    }, 50)
+      frameId = window.requestAnimationFrame(animate)
+    }
 
-    return () => window.clearInterval(interval)
+    frameId = window.requestAnimationFrame(animate)
+
+    return () => window.cancelAnimationFrame(frameId)
   }, [bars, isPlaying])
 
   return (

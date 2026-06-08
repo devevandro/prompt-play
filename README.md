@@ -1,0 +1,144 @@
+# Prompt Play
+
+Prompt Play is an Electron desktop music player with a terminal-style
+interface. It supports local music files, online radio streams, and placeholder
+YouTube playlist sources from one shared player UI.
+
+## Features
+
+- Local music folder scanning with persisted libraries.
+- MP3 title, artist, album, and duration metadata when available.
+- Local playback through a secure Electron `local-audio:` protocol with range
+  requests and CORS support.
+- Online radio mode with a full radio-list tab and recently played radio list.
+- Source-aware player controls, seek handling, status footer, and visualizer.
+- Terminal commands for playback, sources, volume, tabs, themes, and app
+  navigation.
+- Theme picker with multiple terminal-inspired themes.
+
+## Requirements
+
+- Node.js compatible with the project dependencies.
+- Yarn `1.22.22`, as declared in `package.json`.
+
+## Development
+
+Install dependencies:
+
+```sh
+yarn install
+```
+
+Start the Electron Vite development app:
+
+```sh
+yarn dev
+```
+
+Build the Electron Vite app:
+
+```sh
+yarn compile:app
+```
+
+Preview the built app:
+
+```sh
+yarn start
+```
+
+Run validation:
+
+```sh
+yarn typecheck
+yarn lint
+```
+
+Package the app with Electron Builder:
+
+```sh
+yarn build
+```
+
+## Core Commands
+
+First access:
+
+| Command | Action |
+| --- | --- |
+| `pp music` or `music` | Open local music mode. |
+| `pp radio` or `radio` | Open radio mode. |
+| `help` | Show the first access hint. |
+| `pp quit` | Close the app. |
+
+Playback:
+
+| Command | Action |
+| --- | --- |
+| `play` | Play the selected item or first item in the active source. |
+| `play 1` | Play an item by list position. |
+| `play [name]` | Play the first item matching title or artist/city/channel. |
+| `pause` or `stop` | Pause playback. |
+| `resume` | Resume playback. |
+| `next` or `n` | Play the next item. |
+| `prev` or `p` | Play the previous item. |
+
+Local music:
+
+| Command | Action |
+| --- | --- |
+| `music -- path [path]` | Scan and store a music folder. |
+| `music config` | Select a music folder with the native folder picker. |
+| `music list` | Open the temporary stored-library list tab. |
+| `ls -la` | Open the active source list tab. |
+
+Sources and radio:
+
+| Command | Action |
+| --- | --- |
+| `sources` | Show available sources. |
+| `source local` | Switch to local files. |
+| `source radio` | Switch to radio. |
+| `source yt` | Switch to YouTube playlists. |
+| `radio list` or `ls -ra` | Open the full temporary radio list tab. |
+
+Tabs and utility:
+
+| Command | Action |
+| --- | --- |
+| `pp open now-playing` | Open `cat now_playing.txt`. |
+| `pp open visualizer` | Open `./visualizer --mode=spectrum`. |
+| `pp open controls` | Open `./player-controls`. |
+| `tab [number]` | Open a tab by position. |
+| `theme list` or `ls -th` | Open the theme picker. |
+| `theme use [theme]` | Apply a theme. |
+| `vol 70`, `vol +10`, `vol -10` | Set or adjust volume. |
+| `status` or `info` | Show current playback status. |
+| `:q` | Close a temporary tab. |
+| `pp clear` | Clear terminal history. |
+| `pp home`, `pp exit`, `home`, or `exit` | Return to first access. |
+
+See [commands.md](commands.md) for the full command reference.
+
+## Project Structure
+
+- `src/main`: Electron main process, IPC handlers, radio stream checks, local
+  music scanning, and the `local-audio:` protocol.
+- `src/preload`: Safe renderer bridge exposed as `window.App`.
+- `src/renderer`: React UI, screens, hooks, terminal flow, and player
+  components.
+- `src/shared`: Shared types, constants, utilities, and radio data.
+- `src/lib/electron-app`: Electron setup helpers, factories, release scripts,
+  and bundled dev tooling.
+
+## Local Audio Notes
+
+Local files are not loaded with direct `file://` URLs. The main process serves
+them through `local-audio:` so Chromium can stream them with byte ranges and the
+renderer can use the Web Audio API for visualization. The renderer CSP in
+`src/renderer/index.html` must explicitly allow `local-audio:` in `media-src`.
+
+## Documentation
+
+- [commands.md](commands.md): terminal command reference.
+- [AGENTS.md](AGENTS.md): repository guidelines for future coding agents.
