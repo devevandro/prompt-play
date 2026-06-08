@@ -42,6 +42,7 @@ export function StatusFooter({
     visualizer: `${source.label} fft: 48 bands sr: 44.1khz 16bit`,
     controls: 'player-controls ready',
     'radio-list': 'radio list open, press :q to close',
+    'music-list': 'music lists open, press :q to close',
     help: 'help open, press :q to close',
   }
 

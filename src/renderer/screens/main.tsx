@@ -11,10 +11,10 @@ import { TerminalTabs } from "renderer/components/music-player/terminal-tabs";
 import { TrackList } from "renderer/components/music-player/track-list";
 import { radios } from "shared/data/radios";
 import type {
+  MusicLibrary,
   PlayerQueueItem,
   PlayerSource,
   PlayerSourceMode,
-  Track,
 } from "shared/types";
 import { Visualizer } from "renderer/components/music-player/visualizer";
 import { getThemeById, THEMES, type ThemeId } from "renderer/lib/themes";
@@ -32,8 +32,8 @@ const PLAYER_SOURCES: Record<PlayerSourceMode, PlayerSource> = {
     creatorLabel: "artist",
     contextLabel: "perm",
     timeLabel: "duration",
-    emptyTitle: "No local file selected",
-    emptyHint: "Select a local file or type 'play' in the terminal",
+    emptyTitle: "no recent musics to listen",
+    emptyHint: "type music -- path pathname to config",
     isLive: false,
     supportsSeek: true,
   },
@@ -68,89 +68,6 @@ const PLAYER_SOURCES: Record<PlayerSourceMode, PlayerSource> = {
     supportsSeek: true,
   },
 };
-
-const SAMPLE_TRACKS: Track[] = [
-  {
-    id: "1",
-    mode: "local",
-    title: "midnight_protocol.mp3",
-    artist: "Cyber_Punk",
-    album: "~/music/synthwave",
-    sourceDetail: "-rw-r--r--",
-    duration: 245,
-    src: "/Users/evandro.carvalho/Downloads/aeo.mp3",
-  },
-  {
-    id: "2",
-    mode: "local",
-    title: "neon_dreams.wav",
-    artist: "Terminal_Echo",
-    album: "~/music/ambient",
-    sourceDetail: "-rwxr-xr-x",
-    duration: 312,
-    src: "/Users/evandro.carvalho/Downloads/aeo.mp3",
-  },
-  {
-    id: "3",
-    mode: "local",
-    title: "binary_sunset.flac",
-    artist: "Root_Access",
-    album: "~/music/electronic",
-    sourceDetail: "-rw-rw-r--",
-    duration: 198,
-    src: "/Users/evandro.carvalho/Downloads/aeo.mp3",
-  },
-  {
-    id: "4",
-    mode: "local",
-    title: "kernel_panic.ogg",
-    artist: "Sudo_Beats",
-    album: "~/music/techno",
-    sourceDetail: "-rw-r--r--",
-    duration: 276,
-    src: "/Users/evandro.carvalho/Downloads/aeo.mp3",
-  },
-  {
-    id: "5",
-    mode: "local",
-    title: "recursive_loop.mp3",
-    artist: "Bash_Master",
-    album: "~/music/lofi",
-    sourceDetail: "-rwxr-xr-x",
-    duration: 223,
-    src: "/Users/evandro.carvalho/Downloads/aeo.mp3",
-  },
-  {
-    id: "6",
-    mode: "local",
-    title: "chmod_777.wav",
-    artist: "Permission_Denied",
-    album: "~/music/dnb",
-    sourceDetail: "-rw-rw-r--",
-    duration: 189,
-    src: "/Users/evandro.carvalho/Downloads/aeo.mp3",
-  },
-  {
-    id: "7",
-    mode: "local",
-    title: "pipe_dreams.mp3",
-    artist: "Grep_Life",
-    album: "~/music/chillwave",
-    sourceDetail: "-rw-r--r--",
-    duration: 267,
-    src: "/Users/evandro.carvalho/Downloads/aeo.mp3",
-  },
-  {
-    id: "8",
-    mode: "local",
-    title: "fork_bomb.flac",
-    artist: ":(){ :|:& };:",
-    album: "~/music/hardcore",
-    sourceDetail: "-rwxr-xr-x",
-    duration: 156,
-    src: "/Users/evandro.carvalho/Downloads/aeo.mp3",
-  },
-];
 
 const YOUTUBE_PLAYLISTS: PlayerQueueItem[] = [
   {
@@ -193,18 +110,52 @@ const RADIO_ITEMS: PlayerQueueItem[] = radios.map((radio) => ({
   ],
 }));
 
-const PLAYER_ITEMS: PlayerQueueItem[] = [
-  ...SAMPLE_TRACKS,
-  ...RADIO_ITEMS,
-  ...YOUTUBE_PLAYLISTS,
-];
-
 type RadioStreamStatus = "checking" | "live" | "offline";
+
+const MUSIC_LIBRARY_STORAGE_KEY = "prompt-play-music-libraries";
+
+function getDefaultMusicLocations() {
+  const username = window.App.username;
+  const homePath = username ? `/Users/${username}` : "~";
+
+  return [
+    { name: "Music", path: `${homePath}/Music` },
+    { name: "Downloads", path: `${homePath}/Downloads` },
+  ];
+}
+
+function readStoredMusicLibraries(): MusicLibrary[] {
+  try {
+    const storedValue = localStorage.getItem(MUSIC_LIBRARY_STORAGE_KEY);
+
+    if (!storedValue) {
+      return [];
+    }
+
+    const libraries = JSON.parse(storedValue) as MusicLibrary[];
+
+    if (!Array.isArray(libraries)) {
+      return [];
+    }
+
+    return libraries.filter(
+      (library) =>
+        typeof library.id === "string" &&
+        typeof library.name === "string" &&
+        typeof library.path === "string" &&
+        typeof library.musicCount === "number" &&
+        Array.isArray(library.items),
+    );
+  } catch {
+    return [];
+  }
+}
 
 function getTabs(
   source: PlayerSource,
   showHelpTab: boolean,
   showRadioListTab: boolean,
+  showMusicListTab: boolean,
 ) {
   const tabs = [
     { id: "tracks", label: source.listCommand, shortcut: "⌘1" },
@@ -215,6 +166,10 @@ function getTabs(
 
   if (showRadioListTab) {
     tabs.push({ id: "radio-list", label: "radio list", shortcut: ":q" });
+  }
+
+  if (showMusicListTab) {
+    tabs.push({ id: "music-list", label: "music lists", shortcut: ":q" });
   }
 
   if (showHelpTab) {
@@ -240,13 +195,28 @@ function normalizeAudioSrc(src: string): string {
   }
 
   if (src.startsWith("/")) {
-    return `local-audio://${src
-      .split("/")
-      .map((part) => encodeURIComponent(part))
-      .join("/")}`;
+    const encodedPath = src.split("/").map(encodeURIComponent).join("/");
+
+    return `local-audio://file${encodedPath}`;
   }
 
   return src;
+}
+
+function getPlaybackErrorMessage(error: unknown): string {
+  if (error instanceof DOMException) {
+    return error.name;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "unknown error";
+}
+
+function isExpectedPlaybackAbort(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
 }
 
 function clampVolumePercent(volumePercent: number): number {
@@ -255,7 +225,18 @@ function clampVolumePercent(volumePercent: number): number {
 
 function HelpTab({ source }: { source: PlayerSource }) {
   const sourceCommands: Record<PlayerSourceMode, string[]> = {
-    local: ["music", "source local", "play", "play 1", "list", "next", "prev"],
+    local: [
+      "music",
+      "music -- path <pathname>",
+      "music config",
+      "music list",
+      "source local",
+      "play",
+      "play 1",
+      "list",
+      "next",
+      "prev",
+    ],
     radio: [
       "radio",
       "fm",
@@ -414,13 +395,80 @@ function RadioListTab({
   );
 }
 
+function MusicListTab({ libraries }: { libraries: MusicLibrary[] }) {
+  const defaultLocations = getDefaultMusicLocations();
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="px-4 py-3">
+        <div className="font-mono text-sm">
+          <span className="text-terminal-green">➜</span>{" "}
+          <span className="text-terminal-cyan">~/music</span>{" "}
+          <span className="text-terminal-white">music list</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-12 gap-2 bg-muted/30 px-4 py-2 font-mono text-terminal-gray text-xs">
+        <span className="col-span-1">#</span>
+        <span className="col-span-3">folder</span>
+        <span className="col-span-6">path</span>
+        <span className="col-span-2 text-right">musics</span>
+      </div>
+
+      <div className="custom-scrollbar flex-1 overflow-y-auto">
+        {libraries.length === 0
+          ? defaultLocations.map((location, index) => (
+              <div
+                className="grid grid-cols-12 items-center gap-2 px-4 py-2.5 font-mono text-xs text-terminal-white"
+                key={location.path}
+              >
+                <span className="col-span-1 text-terminal-gray">
+                  {index + 1}
+                </span>
+                <span className="col-span-3 truncate text-terminal-cyan">
+                  {location.name}
+                </span>
+                <span className="col-span-6 truncate text-terminal-magenta">
+                  {location.path}
+                </span>
+                <span className="col-span-2 text-right text-terminal-yellow">
+                  path
+                </span>
+              </div>
+            ))
+          : null}
+
+        {libraries.map((library, index) => (
+          <div
+            className="grid grid-cols-12 items-center gap-2 px-4 py-2.5 font-mono text-xs text-terminal-white"
+            key={library.id}
+          >
+            <span className="col-span-1 text-terminal-gray">{index + 1}</span>
+            <span className="col-span-3 truncate text-terminal-cyan">
+              {library.name}
+            </span>
+            <span className="col-span-6 truncate text-terminal-magenta">
+              {library.path}
+            </span>
+            <span className="col-span-2 text-right text-terminal-yellow">
+              {library.musicCount}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function MainScreen() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [activeSourceMode, setActiveSourceMode] = useState<PlayerSourceMode>(
     () => (searchParams.get("source") === "radio" ? "radio" : "local"),
   );
-  const [items] = useState<PlayerQueueItem[]>(PLAYER_ITEMS);
+  const [musicLibraries, setMusicLibraries] = useState<MusicLibrary[]>(
+    readStoredMusicLibraries,
+  );
   const [activeTheme, setActiveTheme] = useState<ThemeId>("default");
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
   const [selectedThemeIndex, setSelectedThemeIndex] = useState(0);
@@ -432,6 +480,7 @@ export function MainScreen() {
   const [activeTab, setActiveTab] = useState("tracks");
   const [showHelpTab, setShowHelpTab] = useState(false);
   const [showRadioListTab, setShowRadioListTab] = useState(false);
+  const [showMusicListTab, setShowMusicListTab] = useState(false);
   const [radioStatuses, setRadioStatuses] = useState<
     Record<string, RadioStreamStatus>
   >({});
@@ -450,7 +499,27 @@ export function MainScreen() {
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
     null,
   );
-  const activeSource = PLAYER_SOURCES[activeSourceMode];
+  const items = useMemo(
+    () => [
+      ...musicLibraries.flatMap((library) => library.items),
+      ...RADIO_ITEMS,
+      ...YOUTUBE_PLAYLISTS,
+    ],
+    [musicLibraries],
+  );
+  const activeSource = useMemo(() => {
+    const source = PLAYER_SOURCES[activeSourceMode];
+
+    if (activeSourceMode !== "local" || musicLibraries.length === 0) {
+      return source;
+    }
+
+    return {
+      ...source,
+      locationLabel: musicLibraries[0].path,
+      emptyHint: "type music -- path pathname to config",
+    };
+  }, [activeSourceMode, musicLibraries]);
   const canAnalyzeAudio = activeSource.supportsSeek;
   const { frequencyData, isConnected } = useAudioAnalyzer(
     audioElement,
@@ -475,8 +544,9 @@ export function MainScreen() {
   const visibleItems =
     activeSourceMode === "radio" ? recentRadioItems : activeItems;
   const tabs = useMemo(
-    () => getTabs(activeSource, showHelpTab, showRadioListTab),
-    [activeSource, showHelpTab, showRadioListTab],
+    () =>
+      getTabs(activeSource, showHelpTab, showRadioListTab, showMusicListTab),
+    [activeSource, showHelpTab, showRadioListTab, showMusicListTab],
   );
 
   const cycleTab = useCallback(() => {
@@ -500,7 +570,7 @@ export function MainScreen() {
     if (audioRef.current) {
       setAudioElement(audioRef.current);
     }
-  }, [activeSourceMode]);
+  }, [activeSourceMode, currentItem]);
 
   useEffect(() => {
     if (activeTab !== "radio-list" || !showRadioListTab) {
@@ -558,6 +628,41 @@ export function MainScreen() {
     localStorage.setItem("prompt-play-theme", activeTheme);
   }, [activeTheme]);
 
+  useEffect(() => {
+    localStorage.setItem(
+      MUSIC_LIBRARY_STORAGE_KEY,
+      JSON.stringify(musicLibraries),
+    );
+  }, [musicLibraries]);
+
+  useEffect(() => {
+    const storedLibraries = readStoredMusicLibraries();
+
+    if (storedLibraries.length === 0) {
+      return;
+    }
+
+    let isMounted = true;
+
+    Promise.all(
+      storedLibraries.map((library) =>
+        window.App.scanMusicFolder(library.path),
+      ),
+    )
+      .then((libraries) => {
+        if (isMounted) {
+          setMusicLibraries(libraries);
+        }
+      })
+      .catch(() => {
+        // Keep the stored library if a path is temporarily unavailable.
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const addToHistory = useCallback((command: string) => {
     setCommandHistory((prev) => [...prev.slice(-30), command]);
   }, []);
@@ -585,6 +690,12 @@ export function MainScreen() {
     addToHistory("[OK] Radio list tab closed");
   }, [addToHistory]);
 
+  const closeMusicListTab = useCallback(() => {
+    setShowMusicListTab(false);
+    setActiveTab(previousTabRef.current);
+    addToHistory("[OK] Music lists tab closed");
+  }, [addToHistory]);
+
   const openHelpTab = useCallback(() => {
     previousTabRef.current =
       activeTab === "help" ? previousTabRef.current : activeTab;
@@ -600,6 +711,96 @@ export function MainScreen() {
     setActiveTab("radio-list");
     addToHistory("[INFO] Opened radio list");
   }, [activeTab, addToHistory]);
+
+  const openMusicListTab = useCallback(() => {
+    previousTabRef.current =
+      activeTab === "music-list" ? previousTabRef.current : activeTab;
+    setShowMusicListTab(true);
+    setActiveTab("music-list");
+    addToHistory("[INFO] Opened music lists");
+  }, [activeTab, addToHistory]);
+
+  const storeMusicLibrary = useCallback(
+    (library: MusicLibrary) => {
+      setMusicLibraries((prev) => [
+        library,
+        ...prev.filter((item) => item.path !== library.path),
+      ]);
+      addToHistory(`[OK] Configured music folder: ${library.name}`);
+      addToHistory(`[INFO] Path: ${library.path}`);
+      addToHistory(`[INFO] ${library.musicCount} musics found`);
+    },
+    [addToHistory],
+  );
+
+  const updateLocalItemDuration = useCallback(
+    (item: PlayerQueueItem, nextDuration: number) => {
+      if (item.mode !== "local" || nextDuration <= 0) {
+        return;
+      }
+
+      setCurrentItem((prev) =>
+        prev?.id === item.id ? { ...prev, duration: nextDuration } : prev,
+      );
+      setMusicLibraries((prev) =>
+        prev.map((library) => ({
+          ...library,
+          items: library.items.map((libraryItem) =>
+            libraryItem.id === item.id
+              ? { ...libraryItem, duration: nextDuration }
+              : libraryItem,
+          ),
+        })),
+      );
+    },
+    [],
+  );
+
+  const scanMusicPath = useCallback(
+    async (folderPath: string) => {
+      const path = folderPath.trim();
+
+      if (!path) {
+        addToHistory("[ERROR] Use music -- path pathname");
+        return;
+      }
+
+      setIsLoading(true);
+      addToHistory(`[INFO] Scanning music folder: ${path}`);
+
+      try {
+        const library = await window.App.scanMusicFolder(path);
+        storeMusicLibrary(library);
+        openMusicListTab();
+      } catch {
+        addToHistory(`[ERROR] Could not access music folder: ${path}`);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [addToHistory, openMusicListTab, storeMusicLibrary],
+  );
+
+  const selectMusicFolder = useCallback(async () => {
+    setIsLoading(true);
+    addToHistory("[INFO] Select a folder to scan for musics");
+
+    try {
+      const library = await window.App.selectMusicFolder();
+
+      if (!library) {
+        addToHistory("[INFO] Music folder selection canceled");
+        return;
+      }
+
+      storeMusicLibrary(library);
+      openMusicListTab();
+    } catch {
+      addToHistory("[ERROR] Could not select music folder");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [addToHistory, openMusicListTab, storeMusicLibrary]);
 
   const simulateLoading = useCallback(
     async (
@@ -689,9 +890,7 @@ export function MainScreen() {
         return;
       }
 
-      connectionTimersRef.current = [
-        window.setTimeout(startPlaybackAfterConnected, 800),
-      ];
+      startPlaybackAfterConnected();
     },
     [activeSourceMode, addToHistory, clearConnectionTimers],
   );
@@ -797,17 +996,25 @@ export function MainScreen() {
 
   const handleCommand = useCallback(
     (command: string) => {
-      const cmd = command.toLowerCase().trim();
+      const rawCommand = command.trim();
+      const cmd = rawCommand.toLowerCase();
+      const musicPathMatch = /^(music|radio)\s+--\s*path\s+(.+)$/i.exec(
+        rawCommand,
+      );
 
       if (cmd === ":q") {
         if (activeTab === "help" && showHelpTab) {
           closeHelpTab();
         } else if (activeTab === "radio-list" && showRadioListTab) {
           closeRadioListTab();
+        } else if (activeTab === "music-list" && showMusicListTab) {
+          closeMusicListTab();
         } else if (showHelpTab) {
           closeHelpTab();
         } else if (showRadioListTab) {
           closeRadioListTab();
+        } else if (showMusicListTab) {
+          closeMusicListTab();
         } else {
           addToHistory("[INFO] No temporary tab is open");
         }
@@ -860,6 +1067,15 @@ export function MainScreen() {
         applyTheme(themeId);
       } else if (cmd === "pp music" || cmd === "music") {
         selectSource("local");
+      } else if (musicPathMatch) {
+        selectSource("local");
+        void scanMusicPath(musicPathMatch[2]);
+      } else if (cmd === "music config") {
+        selectSource("local");
+        void selectMusicFolder();
+      } else if (cmd === "music list") {
+        selectSource("local");
+        openMusicListTab();
       } else if (cmd === "pp radio" || cmd === "radio" || cmd === "fm") {
         selectSource("radio");
       } else if (
@@ -952,6 +1168,12 @@ export function MainScreen() {
           return;
         }
 
+        if (listedItems.length === 0 && activeSourceMode === "local") {
+          addToHistory("[INFO] no recent musics to listen");
+          addToHistory("[HINT] type music -- path pathname to config");
+          return;
+        }
+
         listedItems.forEach((item, index) => {
           const prefix = currentItem?.id === item.id ? "▶" : " ";
           const context =
@@ -1019,15 +1241,19 @@ export function MainScreen() {
       applyTheme,
       activeTab,
       closeHelpTab,
+      closeMusicListTab,
       closeRadioListTab,
       currentItem,
       navigate,
       openHelpTab,
+      openMusicListTab,
       openRadioListTab,
       playItem,
       nextItem,
       prevItem,
       selectSource,
+      scanMusicPath,
+      selectMusicFolder,
       volume,
       addToHistory,
       clearConnectionTimers,
@@ -1036,6 +1262,7 @@ export function MainScreen() {
       handleVolumeChange,
       isConnected,
       showHelpTab,
+      showMusicListTab,
       showRadioListTab,
       tabs,
       recentRadioItems,
@@ -1098,7 +1325,15 @@ export function MainScreen() {
 
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
     const handleLoadedMetadata = () => {
-      setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
+      const nextDuration = Number.isFinite(audio.duration)
+        ? Math.round(audio.duration)
+        : 0;
+
+      setDuration(nextDuration);
+
+      if (currentItem) {
+        updateLocalItemDuration(currentItem, nextDuration);
+      }
     };
     const handleEnded = () => {
       addToHistory("[INFO] Item ended");
@@ -1114,7 +1349,7 @@ export function MainScreen() {
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("ended", handleEnded);
     };
-  }, [nextItem, addToHistory]);
+  }, [currentItem, nextItem, addToHistory, updateLocalItemDuration]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -1123,9 +1358,13 @@ export function MainScreen() {
       return;
     }
 
-    audio.src = normalizeAudioSrc(currentItem.src);
+    const nextSrc = normalizeAudioSrc(currentItem.src);
     audio.volume = volumeRef.current;
-    audio.load();
+
+    if (audio.src !== nextSrc && audio.currentSrc !== nextSrc) {
+      audio.src = nextSrc;
+      audio.load();
+    }
   }, [currentItem]);
 
   useEffect(() => {
@@ -1148,10 +1387,17 @@ export function MainScreen() {
 
     if (isPlaying) {
       audio.play().catch((error: unknown) => {
+        if (isExpectedPlaybackAbort(error)) {
+          return;
+        }
+
+        const errorMessage = getPlaybackErrorMessage(error);
+
         console.error("[audio] playback failed:", error);
         clearConnectionTimers();
         setIsPlaying(false);
-        addToHistory("[ERROR] Failed to play audio");
+        addToHistory(`[ERROR] Failed to play audio: ${errorMessage}`);
+        addToHistory(`[ERROR] Source: ${audio.currentSrc || audio.src}`);
       });
     } else {
       audio.pause();
@@ -1191,6 +1437,7 @@ export function MainScreen() {
       case "controls":
         return (
           <PlayerControls
+            currentItem={currentItem}
             currentTime={currentTime}
             duration={duration}
             isPlaying={isPlaying}
@@ -1214,6 +1461,8 @@ export function MainScreen() {
             scrollContainerRef={radioListScrollRef}
           />
         );
+      case "music-list":
+        return <MusicListTab libraries={musicLibraries} />;
       case "help":
         return <HelpTab source={activeSource} />;
       default:
@@ -1275,7 +1524,12 @@ export function MainScreen() {
             />
           </div>
 
-          <audio key={activeSourceMode} preload="metadata" ref={audioRef}>
+          <audio
+            crossOrigin="anonymous"
+            key={activeSourceMode}
+            preload="metadata"
+            ref={audioRef}
+          >
             <track kind="captions" />
           </audio>
         </div>
