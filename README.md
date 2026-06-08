@@ -14,7 +14,7 @@ YouTube playlist sources from one shared player UI.
 - Source-aware player controls, seek handling, status footer, and visualizer.
 - Terminal commands for playback, sources, volume, tabs, themes, and app
   navigation.
-- Theme picker with multiple terminal-inspired themes.
+- Theme picker with terminal-inspired themes, each with its own monospace font.
 
 ## Requirements
 
@@ -119,6 +119,24 @@ Tabs and utility:
 | `pp home`, `pp exit`, `home`, or `exit` | Return to first access. |
 
 See [commands.md](commands.md) for the full command reference.
+
+## Themes
+
+Themes can be selected with `theme list`, `ls -th`, or `theme use [theme]`.
+Each theme applies its own font family through the shared terminal typography
+tokens.
+
+| Theme | Command id | Font family |
+| --- | --- | --- |
+| Default | `default` | DM Mono |
+| Tokyo Night | `tokyo-night` | Space Mono |
+| Dark Soul | `dark-soul` | Datatype |
+| Dark Petroleum Blue | `dark-petroleum-blue` | Chivo Mono |
+| Shell Pink | `shell-pink` | Lekton |
+| Synthwave | `synthwave` | Cousine |
+
+Dark Soul and Shell Pink use a slightly larger text scale and line height so
+Datatype and Lekton remain readable in the terminal interface.
 
 ## Project Structure
 

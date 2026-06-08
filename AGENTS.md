@@ -51,6 +51,29 @@ duration from browser `loadedmetadata` when available. Stored libraries live in
 `localStorage` under `prompt-play-music-libraries` and are refreshed on player
 startup.
 
+## Theme Typography
+
+Theme font families and text scale variables live in `src/renderer/globals.css`,
+while available theme names and ids live in `src/renderer/lib/themes.ts`. Keep
+terminal UI components on Tailwind typography utilities such as `font-mono`,
+`text-xs`, `text-sm`, and `text-base` so theme changes can be made centrally.
+
+Current theme font mapping:
+
+| Theme | Font family |
+| --- | --- |
+| Default | DM Mono |
+| Tokyo Night | Space Mono |
+| Dark Soul | Datatype |
+| Dark Petroleum Blue | Chivo Mono |
+| Shell Pink | Lekton |
+| Synthwave | Cousine |
+
+Theme font files are loaded from Google Fonts in `src/renderer/index.html`.
+Dark Soul and Shell Pink use larger theme-specific text scale variables in
+`globals.css` because Datatype and Lekton render visually smaller and tighter
+than the other monospace fonts.
+
 ## Build, Test, and Development Commands
 
 Use Yarn 1.22.22, as declared in `package.json`.
