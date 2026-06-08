@@ -223,6 +223,63 @@ function clampVolumePercent(volumePercent: number): number {
   return Math.max(0, Math.min(100, volumePercent));
 }
 
+function getRandomQueueIndex(itemCount: number, currentIndex: number): number {
+  if (itemCount <= 1) {
+    return 0;
+  }
+
+  let nextIndex = currentIndex;
+
+  while (nextIndex === currentIndex) {
+    nextIndex = Math.floor(Math.random() * itemCount);
+  }
+
+  return nextIndex;
+}
+
+function normalizeCommand(command: string): string {
+  return command
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function getSourceCommandMode(
+  cmd: string,
+  pathCommandSource: string | undefined,
+): PlayerSourceMode | null {
+  if (
+    cmd === "pp music" ||
+    cmd === "music" ||
+    cmd === "music config" ||
+    cmd === "music list" ||
+    pathCommandSource === "music"
+  ) {
+    return "local";
+  }
+
+  if (
+    cmd === "pp radio" ||
+    cmd === "radio" ||
+    cmd === "fm" ||
+    cmd === "radio list" ||
+    cmd === "ls -ra" ||
+    pathCommandSource === "radio"
+  ) {
+    return "radio";
+  }
+
+  return null;
+}
+
+function sourceCommandLabel(mode: PlayerSourceMode): string {
+  if (mode === "local") {
+    return "music";
+  }
+
+  return mode;
+}
+
 function HelpTab({ source }: { source: PlayerSource }) {
   const sourceCommands: Record<PlayerSourceMode, string[]> = {
     local: [
@@ -236,6 +293,8 @@ function HelpTab({ source }: { source: PlayerSource }) {
       "list",
       "next",
       "prev",
+      "aleatorio",
+      "repetir musica",
     ],
     radio: [
       "radio",
@@ -248,8 +307,19 @@ function HelpTab({ source }: { source: PlayerSource }) {
       "list",
       "next",
       "prev",
+      "aleatorio",
+      "repetir musica",
     ],
-    yt: ["source yt", "play", "play 1", "list", "next", "prev"],
+    yt: [
+      "source yt",
+      "play",
+      "play 1",
+      "list",
+      "next",
+      "prev",
+      "aleatorio",
+      "repetir musica",
+    ],
   };
 
   return (
@@ -288,11 +358,13 @@ function HelpTab({ source }: { source: PlayerSource }) {
 
         <section className="space-y-2">
           <h2 className="text-terminal-yellow text-xs">Volume Commands</h2>
-          {["vol 0-100", "vol +10", "vol -10"].map((command) => (
-            <div className="text-terminal-white" key={command}>
-              {command}
-            </div>
-          ))}
+          {["vol 0-100", "vol +10", "vol -10", "mute", "unmute"].map(
+            (command) => (
+              <div className="text-terminal-white" key={command}>
+                {command}
+              </div>
+            ),
+          )}
         </section>
       </div>
 
@@ -477,6 +549,8 @@ export function MainScreen() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.7);
+  const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
+  const [isRepeatEnabled, setIsRepeatEnabled] = useState(false);
   const [activeTab, setActiveTab] = useState("tracks");
   const [showHelpTab, setShowHelpTab] = useState(false);
   const [showRadioListTab, setShowRadioListTab] = useState(false);
@@ -496,6 +570,7 @@ export function MainScreen() {
   const previousTabRef = useRef("tracks");
   const radioListScrollRef = useRef<HTMLDivElement>(null);
   const volumeRef = useRef(volume);
+  const previousVolumeRef = useRef(volume);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
     null,
   );
@@ -924,10 +999,13 @@ export function MainScreen() {
     const currentIndex = activeItems.findIndex(
       (item) => item.id === currentItem.id,
     );
-    const nextIndex = (currentIndex + 1) % activeItems.length;
+    const nextIndex =
+      isShuffleEnabled && activeItems.length > 1
+        ? getRandomQueueIndex(activeItems.length, currentIndex)
+        : (currentIndex + 1) % activeItems.length;
     addToHistory("$ next");
     playItem(activeItems[nextIndex]);
-  }, [activeItems, currentItem, playItem, addToHistory]);
+  }, [activeItems, currentItem, isShuffleEnabled, playItem, addToHistory]);
 
   const prevItem = useCallback(() => {
     if (!currentItem || activeItems.length === 0) {
@@ -951,6 +1029,10 @@ export function MainScreen() {
   }, []);
 
   const handleVolumeChange = useCallback((newVolume: number) => {
+    if (newVolume > 0) {
+      previousVolumeRef.current = newVolume;
+    }
+
     volumeRef.current = newVolume;
     setVolume(newVolume);
 
@@ -958,6 +1040,36 @@ export function MainScreen() {
       audioRef.current.volume = newVolume;
     }
   }, []);
+
+  const muteVolume = useCallback(() => {
+    if (volumeRef.current > 0) {
+      previousVolumeRef.current = volumeRef.current;
+    }
+
+    handleVolumeChange(0);
+  }, [handleVolumeChange]);
+
+  const unmuteVolume = useCallback(() => {
+    handleVolumeChange(previousVolumeRef.current || 0.7);
+  }, [handleVolumeChange]);
+
+  const toggleShuffle = useCallback(() => {
+    setIsShuffleEnabled((prev) => {
+      const nextValue = !prev;
+      addToHistory(`[OK] Aleatorio ${nextValue ? "enabled" : "disabled"}`);
+      return nextValue;
+    });
+  }, [addToHistory]);
+
+  const toggleRepeat = useCallback(() => {
+    setIsRepeatEnabled((prev) => {
+      const nextValue = !prev;
+      addToHistory(
+        `[OK] Repetir musica ${nextValue ? "enabled" : "disabled"}`,
+      );
+      return nextValue;
+    });
+  }, [addToHistory]);
 
   const applyTheme = useCallback(
     (themeId: string) => {
@@ -997,8 +1109,8 @@ export function MainScreen() {
   const handleCommand = useCallback(
     (command: string) => {
       const rawCommand = command.trim();
-      const cmd = rawCommand.toLowerCase();
-      const musicPathMatch = /^(music|radio)\s+--\s*path\s+(.+)$/i.exec(
+      const cmd = normalizeCommand(rawCommand);
+      const pathCommandMatch = /^(music|radio)\s+--\s*path\s+(.+)$/i.exec(
         rawCommand,
       );
 
@@ -1028,6 +1140,26 @@ export function MainScreen() {
       }
 
       addToHistory(`$ ${command}`);
+
+      const sourceCommandMode = getSourceCommandMode(
+        cmd,
+        pathCommandMatch?.[1]?.toLowerCase(),
+      );
+
+      if (sourceCommandMode && sourceCommandMode !== activeSourceMode) {
+        addToHistory(
+          `[ERROR] Current mode is ${sourceCommandLabel(activeSourceMode)}.`,
+        );
+        addToHistory(
+          `[HINT] Only ${sourceCommandLabel(
+            activeSourceMode,
+          )} commands are supported in this mode.`,
+        );
+        addToHistory(
+          `[HINT] Use 'source ${sourceCommandMode}' to switch modes.`,
+        );
+        return;
+      }
 
       if (cmd === "zsh-player --init" || cmd === "init") {
         simulateLoading(
@@ -1067,9 +1199,12 @@ export function MainScreen() {
         applyTheme(themeId);
       } else if (cmd === "pp music" || cmd === "music") {
         selectSource("local");
-      } else if (musicPathMatch) {
+      } else if (pathCommandMatch?.[1].toLowerCase() === "music") {
         selectSource("local");
-        void scanMusicPath(musicPathMatch[2]);
+        void scanMusicPath(pathCommandMatch[2]);
+      } else if (pathCommandMatch?.[1].toLowerCase() === "radio") {
+        addToHistory("[ERROR] Radio path configuration is not available");
+        addToHistory("[HINT] Use 'radio list' or 'ls -ra' to see all radios");
       } else if (cmd === "music config") {
         selectSource("local");
         void selectMusicFolder();
@@ -1136,8 +1271,16 @@ export function MainScreen() {
         nextItem();
       } else if (cmd === "prev" || cmd === "p") {
         prevItem();
+      } else if (cmd === "aleatorio" || cmd === "shuffle") {
+        toggleShuffle();
+      } else if (
+        cmd === "repetir" ||
+        cmd === "repetir musica" ||
+        cmd === "repeat"
+      ) {
+        toggleRepeat();
       } else if (cmd.startsWith("play ")) {
-        const query = cmd.slice(5).replace(/"/g, "");
+        const query = normalizeCommand(rawCommand.slice(5).replace(/"/g, ""));
         const itemIndex = Number.parseInt(query, 10);
         const found =
           Number.isInteger(itemIndex) &&
@@ -1146,8 +1289,8 @@ export function MainScreen() {
             ? activeItems[itemIndex - 1]
             : activeItems.find(
                 (item) =>
-                  item.title.toLowerCase().includes(query) ||
-                  item.artist.toLowerCase().includes(query),
+                  normalizeCommand(item.title).includes(query) ||
+                  normalizeCommand(item.artist).includes(query),
               );
 
         if (found) {
@@ -1195,11 +1338,25 @@ export function MainScreen() {
           );
           addToHistory(`[STATUS] Volume: ${Math.round(volume * 100)}%`);
           addToHistory(
+            `[STATUS] Aleatorio: ${isShuffleEnabled ? "on" : "off"}`,
+          );
+          addToHistory(
+            `[STATUS] Repetir musica: ${isRepeatEnabled ? "on" : "off"}`,
+          );
+          addToHistory(
             `[STATUS] Audio API: ${isConnected ? "Connected" : "Procedural"}`,
           );
         } else {
           addToHistory("[STATUS] No item is playing");
         }
+      } else if (cmd === "mute") {
+        muteVolume();
+        addToHistory("[OK] Volume muted");
+      } else if (cmd === "unmute") {
+        unmuteVolume();
+        addToHistory(
+          `[OK] Volume restored to ${Math.round(volumeRef.current * 100)}%`,
+        );
       } else if (cmd.startsWith("vol ")) {
         const volumeInput = cmd.slice(4).trim();
         const relativeMatch = /^([+-])\s*(\d+)$/.exec(volumeInput);
@@ -1255,11 +1412,17 @@ export function MainScreen() {
       scanMusicPath,
       selectMusicFolder,
       volume,
+      isShuffleEnabled,
+      isRepeatEnabled,
       addToHistory,
       clearConnectionTimers,
       simulateLoading,
       isLoading,
       handleVolumeChange,
+      muteVolume,
+      unmuteVolume,
+      toggleShuffle,
+      toggleRepeat,
       isConnected,
       showHelpTab,
       showMusicListTab,
@@ -1337,6 +1500,12 @@ export function MainScreen() {
     };
     const handleEnded = () => {
       addToHistory("[INFO] Item ended");
+      if (isRepeatEnabled && currentItem) {
+        addToHistory("[INFO] Repeating current item");
+        playItem(currentItem);
+        return;
+      }
+
       nextItem();
     };
 
@@ -1349,7 +1518,14 @@ export function MainScreen() {
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("ended", handleEnded);
     };
-  }, [currentItem, nextItem, addToHistory, updateLocalItemDuration]);
+  }, [
+    currentItem,
+    isRepeatEnabled,
+    nextItem,
+    playItem,
+    addToHistory,
+    updateLocalItemDuration,
+  ]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -1441,10 +1617,15 @@ export function MainScreen() {
             currentTime={currentTime}
             duration={duration}
             isPlaying={isPlaying}
+            isRepeatEnabled={isRepeatEnabled}
+            isShuffleEnabled={isShuffleEnabled}
             onNext={nextItem}
             onPrev={prevItem}
             onSeek={handleSeek}
+            onToggleMute={volume > 0 ? muteVolume : unmuteVolume}
             onTogglePlay={togglePlay}
+            onToggleRepeat={toggleRepeat}
+            onToggleShuffle={toggleShuffle}
             onVolumeChange={handleVolumeChange}
             source={activeSource}
             volume={volume}

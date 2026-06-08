@@ -24,6 +24,8 @@ Reference for commands accepted by the Prompt Play terminal input.
 | `stop` | Pauses playback. |
 | `next` or `n` | Plays the next item from the active source. |
 | `prev` or `p` | Plays the previous item from the active source. |
+| `aleatorio` or `shuffle` | Toggles random playback order for the active source. |
+| `repetir musica`, `repetir música`, `repetir`, or `repeat` | Toggles repeat for the current item. |
 
 ## Sources
 
@@ -36,6 +38,12 @@ Reference for commands accepted by the Prompt Play terminal input.
 | `pp music` or `music` | Switches the player to local music mode. |
 | `pp radio`, `radio`, or `fm` | Switches the player to radio mode. |
 
+Source-specific commands only work in their active mode. For example, radio
+commands such as `radio list` and `fm` are rejected while the player is in
+music mode, and music commands such as `music config` and `music list` are
+rejected while the player is in radio mode. Use `source local`, `source radio`,
+or `source yt` to change modes.
+
 ## Library
 
 | Command | Description |
@@ -43,11 +51,11 @@ Reference for commands accepted by the Prompt Play terminal input.
 | `list` or `ls` | Lists items from the active source. |
 | `ls -la` | Opens the active source list tab. For radio, this tab shows the 5 most recently played radios. |
 | `music -- path [path]` | Scans and stores a local music folder. Relative paths are resolved from the app, home, `~/Music`, and `~/Downloads`. |
-| `radio -- path [path]` | Alias for local folder scanning kept for terminal-style input compatibility. |
+| `radio -- path [path]` | Not supported. Radio stations are configured in `src/shared/data/radios.ts`; use `radio list` or `ls -ra` to view them. |
 | `music config` | Opens the native folder picker and stores the selected music folder. |
 | `music list` | Opens the temporary `music lists` tab. When no library is configured, it shows suggested `~/Music` and `~/Downloads` paths. |
-| `radio list` or `ls -ra` | Switches to radio and opens a temporary `radio list` tab with every configured radio. |
-| `status` or `info` | Shows active source, current item, creator/city/channel, volume, and audio API status. |
+| `radio list` or `ls -ra` | Opens a temporary `radio list` tab with every configured radio. |
+| `status` or `info` | Shows active source, current item, creator/city/channel, volume, random/repeat state, and audio API status. |
 
 For radio sources, `list`, `ls`, and the `ls -la` tab show only the 5 most
 recently played radios. Use `radio list` or `ls -ra` to verify the full radio
@@ -65,6 +73,8 @@ reconfiguring the folder.
 | `vol [0-100]` | Sets the player volume. Example: `vol 70`. |
 | `vol +[number]` | Increases the current volume by a relative amount. Example: `vol +10`. |
 | `vol -[number]` | Decreases the current volume by a relative amount. Example: `vol -10`. |
+| `mute` | Mutes the player and remembers the previous non-zero volume. |
+| `unmute` | Restores the volume saved before muting, or 70% when no previous volume exists. |
 
 ## Tabs
 
