@@ -16,12 +16,17 @@ interface PlayerControlsProps {
   isPlaying: boolean
   currentTime: number
   duration: number
+  isRepeatEnabled: boolean
+  isShuffleEnabled: boolean
   volume: number
   source: PlayerSource
   onTogglePlay: () => void
   onNext: () => void
   onPrev: () => void
+  onToggleRepeat: () => void
+  onToggleShuffle: () => void
   onSeek: (time: number) => void
+  onToggleMute: () => void
   onVolumeChange: (volume: number) => void
 }
 
@@ -41,12 +46,17 @@ export function PlayerControls({
   isPlaying,
   currentTime,
   duration,
+  isRepeatEnabled,
+  isShuffleEnabled,
   volume,
   source,
   onTogglePlay,
   onNext,
   onPrev,
+  onToggleRepeat,
+  onToggleShuffle,
   onSeek,
+  onToggleMute,
   onVolumeChange,
 }: PlayerControlsProps) {
   const canSeek = source.supportsSeek && duration > 0
@@ -97,8 +107,12 @@ export function PlayerControls({
 
         <div className="flex items-center justify-center gap-4">
           <button
-            aria-label="Shuffle"
-            className="p-2 text-terminal-gray transition-colors hover:text-terminal-cyan"
+            aria-label="Aleatorio"
+            aria-pressed={isShuffleEnabled}
+            className={`p-2 transition-colors hover:text-terminal-cyan ${
+              isShuffleEnabled ? 'text-terminal-cyan' : 'text-terminal-gray'
+            }`}
+            onClick={onToggleShuffle}
             type="button"
           >
             <Shuffle className="h-5 w-5" />
@@ -136,8 +150,12 @@ export function PlayerControls({
           </button>
 
           <button
-            aria-label="Repetir"
-            className="p-2 text-terminal-gray transition-colors hover:text-terminal-cyan"
+            aria-label="Repetir musica"
+            aria-pressed={isRepeatEnabled}
+            className={`p-2 transition-colors hover:text-terminal-cyan ${
+              isRepeatEnabled ? 'text-terminal-cyan' : 'text-terminal-gray'
+            }`}
+            onClick={onToggleRepeat}
             type="button"
           >
             <Repeat className="h-5 w-5" />
@@ -178,7 +196,7 @@ export function PlayerControls({
           <button
             aria-label={volume > 0 ? 'Mute' : 'Unmute'}
             className="p-1 text-terminal-gray transition-colors hover:text-terminal-white"
-            onClick={() => onVolumeChange(volume > 0 ? 0 : 0.7)}
+            onClick={onToggleMute}
             type="button"
           >
             {volume > 0 ? (
