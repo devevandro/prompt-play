@@ -48,6 +48,7 @@ const COMMANDS = [
   'theme use default',
   'theme use tokyo-night',
   'theme use dark-soul',
+  'theme use synthwave',
   'theme use dark-petroleum-blue',
   'theme use shell-pink',
   'zsh-player --init',
