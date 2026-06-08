@@ -9,9 +9,10 @@ import {
   VolumeX,
 } from 'lucide-react'
 
-import type { PlayerSource } from '../../../shared/types'
+import type { PlayerQueueItem, PlayerSource } from '../../../shared/types'
 
 interface PlayerControlsProps {
+  currentItem: PlayerQueueItem | null
   isPlaying: boolean
   currentTime: number
   duration: number
@@ -36,6 +37,7 @@ function formatTime(seconds: number): string {
 }
 
 export function PlayerControls({
+  currentItem,
   isPlaying,
   currentTime,
   duration,
@@ -81,7 +83,18 @@ export function PlayerControls({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col justify-center space-y-8 p-6">
+      <div className="flex flex-1 flex-col justify-center space-y-6 p-6">
+        <div className="mx-auto w-full max-w-xl text-center font-mono">
+          <div className="truncate text-terminal-cyan text-sm">
+            {currentItem?.title ?? source.emptyTitle}
+          </div>
+          <div className="mt-1 truncate text-terminal-gray text-xs">
+            {currentItem
+              ? `${source.creatorLabel}: ${currentItem.artist}`
+              : source.emptyHint}
+          </div>
+        </div>
+
         <div className="flex items-center justify-center gap-4">
           <button
             aria-label="Shuffle"
