@@ -43,6 +43,7 @@ export function StatusFooter({
     controls: 'player-controls ready',
     'radio-list': 'radio list open, press :q to close',
     'music-list': 'music lists open, press :q to close',
+    'youtube-list': 'yt playlists open, press :q to close',
     help: 'help open, press :q to close',
   }
 

@@ -1,8 +1,8 @@
 # Prompt Play
 
 Prompt Play is an Electron desktop music player with a terminal-style
-interface. It supports local music files, online radio streams, and placeholder
-YouTube playlist sources from one shared player UI.
+interface. It supports local music files, online radio streams, and YouTube
+playlist sources from one shared player UI.
 
 ## Features
 
@@ -11,9 +11,12 @@ YouTube playlist sources from one shared player UI.
 - Local playback through a secure Electron `local-audio:` protocol with range
   requests and CORS support.
 - Online radio mode with a full radio-list tab and recently played radio list.
+- YouTube playlist mode with API-key setup, playlist caching, embedded video
+  playback, volume controls, and automatic advance.
 - Source-aware player controls, seek handling, status footer, and visualizer.
 - Terminal commands for playback, sources, volume, tabs, themes, and app
   navigation.
+- Shuffle, repeat, mute, and unmute controls across supported sources.
 - Theme picker with terminal-inspired themes, each with its own monospace font.
 
 ## Requirements
@@ -66,10 +69,11 @@ First access:
 
 | Command | Action |
 | --- | --- |
-| `pp music` or `music` | Open local music mode. |
-| `pp radio` or `radio` | Open radio mode. |
+| `music` | Open local music mode. |
+| `radio` | Open radio mode. |
+| `yt` | Open YouTube playlist mode. |
 | `help` | Show the first access hint. |
-| `pp quit` | Close the app. |
+| `quit` | Close the app. |
 
 Playback:
 
@@ -82,6 +86,8 @@ Playback:
 | `resume` | Resume playback. |
 | `next` or `n` | Play the next item. |
 | `prev` or `p` | Play the previous item. |
+| `shuffle` | Toggle random playback order. |
+| `repeat` | Toggle repeat for the current item. |
 
 Local music:
 
@@ -102,21 +108,33 @@ Sources and radio:
 | `source yt` | Switch to YouTube playlists. |
 | `radio list` or `ls -ra` | Open the full temporary radio list tab. |
 
+YouTube:
+
+| Command | Action |
+| --- | --- |
+| `yt` | Switch to YouTube mode. |
+| `yt auth` | Start the interactive YouTube API key prompt. |
+| `yt auth clear` | Remove the saved YouTube API key. |
+| `yt add [playlist-url-or-id]` | Fetch and cache a YouTube playlist. |
+| `yt list` | Open the temporary saved-playlist list tab. |
+| `play [number]` in `yt playlists` | Select and start a saved playlist. |
+
 Tabs and utility:
 
 | Command | Action |
 | --- | --- |
-| `pp open now-playing` | Open `cat now_playing.txt`. |
-| `pp open visualizer` | Open `./visualizer --mode=spectrum`. |
-| `pp open controls` | Open `./player-controls`. |
+| `open now-playing` | Open `cat now_playing.txt`. |
+| `open visualizer` | Open `./visualizer --mode=spectrum`. |
+| `open controls` | Open `./player-controls`. |
 | `tab [number]` | Open a tab by position. |
 | `theme list` or `ls -th` | Open the theme picker. |
 | `theme use [theme]` | Apply a theme. |
 | `vol 70`, `vol +10`, `vol -10` | Set or adjust volume. |
+| `mute` or `unmute` | Mute playback or restore the previous volume. |
 | `status` or `info` | Show current playback status. |
 | `:q` | Close a temporary tab. |
-| `pp clear` | Clear terminal history. |
-| `pp home`, `pp exit`, `home`, or `exit` | Return to first access. |
+| `clear` | Clear terminal history. |
+| `home` or `exit` | Return to first access. |
 
 See [commands.md](commands.md) for the full command reference.
 
@@ -155,6 +173,16 @@ Local files are not loaded with direct `file://` URLs. The main process serves
 them through `local-audio:` so Chromium can stream them with byte ranges and the
 renderer can use the Web Audio API for visualization. The renderer CSP in
 `src/renderer/index.html` must explicitly allow `local-audio:` in `media-src`.
+
+## YouTube Notes
+
+YouTube settings are stored in `localStorage` under `prompt-play-youtube`.
+`yt auth` prompts for the API key, and `yt add [playlist-url-or-id]` accepts
+either a full playlist URL or a plain playlist id. Playlist loading follows
+YouTube pagination, stores total video counts, caches title/channel/video id and
+duration metadata, and renders the selected playlist in `ls -la`. The embedded
+YouTube player stays mounted while moving between YouTube tabs so playback can
+continue and advance automatically.
 
 ## Documentation
 

@@ -1,3 +1,5 @@
+import type { RefObject } from 'react'
+
 import type { PlayerQueueItem, PlayerSource } from '../../../shared/types'
 
 interface TrackListProps {
@@ -5,6 +7,7 @@ interface TrackListProps {
   isPlaying: boolean
   items: PlayerQueueItem[]
   onSelectItem: (item: PlayerQueueItem) => void
+  scrollContainerRef?: RefObject<HTMLDivElement | null>
   source: PlayerSource
 }
 
@@ -34,6 +37,7 @@ export function TrackList({
   isPlaying,
   items,
   onSelectItem,
+  scrollContainerRef,
   source,
 }: TrackListProps) {
   return (
@@ -55,7 +59,10 @@ export function TrackList({
         <span className="col-span-2 text-right">{source.timeLabel}</span>
       </div>
 
-      <div className="custom-scrollbar flex-1 overflow-y-auto">
+      <div
+        className="custom-scrollbar flex-1 overflow-y-auto"
+        ref={scrollContainerRef}
+      >
         {items.length === 0 && (
           <div className="space-y-2 px-4 py-6 font-mono text-xs">
             <div className="text-terminal-yellow">{source.emptyTitle}</div>

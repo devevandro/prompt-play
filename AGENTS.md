@@ -22,14 +22,16 @@ hard-coding music-file labels such as track, artist, album, or duration.
 When adding player behavior, update the source configuration in
 `src/renderer/screens/main.tsx` and keep commands working against the active
 source. The current commands are `sources`, `source local`, `source radio`,
-`source yt`, `pp music`, `music`, `pp radio`, `radio`, `fm`,
+`source yt`, `music`, `radio`, `fm`, `yt`, `yt list`, `yt auth`,
+`yt auth clear`, `yt add [playlist-url-or-id]`,
 `music -- path [path]`, `radio -- path [path]`, `music config`, `music list`,
 `play`, `play [number]`, `play [name]`, `resume`, `pause`, `stop`, `list`,
-`ls`, `ls -la`, `status`, `info`, `next`, `n`, `prev`, `p`, `vol [0-100]`,
-`vol +[number]`, `vol -[number]`, `theme list`, `ls -th`,
-`theme use [theme]`, `radio list`, `ls -ra`, `pp open now-playing`,
-`pp open visualizer`, `pp open controls`, `tab [number]`, `help`, `h`, `?`,
-and `:q`.
+`ls`, `ls -la`, `status`, `info`, `next`, `n`, `prev`, `p`, `shuffle`,
+`repeat`, `vol [0-100]`, `vol +[number]`, `vol -[number]`, `mute`,
+`unmute`, `theme list`, `ls -th`, `theme use [theme]`, `radio list`,
+`ls -ra`, `open now-playing`, `open visualizer`, `open controls`,
+`tab [number]`, `home`, `exit`, `quit`, `clear`, `version`, `help`, `h`,
+`?`, and `:q`.
 
 Radio is live streaming and should not expose seek controls; local files and
 YouTube playlists can expose duration and seeking. The radio `ls -la` source
@@ -39,6 +41,23 @@ same temporary-tab pattern as help. Local music folders are configured with
 `music -- path [path]` or `music config`; `music list` opens a temporary
 `music lists` tab and shows suggested `~/Music` and `~/Downloads` paths when no
 library has been stored.
+
+YouTube configuration is stored temporarily in `localStorage` under
+`prompt-play-youtube`. `yt auth` opens an interactive `YouTube API Key:` prompt,
+`yt auth clear` removes the stored key, and `yt add [playlist-url-or-id]`
+accepts either a full playlist URL or a plain playlist id. YouTube playlist
+loading must follow `nextPageToken` pagination, store playlist summaries with
+the total video count from the YouTube `playlists` API, cache video title,
+channel/artist, video id, and duration metadata, and render only the selected
+playlist in the source list. `yt list` opens the temporary `yt playlists` tab;
+from that tab, `play [number]` selects and starts the playlist. YouTube playback
+uses an embedded player in `./player-controls`, keeps playback mounted while
+navigating between YouTube tabs, supports volume/mute commands through the
+iframe API, and advances automatically when the current video ends.
+
+Player tab changes should be terminal-driven through commands such as
+`tab [number]`, `open now-playing`, `open visualizer`, `open controls`, and
+temporary-tab commands. Do not add mouse-only navigation as the primary path.
 
 Local audio files must be played through the privileged `local-audio:` protocol
 registered in `src/main/index.ts`, not directly through `file://`. The protocol

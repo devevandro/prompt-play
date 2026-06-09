@@ -10,9 +10,7 @@ const COMMANDS = [
   'n',
   'prev',
   'p',
-  'aleatorio',
   'shuffle',
-  'repetir musica',
   'repeat',
   'list',
   'ls',
@@ -26,6 +24,11 @@ const COMMANDS = [
   'source local',
   'source radio',
   'source yt',
+  'yt',
+  'yt list',
+  'yt auth',
+  'yt auth clear',
+  'yt add',
   'radio',
   'radio list',
   'fm',
@@ -41,15 +44,11 @@ const COMMANDS = [
   'vol',
   'mute',
   'unmute',
-  'pp music',
-  'pp radio',
-  'pp exit',
-  'pp quit',
-  'pp clear',
-  'pp version',
-  'pp open now-playing',
-  'pp open visualizer',
-  'pp open controls',
+  'clear',
+  'version',
+  'open now-playing',
+  'open visualizer',
+  'open controls',
   'theme list',
   'theme use default',
   'theme use tokyo-night',
@@ -66,6 +65,7 @@ interface TerminalPromptProps {
   onCommand: (command: string) => void
   onArrowNavigation?: (direction: 'down' | 'up') => void
   onCycleTab: () => void
+  promptLabel?: string
   promptContext: string
   themePicker?: {
     activeThemeId: string
@@ -93,6 +93,7 @@ export function TerminalPrompt({
   onCommand,
   onArrowNavigation,
   onCycleTab,
+  promptLabel,
   promptContext,
   themePicker,
 }: TerminalPromptProps) {
@@ -340,9 +341,19 @@ export function TerminalPrompt({
               </div>
             ))}
 
+            {promptLabel && (
+              <div className="px-2 text-terminal-cyan">{promptLabel}</div>
+            )}
+
             <div className="flex items-center gap-2 rounded-md bg-background/35 px-2 py-1 leading-5">
-              <Prompt text={`pp:${promptContext}`} />
-              <Prompt text=">" />
+              {promptLabel ? (
+                <Prompt text=">" />
+              ) : (
+                <>
+                  <Prompt text={promptContext} />
+                  <Prompt text=">" />
+                </>
+              )}
               <div className="relative flex flex-1 items-center">
                 <input
                   autoComplete="off"
