@@ -7,40 +7,40 @@ import {
   SkipForward,
   Volume2,
   VolumeX,
-} from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+} from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
-import type { PlayerQueueItem, PlayerSource } from "../../../shared/types";
+import type { PlayerQueueItem, PlayerSource } from '../../../shared/types'
 
 interface PlayerControlsProps {
-  currentItem: PlayerQueueItem | null;
-  isPlaying: boolean;
-  currentTime: number;
-  duration: number;
-  isRepeatEnabled: boolean;
-  isShuffleEnabled: boolean;
-  volume: number;
-  source: PlayerSource;
-  onTogglePlay: () => void;
-  onNext: () => void;
-  onEnded?: () => void;
-  onPrev: () => void;
-  onToggleRepeat: () => void;
-  onToggleShuffle: () => void;
-  onSeek: (time: number) => void;
-  onToggleMute: () => void;
-  onVolumeChange: (volume: number) => void;
+  currentItem: PlayerQueueItem | null
+  isPlaying: boolean
+  currentTime: number
+  duration: number
+  isRepeatEnabled: boolean
+  isShuffleEnabled: boolean
+  volume: number
+  source: PlayerSource
+  onTogglePlay: () => void
+  onNext: () => void
+  onEnded?: () => void
+  onPrev: () => void
+  onToggleRepeat: () => void
+  onToggleShuffle: () => void
+  onSeek: (time: number) => void
+  onToggleMute: () => void
+  onVolumeChange: (volume: number) => void
 }
 
 function formatTime(seconds: number): string {
   if (Number.isNaN(seconds)) {
-    return "0:00";
+    return '0:00'
   }
 
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
 
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
+  return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
 export function PlayerControls({
@@ -62,153 +62,153 @@ export function PlayerControls({
   onToggleMute,
   onVolumeChange,
 }: PlayerControlsProps) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [isYouTubeFrameReady, setIsYouTubeFrameReady] = useState(false);
-  const canSeek = source.supportsSeek && duration > 0;
-  const progress = canSeek ? (currentTime / duration) * 100 : 0;
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [isYouTubeFrameReady, setIsYouTubeFrameReady] = useState(false)
+  const canSeek = source.supportsSeek && duration > 0
+  const progress = canSeek ? (currentTime / duration) * 100 : 0
   const youtubeEmbedUrl = useMemo(() => {
-    const videoId = currentItem?.videoId ?? currentItem?.src;
+    const videoId = currentItem?.videoId ?? currentItem?.src
 
-    if (source.mode !== "yt" || !videoId) {
-      return "";
+    if (source.mode !== 'yt' || !videoId) {
+      return ''
     }
 
     const params = new URLSearchParams({
-      autoplay: "1",
-      controls: "0",
-      disablekb: "1",
-      enablejsapi: "1",
-      modestbranding: "1",
+      autoplay: '1',
+      controls: '0',
+      disablekb: '1',
+      enablejsapi: '1',
+      modestbranding: '1',
       origin: window.location.origin,
-      playsinline: "1",
-      rel: "0",
-    });
+      playsinline: '1',
+      rel: '0',
+    })
 
-    return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
-  }, [currentItem?.src, currentItem?.videoId, source.mode]);
+    return `https://www.youtube.com/embed/${videoId}?${params.toString()}`
+  }, [currentItem?.src, currentItem?.videoId, source.mode])
   useEffect(() => {
-    setIsYouTubeFrameReady(false);
-  }, [youtubeEmbedUrl]);
+    setIsYouTubeFrameReady(false)
+  }, [youtubeEmbedUrl])
 
   useEffect(() => {
-    if (source.mode !== "yt" || !iframeRef.current || !isYouTubeFrameReady) {
-      return;
+    if (source.mode !== 'yt' || !iframeRef.current || !isYouTubeFrameReady) {
+      return
     }
 
     iframeRef.current.contentWindow?.postMessage(
       JSON.stringify({
-        event: "command",
-        func: "addEventListener",
-        args: ["onStateChange"],
+        event: 'command',
+        func: 'addEventListener',
+        args: ['onStateChange'],
       }),
-      "*",
-    );
+      '*'
+    )
 
     iframeRef.current.contentWindow?.postMessage(
       JSON.stringify({
-        event: "command",
-        func: isPlaying ? "playVideo" : "pauseVideo",
+        event: 'command',
+        func: isPlaying ? 'playVideo' : 'pauseVideo',
         args: [],
       }),
-      "*",
-    );
-  }, [isPlaying, isYouTubeFrameReady, source.mode, youtubeEmbedUrl]);
+      '*'
+    )
+  }, [isPlaying, isYouTubeFrameReady, source.mode, youtubeEmbedUrl])
 
   useEffect(() => {
-    if (source.mode !== "yt") {
-      return;
+    if (source.mode !== 'yt') {
+      return
     }
 
     const handleMessage = (event: MessageEvent) => {
-      if (!event.origin.includes("youtube.com")) {
-        return;
+      if (!event.origin.includes('youtube.com')) {
+        return
       }
 
       try {
         const data =
-          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+          typeof event.data === 'string' ? JSON.parse(event.data) : event.data
 
         const playerState =
-          data?.event === "onStateChange"
+          data?.event === 'onStateChange'
             ? data.info
-            : data?.event === "infoDelivery"
+            : data?.event === 'infoDelivery'
               ? data.info?.playerState
-              : undefined;
+              : undefined
 
         if (playerState === 0 && isPlaying) {
-          onEnded?.();
+          onEnded?.()
         }
       } catch {
         // Ignore non-JSON messages from the embedded player.
       }
-    };
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [isPlaying, onEnded, source.mode]);
-
-  useEffect(() => {
-    if (source.mode !== "yt" || !isYouTubeFrameReady) {
-      return;
     }
 
-    const volumePercent = Math.round(volume * 100);
-    sendYouTubeCommand("setVolume", [volumePercent]);
-    sendYouTubeCommand(volumePercent === 0 ? "mute" : "unMute");
-  }, [isYouTubeFrameReady, source.mode, volume]);
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [isPlaying, onEnded, source.mode])
+
+  useEffect(() => {
+    if (source.mode !== 'yt' || !isYouTubeFrameReady) {
+      return
+    }
+
+    const volumePercent = Math.round(volume * 100)
+    sendYouTubeCommand('setVolume', [volumePercent])
+    sendYouTubeCommand(volumePercent === 0 ? 'mute' : 'unMute')
+  }, [isYouTubeFrameReady, source.mode, volume])
 
   const sendYouTubeCommand = (func: string, args: unknown[] = []) => {
     if (!isYouTubeFrameReady) {
-      return;
+      return
     }
 
     iframeRef.current?.contentWindow?.postMessage(
       JSON.stringify({
-        event: "command",
+        event: 'command',
         func,
         args,
       }),
-      "*",
-    );
-  };
+      '*'
+    )
+  }
 
   const handleProgressClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     if (!canSeek) {
-      return;
+      return
     }
 
-    const rect = event.currentTarget.getBoundingClientRect();
-    const percentage = (event.clientX - rect.left) / rect.width;
+    const rect = event.currentTarget.getBoundingClientRect()
+    const percentage = (event.clientX - rect.left) / rect.width
 
-    if (source.mode === "yt") {
-      sendYouTubeCommand("seekTo", [percentage * duration, true]);
+    if (source.mode === 'yt') {
+      sendYouTubeCommand('seekTo', [percentage * duration, true])
     }
 
-    onSeek(percentage * duration);
-  };
+    onSeek(percentage * duration)
+  }
 
   const handleVolumeClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect();
+    const rect = event.currentTarget.getBoundingClientRect()
     const percentage = Math.max(
       0,
-      Math.min(1, (event.clientX - rect.left) / rect.width),
-    );
+      Math.min(1, (event.clientX - rect.left) / rect.width)
+    )
 
-    onVolumeChange(percentage);
-  };
+    onVolumeChange(percentage)
+  }
 
   return (
     <div className="flex h-full flex-col">
       <div className="px-4 py-3">
         <div className="font-mono text-sm">
-          <span className="text-terminal-green">➜</span>{" "}
-          <span className="text-terminal-cyan">{source.locationLabel}</span>{" "}
+          <span className="text-terminal-green">➜</span>{' '}
+          <span className="text-terminal-cyan">{source.locationLabel}</span>{' '}
           <span className="text-terminal-white">./player-controls</span>
         </div>
       </div>
 
       <div className="flex flex-1 flex-col justify-center space-y-6 p-6">
-        {source.mode === "yt" && (
+        {source.mode === 'yt' && (
           <div className="mx-auto aspect-video w-full max-w-xl overflow-hidden rounded bg-muted">
             {youtubeEmbedUrl ? (
               <iframe
@@ -219,7 +219,7 @@ export function PlayerControls({
                 onLoad={() => setIsYouTubeFrameReady(true)}
                 ref={iframeRef}
                 src={youtubeEmbedUrl}
-                title={currentItem?.title ?? "YouTube player"}
+                title={currentItem?.title ?? 'YouTube player'}
               />
             ) : (
               <div className="flex h-full items-center justify-center font-mono text-terminal-gray text-xs">
@@ -245,7 +245,7 @@ export function PlayerControls({
             aria-label="Shuffle playback"
             aria-pressed={isShuffleEnabled}
             className={`p-2 transition-colors hover:text-terminal-cyan ${
-              isShuffleEnabled ? "text-terminal-cyan" : "text-terminal-gray"
+              isShuffleEnabled ? 'text-terminal-cyan' : 'text-terminal-gray'
             }`}
             onClick={onToggleShuffle}
             type="button"
@@ -263,7 +263,7 @@ export function PlayerControls({
           </button>
 
           <button
-            aria-label={isPlaying ? "Pause" : "Play"}
+            aria-label={isPlaying ? 'Pause' : 'Play'}
             className="rounded-full bg-terminal-green p-5 text-background transition-colors hover:bg-terminal-cyan"
             onClick={onTogglePlay}
             type="button"
@@ -288,7 +288,7 @@ export function PlayerControls({
             aria-label="Repeat current item"
             aria-pressed={isRepeatEnabled}
             className={`p-2 transition-colors hover:text-terminal-cyan ${
-              isRepeatEnabled ? "text-terminal-cyan" : "text-terminal-gray"
+              isRepeatEnabled ? 'text-terminal-cyan' : 'text-terminal-gray'
             }`}
             onClick={onToggleRepeat}
             type="button"
@@ -302,7 +302,7 @@ export function PlayerControls({
             aria-disabled={!canSeek}
             aria-label="Adjust progress"
             className={`group h-2 w-full rounded bg-muted ${
-              canSeek ? "cursor-pointer" : "cursor-not-allowed opacity-60"
+              canSeek ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'
             }`}
             onClick={handleProgressClick}
             type="button"
@@ -314,22 +314,22 @@ export function PlayerControls({
           </button>
 
           <div className="flex justify-between font-mono text-terminal-gray text-xs">
-            <span>{canSeek ? formatTime(currentTime) : "live"}</span>
+            <span>{canSeek ? formatTime(currentTime) : 'live'}</span>
             <span>{canSeek ? formatTime(duration) : source.label}</span>
           </div>
 
           <div className="text-center font-mono text-[11px] text-terminal-gray">
             {canSeek
-              ? `[${"\u2588".repeat(Math.floor(progress / 5))}${"\u2591".repeat(
-                  20 - Math.floor(progress / 5),
+              ? `[${'\u2588'.repeat(Math.floor(progress / 5))}${'\u2591'.repeat(
+                  20 - Math.floor(progress / 5)
                 )}] ${Math.floor(progress)}%`
-              : `[${"\u2588".repeat(20)}] streaming`}
+              : `[${'\u2588'.repeat(20)}] streaming`}
           </div>
         </div>
 
         <div className="flex items-center justify-center gap-3 px-4">
           <button
-            aria-label={volume > 0 ? "Mute" : "Unmute"}
+            aria-label={volume > 0 ? 'Mute' : 'Unmute'}
             className="p-1 text-terminal-gray transition-colors hover:text-terminal-white"
             onClick={onToggleMute}
             type="button"
@@ -364,8 +364,8 @@ export function PlayerControls({
           <kbd className="text-terminal-cyan">space</kbd> play/pause
         </span>
         <span>
-          <kbd className="text-terminal-cyan">←/→</kbd>{" "}
-          {source.supportsSeek ? "seek" : "stream"}
+          <kbd className="text-terminal-cyan">←/→</kbd>{' '}
+          {source.supportsSeek ? 'seek' : 'stream'}
         </span>
         <span>
           <kbd className="text-terminal-cyan">↑/↓</kbd> volume
@@ -375,5 +375,5 @@ export function PlayerControls({
         </span>
       </div>
     </div>
-  );
+  )
 }

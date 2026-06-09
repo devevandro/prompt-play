@@ -1,70 +1,70 @@
-import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Header } from "renderer/components/header";
-import { version } from "../../../package.json";
-import { Prompt } from "renderer/components/prompt";
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Header } from 'renderer/components/header'
+import { version } from '../../../package.json'
+import { Prompt } from 'renderer/components/prompt'
 
 export function HomeScreen() {
-  const navigate = useNavigate();
-  const [input, setInput] = useState("");
-  const [message, setMessage] = useState("Type 'help' to get started.");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate()
+  const [input, setInput] = useState('')
+  const [message, setMessage] = useState("Type 'help' to get started.")
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const focusInput = () => {
-    inputRef.current?.focus();
-  };
+    inputRef.current?.focus()
+  }
 
   useEffect(() => {
-    focusInput();
-  }, []);
+    focusInput()
+  }, [])
 
   const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
+    event.preventDefault()
 
-    const command = input.trim().toLowerCase();
+    const command = input.trim().toLowerCase()
 
     if (!command) {
-      return;
+      return
     }
 
-    if (command === "music") {
-      navigate("/player?source=local");
-      return;
+    if (command === 'music') {
+      navigate('/player?source=local')
+      return
     }
 
-    if (command === "radio") {
-      navigate("/player?source=radio");
-      return;
+    if (command === 'radio') {
+      navigate('/player?source=radio')
+      return
     }
 
-    if (command === "yt") {
-      navigate("/player?source=yt");
-      return;
+    if (command === 'yt') {
+      navigate('/player?source=yt')
+      return
     }
 
-    if (command === "exit") {
-      setMessage("You are already on the first access screen.");
-      setInput("");
-      requestAnimationFrame(focusInput);
-      return;
+    if (command === 'exit') {
+      setMessage('You are already on the first access screen.')
+      setInput('')
+      requestAnimationFrame(focusInput)
+      return
     }
 
-    if (command === "quit") {
-      window.App.quit();
-      return;
+    if (command === 'quit') {
+      window.App.quit()
+      return
     }
 
-    if (command === "help") {
-      setMessage("Type 'music', 'radio', or 'yt' to choose a source.");
-      setInput("");
-      requestAnimationFrame(focusInput);
-      return;
+    if (command === 'help') {
+      setMessage("Type 'music', 'radio', or 'yt' to choose a source.")
+      setInput('')
+      requestAnimationFrame(focusInput)
+      return
     }
 
-    setMessage(`[ERROR] Unknown command: ${input.trim()}`);
-    setInput("");
-    requestAnimationFrame(focusInput);
-  };
+    setMessage(`[ERROR] Unknown command: ${input.trim()}`)
+    setInput('')
+    requestAnimationFrame(focusInput)
+  }
 
   return (
     <>
@@ -104,9 +104,9 @@ export function HomeScreen() {
             <div className="space-y-4">
               <p
                 className={
-                  message.startsWith("[ERROR]")
-                    ? "text-terminal-red"
-                    : "text-terminal-cyan"
+                  message.startsWith('[ERROR]')
+                    ? 'text-terminal-red'
+                    : 'text-terminal-cyan'
                 }
               >
                 {message}
@@ -117,7 +117,7 @@ export function HomeScreen() {
                 <input
                   autoComplete="off"
                   className="min-w-0 flex-1 bg-transparent text-terminal-white caret-terminal-green outline-none placeholder:text-terminal-gray"
-                  onChange={(event) => setInput(event.target.value)}
+                  onChange={event => setInput(event.target.value)}
                   onPointerDown={focusInput}
                   placeholder="music | radio | yt"
                   ref={inputRef}
@@ -130,5 +130,5 @@ export function HomeScreen() {
         </section>
       </main>
     </>
-  );
+  )
 }

@@ -1,17 +1,17 @@
-"use client";
+'use client'
 
-import { Terminal } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Terminal } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 export function Header() {
-  const [mounted, setMounted] = useState(false);
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    setMounted(true)
+  }, [])
 
   if (!mounted) {
-    return null;
+    return null
   }
 
   return (
@@ -29,5 +29,5 @@ export function Header() {
         </div>
       </div>
     </header>
-  );
+  )
 }
