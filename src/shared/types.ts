@@ -42,6 +42,7 @@ export interface PlayerQueueItem {
   album?: string
   duration: number | null
   src: string
+  videoId?: string
   sourceDetail?: string
   details?: {
     label: string

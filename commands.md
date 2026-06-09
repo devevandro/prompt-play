@@ -6,10 +6,11 @@ Reference for commands accepted by the Prompt Play terminal input.
 
 | Command | Description |
 | --- | --- |
-| `pp music` or `music` | Opens the player on the local music library. |
-| `pp radio` or `radio` | Opens the player on FM and web radio streams. |
-| `pp exit` | Keeps the app on the first access screen. |
-| `pp quit` | Closes the application. |
+| `music` | Opens the player on the local music library. |
+| `radio` | Opens the player on FM and web radio streams. |
+| `yt` | Opens the player on YouTube playlists. |
+| `exit` | Keeps the app on the first access screen. |
+| `quit` | Closes the application. |
 | `help` | Shows the first access hint. |
 
 ## Playback
@@ -24,8 +25,8 @@ Reference for commands accepted by the Prompt Play terminal input.
 | `stop` | Pauses playback. |
 | `next` or `n` | Plays the next item from the active source. |
 | `prev` or `p` | Plays the previous item from the active source. |
-| `aleatorio` or `shuffle` | Toggles random playback order for the active source. |
-| `repetir musica`, `repetir música`, `repetir`, or `repeat` | Toggles repeat for the current item. |
+| `shuffle` | Toggles random playback order for the active source. |
+| `repeat` | Toggles repeat for the current item. |
 
 ## Sources
 
@@ -35,14 +36,16 @@ Reference for commands accepted by the Prompt Play terminal input.
 | `source local` | Uses music files available on the computer. |
 | `source radio` | Uses FM and web radio streams. |
 | `source yt` | Uses YouTube playlists. |
-| `pp music` or `music` | Switches the player to local music mode. |
-| `pp radio`, `radio`, or `fm` | Switches the player to radio mode. |
+| `music` | Switches the player to local music mode. |
+| `radio` or `fm` | Switches the player to radio mode. |
+| `yt` | Switches the player to YouTube mode. |
 
 Source-specific commands only work in their active mode. For example, radio
 commands such as `radio list` and `fm` are rejected while the player is in
 music mode, and music commands such as `music config` and `music list` are
-rejected while the player is in radio mode. Use `source local`, `source radio`,
-or `source yt` to change modes.
+rejected while the player is in radio mode. YouTube commands such as `yt list`
+and `yt add` are rejected outside YouTube mode. Use `source local`,
+`source radio`, or `source yt` to change modes.
 
 ## Library
 
@@ -55,6 +58,11 @@ or `source yt` to change modes.
 | `music config` | Opens the native folder picker and stores the selected music folder. |
 | `music list` | Opens the temporary `music lists` tab. When no library is configured, it shows suggested `~/Music` and `~/Downloads` paths. |
 | `radio list` or `ls -ra` | Opens a temporary `radio list` tab with every configured radio. |
+| `yt list` | Opens the temporary `yt playlists` tab. |
+| `yt auth` | Starts the interactive YouTube API key prompt. Enter the key at `YouTube API Key:`. |
+| `yt auth clear` | Removes the saved YouTube API key from `localStorage`. |
+| `yt add [playlist-url-or-id]` | Fetches a YouTube playlist from a full playlist URL or playlist id, saves the playlist id, total video count, and cached video metadata in `localStorage`. |
+| `play [number]` in `yt playlists` | Selects and starts the playlist by its 1-based position. Example: `play 1`. |
 | `status` or `info` | Shows active source, current item, creator/city/channel, volume, random/repeat state, and audio API status. |
 
 For radio sources, `list`, `ls`, and the `ls -la` tab show only the 5 most
@@ -65,6 +73,23 @@ For local music, scans are persisted in `localStorage` under
 `prompt-play-music-libraries`. Stored libraries are refreshed when the player
 opens so duration and ID3 artist/title/album metadata can be updated without
 reconfiguring the folder.
+
+For YouTube, configuration is persisted in `localStorage` under
+`prompt-play-youtube` using a JSON shape with a `youtube.apiKey` and
+`youtube.playlists` array. The `yt add` command uses the YouTube
+`playlists` API for the title and total video count, then uses the
+`playlistItems` API for titles and video ids, following `nextPageToken` until
+all playlist pages are loaded. It then calls the YouTube `videos` API in batches
+for durations because `playlistItems` does not include duration metadata.
+The `ls -la` tab renders video title, artist/channel when available, and total
+video duration for the selected playlist only. The `yt playlists` tab lists
+saved playlists; run `play [number]` there to choose which playlist feeds
+`ls -la`, `next`, and `prev`. The `./player-controls` tab renders the current
+YouTube video as an autoplaying embedded player and stays mounted while
+navigating between YouTube tabs so playback can continue. Volume commands and
+the volume control send YouTube iframe API commands too. When a YouTube video
+ends while playback is active, the player advances to the next selected playlist
+item automatically.
 
 ## Volume
 
@@ -80,18 +105,19 @@ reconfiguring the folder.
 
 | Command | Description |
 | --- | --- |
-| `pp music` | Switches the player to the local music library. |
-| `pp radio` | Switches the player to FM and web radio streams. |
-| `pp home`, `pp exit`, `home`, or `exit` | Returns from the player to the first access screen. |
-| `pp quit` or `quit` | Closes the application. |
-| `pp clear` | Clears terminal history. |
-| `pp version` | Shows the current project version. |
-| `pp open now-playing` | Opens the `cat now_playing.txt` tab. |
-| `pp open visualizer` | Opens the `./visualizer --mode=spectrum` tab. |
-| `pp open controls` | Opens the `./player-controls` tab. |
+| `music` | Switches the player to the local music library. |
+| `radio` | Switches the player to FM and web radio streams. |
+| `home` or `exit` | Returns from the player to the first access screen. |
+| `quit` | Closes the application. |
+| `clear` | Clears terminal history. |
+| `version` | Shows the current project version. |
+| `open now-playing` | Opens the `cat now_playing.txt` tab. |
+| `open visualizer` | Opens the `./visualizer --mode=spectrum` tab. |
+| `open controls` | Opens the `./player-controls` tab. |
 | `tab [number]` | Opens a tab by 1-based position in the current tab strip. |
 | `music list` | Opens the temporary `music lists` tab next to `./player-controls`. |
 | `radio list` or `ls -ra` | Opens the temporary `radio list` tab next to `./player-controls`. |
+| `yt list` | Opens the temporary `yt playlists` tab next to `./player-controls`. |
 | `:q` | Closes the active temporary tab, such as `Prompt Play Help`, `music lists`, or `radio list`. |
 
 ## Status Footer
@@ -107,6 +133,7 @@ tab and active source:
 | `./player-controls` tab | `player-controls ready`. |
 | `radio list` | Full radio list status and `:q` close hint. |
 | `music lists` | Music library list status and `:q` close hint. |
+| `yt playlists` | YouTube playlist list status and `:q` close hint. |
 | `Prompt Play Help` | Help status and `:q` close hint. |
 
 ## Source Behavior
@@ -115,7 +142,7 @@ tab and active source:
 | --- | --- | --- | --- |
 | `local` | `ls -la audio/aac *.mp3 *.aac *.wav *.flac *.ogg` | Enabled | Track duration from ID3/browser metadata when available. |
 | `radio` | `ls -la audio/aac *.mp3 *.aac *.m3u *.pls stream` | Disabled | `live`. |
-| `yt` | `yt playlists` | Enabled | Playlist duration. |
+| `yt` | `yt playlists` | Enabled | YouTube video duration from the `videos` API when available. |
 
 Local files are served through the privileged `local-audio:` Electron protocol
 with range requests, CORS headers, and CSP `media-src` support. This allows the
@@ -143,10 +170,10 @@ Theme picker controls: `Up`/`Down` selects a theme, `Enter` applies it, and
 | Command | Description |
 | --- | --- |
 | `zsh-player --init` or `init` | Simulates player initialization. |
-| `pp version` | Shows project, audio engine, and visualizer version info. |
+| `version` | Shows project, audio engine, and visualizer version info. |
 | `help`, `h`, or `?` | Opens the temporary help tab. |
 | `:q` | Closes the active temporary tab. |
-| `pp clear` | Clears terminal history. |
+| `clear` | Clears terminal history. |
 
 ## Input Shortcuts
 
@@ -155,5 +182,6 @@ Theme picker controls: `Up`/`Down` selects a theme, `Enter` applies it, and
 | `Tab` | Autocompletes commands or opens suggestions. |
 | `Left`/`Right` | Moves between autocomplete suggestions when visible. |
 | `Up`/`Down` | Navigates command history, or theme picker items when the picker is open. |
+| `Up`/`Down` on list tabs | Scrolls `ls -la`, `radio list`, and `yt playlists`. |
 | `Esc` | Closes suggestions or the theme picker. |
 | `Cmd/Ctrl + 1..4` | Switches tabs directly. |
