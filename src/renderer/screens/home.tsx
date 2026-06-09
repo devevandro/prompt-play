@@ -27,30 +27,35 @@ export function HomeScreen() {
       return;
     }
 
-    if (command === "pp music" || command === "music") {
+    if (command === "music") {
       navigate("/player?source=local");
       return;
     }
 
-    if (command === "pp radio" || command === "radio") {
+    if (command === "radio") {
       navigate("/player?source=radio");
       return;
     }
 
-    if (command === "pp exit") {
+    if (command === "yt") {
+      navigate("/player?source=yt");
+      return;
+    }
+
+    if (command === "exit") {
       setMessage("You are already on the first access screen.");
       setInput("");
       requestAnimationFrame(focusInput);
       return;
     }
 
-    if (command === "pp quit") {
+    if (command === "quit") {
       window.App.quit();
       return;
     }
 
     if (command === "help") {
-      setMessage("Type 'pp music' for local files or 'pp radio' for radios.");
+      setMessage("Type 'music', 'radio', or 'yt' to choose a source.");
       setInput("");
       requestAnimationFrame(focusInput);
       return;
@@ -75,24 +80,22 @@ export function HomeScreen() {
                 Prompt Play v{version}
               </h1>
               <p className="text-terminal-gray">
-                Não é um terminal. É um player.
+                Not is a terminal. It's a music player.
               </p>
               <div className="space-y-2 text-terminal-white/80 mt-5">
                 <p>Available sources</p>
                 <div className="grid gap-1">
-                  <p>
+                  <p className="grid grid-cols-[4rem_1fr] gap-3">
                     <span className="text-terminal-cyan">music</span>
-                    <span className="ml-5">- Listen to your local library</span>
+                    <span>Listen to your local library</span>
                   </p>
-                  <p>
+                  <p className="grid grid-cols-[4rem_1fr] gap-3">
                     <span className="text-terminal-cyan">radio</span>
-                    <span className="ml-6">- Listen to FM and web radios</span>
+                    <span>Listen to FM and web radios</span>
                   </p>
-                  <p>
+                  <p className="grid grid-cols-[4rem_1fr] gap-3">
                     <span className="text-terminal-cyan">yt</span>
-                    <span className="ml-13.5">
-                      - Listen to YouTube playlists (comming soon)
-                    </span>
+                    <span>Listen to YouTube playlists</span>
                   </p>
                 </div>
               </div>
@@ -110,14 +113,13 @@ export function HomeScreen() {
               </p>
 
               <form className="flex items-center gap-2" onSubmit={handleSubmit}>
-                <Prompt text="pp" />
                 <Prompt text=">" />
                 <input
                   autoComplete="off"
-                  className="min-w-0 flex-1 bg-transparent text-terminal-white caret-terminal-green outline-none"
+                  className="min-w-0 flex-1 bg-transparent text-terminal-white caret-terminal-green outline-none placeholder:text-terminal-gray"
                   onChange={(event) => setInput(event.target.value)}
                   onPointerDown={focusInput}
-                  placeholder="music | radio"
+                  placeholder="music | radio | yt"
                   ref={inputRef}
                   spellCheck={false}
                   value={input}

@@ -56,41 +56,18 @@ const PLAYER_SOURCES: Record<PlayerSourceMode, PlayerSource> = {
     mode: "yt",
     label: "youtube",
     description: "YouTube playlists",
-    locationLabel: "~/youtube",
+    locationLabel: "~/yt",
     listCommand: "yt playlists",
-    itemLabel: "playlist",
-    creatorLabel: "channel",
-    contextLabel: "origin",
+    itemLabel: "music",
+    creatorLabel: "artist",
+    contextLabel: "type",
     timeLabel: "duration",
-    emptyTitle: "No playlist selected",
-    emptyHint: "Select a playlist or use 'source yt' and 'play'",
+    emptyTitle: "No YouTube playlist selected",
+    emptyHint: "yt add https://youtube.com/playlist?list=PL...",
     isLive: false,
     supportsSeek: true,
   },
 };
-
-const YOUTUBE_PLAYLISTS: PlayerQueueItem[] = [
-  {
-    id: "yt-1",
-    mode: "yt",
-    title: "Synthwave Coding Session",
-    artist: "Prompt Play",
-    album: "YouTube playlists",
-    duration: 3600,
-    sourceDetail: "playlist",
-    src: "/Users/evandro.carvalho/Downloads/aeo.mp3",
-  },
-  {
-    id: "yt-2",
-    mode: "yt",
-    title: "Lo-fi Terminal Focus",
-    artist: "Prompt Play",
-    album: "YouTube playlists",
-    duration: 5400,
-    sourceDetail: "playlist",
-    src: "/Users/evandro.carvalho/Downloads/aeo.mp3",
-  },
-];
 
 const RADIO_ITEMS: PlayerQueueItem[] = radios.map((radio) => ({
   id: radio.id,
@@ -113,6 +90,22 @@ const RADIO_ITEMS: PlayerQueueItem[] = radios.map((radio) => ({
 type RadioStreamStatus = "checking" | "live" | "offline";
 
 const MUSIC_LIBRARY_STORAGE_KEY = "prompt-play-music-libraries";
+const YOUTUBE_STORAGE_KEY = "prompt-play-youtube";
+
+interface YouTubePlaylistSummary {
+  id: string;
+  title: string;
+  videoCount: number;
+}
+
+interface YouTubeStorage {
+  youtube: {
+    apiKey: string;
+    playlists: string[];
+    playlistDetails: YouTubePlaylistSummary[];
+    items: PlayerQueueItem[];
+  };
+}
 
 function getDefaultMusicLocations() {
   const username = window.App.username;
@@ -151,11 +144,285 @@ function readStoredMusicLibraries(): MusicLibrary[] {
   }
 }
 
+function createEmptyYouTubeStorage(): YouTubeStorage {
+  return {
+    youtube: {
+      apiKey: "",
+      playlists: [],
+      playlistDetails: [],
+      items: [],
+    },
+  };
+}
+
+function readStoredYouTube(): YouTubeStorage {
+  try {
+    const storedValue = localStorage.getItem(YOUTUBE_STORAGE_KEY);
+
+    if (!storedValue) {
+      return createEmptyYouTubeStorage();
+    }
+
+    const stored = JSON.parse(storedValue) as Partial<YouTubeStorage>;
+    const youtube = stored.youtube;
+
+    if (!youtube) {
+      return createEmptyYouTubeStorage();
+    }
+
+    return {
+      youtube: {
+        apiKey: typeof youtube.apiKey === "string" ? youtube.apiKey : "",
+        playlists: Array.isArray(youtube.playlists)
+          ? youtube.playlists.filter(
+              (playlistId): playlistId is string =>
+                typeof playlistId === "string",
+            )
+          : [],
+        playlistDetails: Array.isArray(youtube.playlistDetails)
+          ? youtube.playlistDetails
+              .filter(
+                (playlist): playlist is YouTubePlaylistSummary =>
+                  typeof playlist.id === "string" &&
+                  typeof playlist.title === "string",
+              )
+              .map((playlist) => ({
+                ...playlist,
+                videoCount:
+                  typeof playlist.videoCount === "number"
+                    ? playlist.videoCount
+                    : 0,
+              }))
+          : [],
+        items: Array.isArray(youtube.items)
+          ? youtube.items.filter(
+              (item): item is PlayerQueueItem =>
+                item?.mode === "yt" &&
+                typeof item.id === "string" &&
+                typeof item.title === "string" &&
+                typeof item.artist === "string" &&
+                typeof item.src === "string",
+            )
+          : [],
+      },
+    };
+  } catch {
+    return createEmptyYouTubeStorage();
+  }
+}
+
+function parseYouTubeDuration(duration: string | undefined): number | null {
+  if (!duration) {
+    return null;
+  }
+
+  const match = /^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(
+    duration,
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const days = Number.parseInt(match[1] ?? "0", 10);
+  const hours = Number.parseInt(match[2] ?? "0", 10);
+  const minutes = Number.parseInt(match[3] ?? "0", 10);
+  const seconds = Number.parseInt(match[4] ?? "0", 10);
+
+  return days * 86400 + hours * 3600 + minutes * 60 + seconds;
+}
+
+function parseYouTubePlaylistId(input: string): string {
+  const value = input.trim();
+
+  if (!value) {
+    return "";
+  }
+
+  try {
+    const url = new URL(value);
+    const playlistId = url.searchParams.get("list");
+
+    return playlistId?.trim() ?? value;
+  } catch {
+    return value;
+  }
+}
+
+function buildYouTubePlaylistItem(
+  item: unknown,
+  playlistId: string,
+  duration: number | null,
+): PlayerQueueItem | null {
+  const snippet = (item as { snippet?: Record<string, unknown> }).snippet;
+  const resourceId = snippet?.resourceId as
+    | { videoId?: unknown }
+    | undefined;
+  const videoId = resourceId?.videoId;
+  const title = snippet?.title;
+  const artist = snippet?.videoOwnerChannelTitle ?? snippet?.channelTitle;
+
+  if (typeof videoId !== "string" || typeof title !== "string") {
+    return null;
+  }
+
+  return {
+    id: `yt-${playlistId}-${videoId}`,
+    mode: "yt",
+    title,
+    artist: typeof artist === "string" ? artist : "YouTube",
+    album: playlistId,
+    duration,
+    sourceDetail: "video",
+    src: videoId,
+    videoId,
+    details: [
+      { label: "playlist", value: playlistId },
+      { label: "video", value: videoId },
+    ],
+  };
+}
+
+async function fetchYouTubePlaylistItems(
+  apiKey: string,
+  playlistId: string,
+): Promise<{
+  items: PlayerQueueItem[];
+  playlistTitle: string;
+  videoCount: number;
+}> {
+  const playlistUrl = new URL(
+    "https://youtube.googleapis.com/youtube/v3/playlists",
+  );
+  playlistUrl.searchParams.set("key", apiKey);
+  playlistUrl.searchParams.set("id", playlistId);
+  playlistUrl.searchParams.set("part", "snippet,contentDetails");
+
+  const playlistResponse = await fetch(playlistUrl.toString());
+
+  let playlistTitle = playlistId;
+  let videoCount = 0;
+
+  if (playlistResponse.ok) {
+    const playlistData = (await playlistResponse.json()) as {
+      items?: {
+        contentDetails?: {
+          itemCount?: number;
+        };
+        snippet?: {
+          title?: string;
+        };
+      }[];
+    };
+
+    playlistTitle = playlistData.items?.[0]?.snippet?.title ?? playlistId;
+    videoCount = playlistData.items?.[0]?.contentDetails?.itemCount ?? 0;
+  }
+
+  const playlistItems: unknown[] = [];
+  let nextPageToken: string | undefined;
+
+  do {
+    const playlistItemsUrl = new URL(
+      "https://youtube.googleapis.com/youtube/v3/playlistItems",
+    );
+    playlistItemsUrl.searchParams.set("key", apiKey);
+    playlistItemsUrl.searchParams.set("playlistId", playlistId);
+    playlistItemsUrl.searchParams.set("part", "snippet");
+    playlistItemsUrl.searchParams.set("maxResults", "50");
+
+    if (nextPageToken) {
+      playlistItemsUrl.searchParams.set("pageToken", nextPageToken);
+    }
+
+    const response = await fetch(playlistItemsUrl.toString());
+
+    if (!response.ok) {
+      throw new Error(`playlistItems failed with ${response.status}`);
+    }
+
+    const data = (await response.json()) as {
+      items?: unknown[];
+      nextPageToken?: string;
+    };
+
+    playlistItems.push(...(Array.isArray(data.items) ? data.items : []));
+    nextPageToken = data.nextPageToken;
+  } while (nextPageToken);
+
+  const videoIds = playlistItems
+    .map((item) => {
+      const snippet = (item as { snippet?: Record<string, unknown> }).snippet;
+      const resourceId = snippet?.resourceId as
+        | { videoId?: unknown }
+        | undefined;
+
+      return typeof resourceId?.videoId === "string"
+        ? resourceId.videoId
+        : null;
+    })
+    .filter((videoId): videoId is string => Boolean(videoId));
+  const durationsByVideoId = new Map<string, number | null>();
+
+  for (let index = 0; index < videoIds.length; index += 50) {
+    const videoIdBatch = videoIds.slice(index, index + 50);
+    const videosUrl = new URL("https://youtube.googleapis.com/youtube/v3/videos");
+    videosUrl.searchParams.set("key", apiKey);
+    videosUrl.searchParams.set("id", videoIdBatch.join(","));
+    videosUrl.searchParams.set("part", "contentDetails");
+
+    const videosResponse = await fetch(videosUrl.toString());
+
+    if (videosResponse.ok) {
+      const videosData = (await videosResponse.json()) as {
+        items?: {
+          id?: string;
+          contentDetails?: {
+            duration?: string;
+          };
+        }[];
+      };
+
+      videosData.items?.forEach((video) => {
+        if (video.id) {
+          durationsByVideoId.set(
+            video.id,
+            parseYouTubeDuration(video.contentDetails?.duration),
+          );
+        }
+      });
+    }
+  }
+
+  const items = playlistItems
+    .map((item) => {
+      const snippet = (item as { snippet?: Record<string, unknown> }).snippet;
+      const resourceId = snippet?.resourceId as
+        | { videoId?: unknown }
+        | undefined;
+      const videoId =
+        typeof resourceId?.videoId === "string" ? resourceId.videoId : "";
+
+      return buildYouTubePlaylistItem(
+        item,
+        playlistId,
+        durationsByVideoId.get(videoId) ?? null,
+      );
+    })
+    .filter((item): item is PlayerQueueItem => Boolean(item));
+  return {
+    items,
+    playlistTitle,
+    videoCount: videoCount || items.length,
+  };
+}
+
 function getTabs(
   source: PlayerSource,
   showHelpTab: boolean,
   showRadioListTab: boolean,
   showMusicListTab: boolean,
+  showYouTubeListTab: boolean,
 ) {
   const tabs = [
     { id: "tracks", label: source.listCommand, shortcut: "⌘1" },
@@ -170,6 +437,10 @@ function getTabs(
 
   if (showMusicListTab) {
     tabs.push({ id: "music-list", label: "music lists", shortcut: ":q" });
+  }
+
+  if (showYouTubeListTab) {
+    tabs.push({ id: "youtube-list", label: "yt playlists", shortcut: ":q" });
   }
 
   if (showHelpTab) {
@@ -249,7 +520,6 @@ function getSourceCommandMode(
   pathCommandSource: string | undefined,
 ): PlayerSourceMode | null {
   if (
-    cmd === "pp music" ||
     cmd === "music" ||
     cmd === "music config" ||
     cmd === "music list" ||
@@ -259,7 +529,6 @@ function getSourceCommandMode(
   }
 
   if (
-    cmd === "pp radio" ||
     cmd === "radio" ||
     cmd === "fm" ||
     cmd === "radio list" ||
@@ -267,6 +536,15 @@ function getSourceCommandMode(
     pathCommandSource === "radio"
   ) {
     return "radio";
+  }
+
+  if (
+    cmd === "yt list" ||
+    cmd === "yt auth" ||
+    cmd === "yt auth clear" ||
+    cmd.startsWith("yt add ")
+  ) {
+    return "yt";
   }
 
   return null;
@@ -293,8 +571,8 @@ function HelpTab({ source }: { source: PlayerSource }) {
       "list",
       "next",
       "prev",
-      "aleatorio",
-      "repetir musica",
+      "shuffle",
+      "repeat",
     ],
     radio: [
       "radio",
@@ -307,18 +585,23 @@ function HelpTab({ source }: { source: PlayerSource }) {
       "list",
       "next",
       "prev",
-      "aleatorio",
-      "repetir musica",
+      "shuffle",
+      "repeat",
     ],
     yt: [
+      "yt",
+      "yt auth",
+      "yt auth clear",
+      "yt add playlist-url-or-id",
+      "yt list",
       "source yt",
       "play",
       "play 1",
       "list",
       "next",
       "prev",
-      "aleatorio",
-      "repetir musica",
+      "shuffle",
+      "repeat",
     ],
   };
 
@@ -532,15 +815,120 @@ function MusicListTab({ libraries }: { libraries: MusicLibrary[] }) {
   );
 }
 
+function YouTubeListTab({
+  currentPlaylistId,
+  onSelectPlaylist,
+  scrollContainerRef,
+  youtube,
+}: {
+  currentPlaylistId: string | null;
+  onSelectPlaylist: (playlistId: string) => void;
+  scrollContainerRef: RefObject<HTMLDivElement | null>;
+  youtube: YouTubeStorage["youtube"];
+}) {
+  return (
+    <div className="flex h-full flex-col">
+      <div className="px-4 py-3">
+        <div className="font-mono text-sm">
+          <span className="text-terminal-green">➜</span>{" "}
+          <span className="text-terminal-cyan">~/yt</span>{" "}
+          <span className="text-terminal-white">yt playlists</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-12 gap-2 bg-muted/30 px-4 py-2 font-mono text-terminal-gray text-xs">
+        <span className="col-span-1">#</span>
+        <span className="col-span-4">playlist</span>
+        <span className="col-span-5">id</span>
+        <span className="col-span-2 text-right">videos</span>
+      </div>
+
+      <div
+        className="custom-scrollbar flex-1 overflow-y-auto"
+        ref={scrollContainerRef}
+      >
+        {!youtube.apiKey && (
+          <div className="space-y-2 px-4 py-6 font-mono text-xs">
+            <div className="text-terminal-yellow">
+              You need to register a YouTube API key
+            </div>
+            <div className="text-terminal-gray">
+              yt auth
+            </div>
+          </div>
+        )}
+
+        {youtube.apiKey && youtube.playlists.length === 0 && (
+          <div className="space-y-2 px-4 py-6 font-mono text-xs">
+            <div className="text-terminal-yellow">
+              no youtube playlists configured
+            </div>
+            <div className="text-terminal-gray">
+              yt add https://youtube.com/playlist?list=PL...
+            </div>
+          </div>
+        )}
+
+        {youtube.playlists.map((playlistId, index) => {
+          const playlist = youtube.playlistDetails.find(
+            (item) => item.id === playlistId,
+          );
+          const cachedVideoCount = youtube.items.filter(
+            (item) => item.album === playlistId,
+          ).length;
+          const videoCount = playlist?.videoCount || cachedVideoCount;
+          const isActive = currentPlaylistId === playlistId;
+
+          return (
+            <button
+              className={`grid w-full grid-cols-12 items-center gap-2 px-4 py-2.5 text-left font-mono text-xs transition-colors ${
+                isActive
+                  ? "bg-terminal-green/10 text-terminal-green"
+                  : "text-terminal-white hover:bg-muted/50"
+              }`}
+              key={playlistId}
+              onClick={() => onSelectPlaylist(playlistId)}
+              type="button"
+            >
+              <span className="col-span-1 text-terminal-gray">
+                {index + 1}
+              </span>
+              <span className="col-span-4 truncate text-terminal-cyan">
+                {playlist?.title ?? playlistId}
+              </span>
+              <span className="col-span-5 truncate text-terminal-magenta">
+                {playlistId}
+              </span>
+              <span className="col-span-2 text-right text-terminal-yellow">
+                {videoCount}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function MainScreen() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [activeSourceMode, setActiveSourceMode] = useState<PlayerSourceMode>(
-    () => (searchParams.get("source") === "radio" ? "radio" : "local"),
+    () => {
+      const source = searchParams.get("source");
+
+      if (source === "radio" || source === "yt") {
+        return source;
+      }
+
+      return "local";
+    },
   );
   const [musicLibraries, setMusicLibraries] = useState<MusicLibrary[]>(
     readStoredMusicLibraries,
   );
+  const [youtubeStorage, setYouTubeStorage] =
+    useState<YouTubeStorage>(readStoredYouTube);
   const [activeTheme, setActiveTheme] = useState<ThemeId>("default");
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
   const [selectedThemeIndex, setSelectedThemeIndex] = useState(0);
@@ -555,6 +943,12 @@ export function MainScreen() {
   const [showHelpTab, setShowHelpTab] = useState(false);
   const [showRadioListTab, setShowRadioListTab] = useState(false);
   const [showMusicListTab, setShowMusicListTab] = useState(false);
+  const [showYouTubeListTab, setShowYouTubeListTab] = useState(false);
+  const [isAwaitingYouTubeApiKey, setIsAwaitingYouTubeApiKey] =
+    useState(false);
+  const [selectedYouTubePlaylistId, setSelectedYouTubePlaylistId] = useState<
+    string | null
+  >(() => readStoredYouTube().youtube.playlists[0] ?? null);
   const [radioStatuses, setRadioStatuses] = useState<
     Record<string, RadioStreamStatus>
   >({});
@@ -568,9 +962,12 @@ export function MainScreen() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const connectionTimersRef = useRef<number[]>([]);
   const previousTabRef = useRef("tracks");
+  const trackListScrollRef = useRef<HTMLDivElement>(null);
   const radioListScrollRef = useRef<HTMLDivElement>(null);
+  const youtubeListScrollRef = useRef<HTMLDivElement>(null);
   const volumeRef = useRef(volume);
   const previousVolumeRef = useRef(volume);
+  const didHandleEndedRef = useRef(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
     null,
   );
@@ -578,12 +975,27 @@ export function MainScreen() {
     () => [
       ...musicLibraries.flatMap((library) => library.items),
       ...RADIO_ITEMS,
-      ...YOUTUBE_PLAYLISTS,
+      ...youtubeStorage.youtube.items,
     ],
-    [musicLibraries],
+    [musicLibraries, youtubeStorage.youtube.items],
   );
   const activeSource = useMemo(() => {
     const source = PLAYER_SOURCES[activeSourceMode];
+
+    if (activeSourceMode === "yt" && !youtubeStorage.youtube.apiKey) {
+      return {
+        ...source,
+        emptyTitle: "You need to register a YouTube API key",
+        emptyHint: "yt auth",
+      };
+    }
+
+    if (activeSourceMode === "yt") {
+      return {
+        ...source,
+        emptyHint: "yt add https://youtube.com/playlist?list=PL...",
+      };
+    }
 
     if (activeSourceMode !== "local" || musicLibraries.length === 0) {
       return source;
@@ -594,8 +1006,8 @@ export function MainScreen() {
       locationLabel: musicLibraries[0].path,
       emptyHint: "type music -- path pathname to config",
     };
-  }, [activeSourceMode, musicLibraries]);
-  const canAnalyzeAudio = activeSource.supportsSeek;
+  }, [activeSourceMode, musicLibraries, youtubeStorage.youtube.apiKey]);
+  const canAnalyzeAudio = activeSource.supportsSeek && activeSource.mode !== "yt";
   const { frequencyData, isConnected } = useAudioAnalyzer(
     audioElement,
     isPlaying,
@@ -616,12 +1028,39 @@ export function MainScreen() {
         .filter((item): item is PlayerQueueItem => Boolean(item)),
     [radioItems, recentRadioIds],
   );
+  const selectedYouTubeItems = useMemo(
+    () =>
+      youtubeStorage.youtube.items.filter(
+        (item) => item.album === selectedYouTubePlaylistId,
+      ),
+    [selectedYouTubePlaylistId, youtubeStorage.youtube.items],
+  );
   const visibleItems =
-    activeSourceMode === "radio" ? recentRadioItems : activeItems;
+    activeSourceMode === "radio"
+      ? recentRadioItems
+      : activeSourceMode === "yt" && selectedYouTubePlaylistId
+        ? selectedYouTubeItems
+        : activeItems;
+  const queueItems =
+    activeSourceMode === "yt" && selectedYouTubePlaylistId
+      ? selectedYouTubeItems
+      : activeItems;
   const tabs = useMemo(
     () =>
-      getTabs(activeSource, showHelpTab, showRadioListTab, showMusicListTab),
-    [activeSource, showHelpTab, showRadioListTab, showMusicListTab],
+      getTabs(
+        activeSource,
+        showHelpTab,
+        showRadioListTab,
+        showMusicListTab,
+        showYouTubeListTab,
+      ),
+    [
+      activeSource,
+      showHelpTab,
+      showRadioListTab,
+      showMusicListTab,
+      showYouTubeListTab,
+    ],
   );
 
   const cycleTab = useCallback(() => {
@@ -636,6 +1075,20 @@ export function MainScreen() {
 
   const scrollRadioList = useCallback((direction: "down" | "up") => {
     radioListScrollRef.current?.scrollBy({
+      top: direction === "down" ? 48 : -48,
+      behavior: "smooth",
+    });
+  }, []);
+
+  const scrollTrackList = useCallback((direction: "down" | "up") => {
+    trackListScrollRef.current?.scrollBy({
+      top: direction === "down" ? 48 : -48,
+      behavior: "smooth",
+    });
+  }, []);
+
+  const scrollYouTubeList = useCallback((direction: "down" | "up") => {
+    youtubeListScrollRef.current?.scrollBy({
       top: direction === "down" ? 48 : -48,
       behavior: "smooth",
     });
@@ -711,6 +1164,10 @@ export function MainScreen() {
   }, [musicLibraries]);
 
   useEffect(() => {
+    localStorage.setItem(YOUTUBE_STORAGE_KEY, JSON.stringify(youtubeStorage));
+  }, [youtubeStorage]);
+
+  useEffect(() => {
     const storedLibraries = readStoredMusicLibraries();
 
     if (storedLibraries.length === 0) {
@@ -771,6 +1228,12 @@ export function MainScreen() {
     addToHistory("[OK] Music lists tab closed");
   }, [addToHistory]);
 
+  const closeYouTubeListTab = useCallback(() => {
+    setShowYouTubeListTab(false);
+    setActiveTab(previousTabRef.current);
+    addToHistory("[OK] YouTube playlists tab closed");
+  }, [addToHistory]);
+
   const openHelpTab = useCallback(() => {
     previousTabRef.current =
       activeTab === "help" ? previousTabRef.current : activeTab;
@@ -793,6 +1256,14 @@ export function MainScreen() {
     setShowMusicListTab(true);
     setActiveTab("music-list");
     addToHistory("[INFO] Opened music lists");
+  }, [activeTab, addToHistory]);
+
+  const openYouTubeListTab = useCallback(() => {
+    previousTabRef.current =
+      activeTab === "youtube-list" ? previousTabRef.current : activeTab;
+    setShowYouTubeListTab(true);
+    setActiveTab("youtube-list");
+    addToHistory("[INFO] Opened YouTube playlists");
   }, [activeTab, addToHistory]);
 
   const storeMusicLibrary = useCallback(
@@ -877,6 +1348,105 @@ export function MainScreen() {
     }
   }, [addToHistory, openMusicListTab, storeMusicLibrary]);
 
+  const setYouTubeApiKey = useCallback(
+    (apiKey: string) => {
+      if (!apiKey) {
+        addToHistory("[ERROR] YouTube API key cannot be empty");
+        return;
+      }
+
+      setYouTubeStorage((prev) => ({
+        youtube: {
+          ...prev.youtube,
+          apiKey,
+        },
+      }));
+      addToHistory("[OK] YouTube API key saved");
+    },
+    [addToHistory],
+  );
+
+  const clearYouTubeApiKey = useCallback(() => {
+    setIsAwaitingYouTubeApiKey(false);
+    setYouTubeStorage((prev) => ({
+      youtube: {
+        ...prev.youtube,
+        apiKey: "",
+      },
+    }));
+    addToHistory("[OK] YouTube API key removed");
+  }, [addToHistory]);
+
+  const saveYouTubePlaylist = useCallback(
+    async (playlistInput: string) => {
+      const playlistId = parseYouTubePlaylistId(playlistInput);
+      const apiKey = youtubeStorage.youtube.apiKey;
+
+      if (!apiKey) {
+        addToHistory("[ERROR] You need to register a YouTube API key");
+        addToHistory("[HINT] yt auth");
+        return;
+      }
+
+      if (!playlistId) {
+        addToHistory(
+          "[ERROR] Use yt add https://youtube.com/playlist?list=PL...",
+        );
+        return;
+      }
+
+      setIsLoading(true);
+      addToHistory(`[INFO] Loading YouTube playlist: ${playlistId}`);
+
+      try {
+        const playlist = await fetchYouTubePlaylistItems(apiKey, playlistId);
+
+        setYouTubeStorage((prev) => ({
+          youtube: {
+            ...prev.youtube,
+            playlists: [
+              playlistId,
+              ...prev.youtube.playlists.filter((id) => id !== playlistId),
+            ],
+            playlistDetails: [
+              {
+                id: playlistId,
+                title: playlist.playlistTitle,
+                videoCount: playlist.videoCount,
+              },
+              ...prev.youtube.playlistDetails.filter(
+                (item) => item.id !== playlistId,
+              ),
+            ],
+            items: [
+              ...prev.youtube.items.filter(
+                (item) => item.album !== playlistId,
+              ),
+              ...playlist.items,
+            ],
+          },
+        }));
+        setSelectedYouTubePlaylistId(playlistId);
+        addToHistory(`[OK] Saved YouTube playlist: ${playlist.playlistTitle}`);
+        addToHistory(`[INFO] ${playlist.items.length} videos found`);
+        openYouTubeListTab();
+      } catch (error) {
+        addToHistory(
+          `[ERROR] Could not load YouTube playlist: ${
+            error instanceof Error ? error.message : "unknown error"
+          }`,
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [
+      addToHistory,
+      openYouTubeListTab,
+      youtubeStorage.youtube.apiKey,
+    ],
+  );
+
   const simulateLoading = useCallback(
     async (
       messages: { text: string; delay: number }[],
@@ -935,6 +1505,7 @@ export function MainScreen() {
         setActiveSourceMode(item.mode);
       }
 
+      didHandleEndedRef.current = false;
       setCurrentItem(item);
       setCurrentTime(0);
       setDuration(item.duration ?? 0);
@@ -970,10 +1541,42 @@ export function MainScreen() {
     [activeSourceMode, addToHistory, clearConnectionTimers],
   );
 
+  const playYouTubePlaylist = useCallback(
+    (playlistId: string) => {
+      const playlist = youtubeStorage.youtube.playlistDetails.find(
+        (item) => item.id === playlistId,
+      );
+      const playlistItems = youtubeStorage.youtube.items.filter(
+        (item) => item.album === playlistId,
+      );
+
+      setSelectedYouTubePlaylistId(playlistId);
+
+      if (playlistItems.length === 0) {
+        addToHistory(
+          `[ERROR] No videos cached for ${playlist?.title ?? playlistId}`,
+        );
+        addToHistory("[HINT] Run yt add playlist-url-or-id again");
+        return;
+      }
+
+      addToHistory(
+        `[INFO] Selected YouTube playlist: ${playlist?.title ?? playlistId}`,
+      );
+      playItem(playlistItems[0]);
+    },
+    [
+      addToHistory,
+      playItem,
+      youtubeStorage.youtube.items,
+      youtubeStorage.youtube.playlistDetails,
+    ],
+  );
+
   const togglePlay = useCallback(() => {
     if (!currentItem) {
-      if (activeItems.length > 0) {
-        playItem(activeItems[0]);
+      if (queueItems.length > 0) {
+        playItem(queueItems[0]);
       }
       return;
     }
@@ -989,44 +1592,49 @@ export function MainScreen() {
       );
       return nextState;
     });
-  }, [activeItems, currentItem, playItem, addToHistory, clearConnectionTimers]);
+  }, [queueItems, currentItem, playItem, addToHistory, clearConnectionTimers]);
 
   const nextItem = useCallback(() => {
-    if (!currentItem || activeItems.length === 0) {
+    if (!currentItem || queueItems.length === 0) {
       return;
     }
 
-    const currentIndex = activeItems.findIndex(
+    const currentIndex = queueItems.findIndex(
       (item) => item.id === currentItem.id,
     );
     const nextIndex =
-      isShuffleEnabled && activeItems.length > 1
-        ? getRandomQueueIndex(activeItems.length, currentIndex)
-        : (currentIndex + 1) % activeItems.length;
+      isShuffleEnabled && queueItems.length > 1
+        ? getRandomQueueIndex(queueItems.length, currentIndex)
+        : (currentIndex + 1) % queueItems.length;
     addToHistory("$ next");
-    playItem(activeItems[nextIndex]);
-  }, [activeItems, currentItem, isShuffleEnabled, playItem, addToHistory]);
+    playItem(queueItems[nextIndex]);
+  }, [queueItems, currentItem, isShuffleEnabled, playItem, addToHistory]);
 
   const prevItem = useCallback(() => {
-    if (!currentItem || activeItems.length === 0) {
+    if (!currentItem || queueItems.length === 0) {
       return;
     }
 
-    const currentIndex = activeItems.findIndex(
+    const currentIndex = queueItems.findIndex(
       (item) => item.id === currentItem.id,
     );
     const prevIndex =
-      currentIndex <= 0 ? activeItems.length - 1 : currentIndex - 1;
+      currentIndex <= 0 ? queueItems.length - 1 : currentIndex - 1;
     addToHistory("$ prev");
-    playItem(activeItems[prevIndex]);
-  }, [activeItems, currentItem, playItem, addToHistory]);
+    playItem(queueItems[prevIndex]);
+  }, [queueItems, currentItem, playItem, addToHistory]);
 
   const handleSeek = useCallback((time: number) => {
+    if (activeSourceMode === "yt") {
+      setCurrentTime(time);
+      return;
+    }
+
     if (audioRef.current) {
       audioRef.current.currentTime = time;
       setCurrentTime(time);
     }
-  }, []);
+  }, [activeSourceMode]);
 
   const handleVolumeChange = useCallback((newVolume: number) => {
     if (newVolume > 0) {
@@ -1056,7 +1664,7 @@ export function MainScreen() {
   const toggleShuffle = useCallback(() => {
     setIsShuffleEnabled((prev) => {
       const nextValue = !prev;
-      addToHistory(`[OK] Aleatorio ${nextValue ? "enabled" : "disabled"}`);
+      addToHistory(`[OK] Shuffle ${nextValue ? "enabled" : "disabled"}`);
       return nextValue;
     });
   }, [addToHistory]);
@@ -1064,9 +1672,7 @@ export function MainScreen() {
   const toggleRepeat = useCallback(() => {
     setIsRepeatEnabled((prev) => {
       const nextValue = !prev;
-      addToHistory(
-        `[OK] Repetir musica ${nextValue ? "enabled" : "disabled"}`,
-      );
+      addToHistory(`[OK] Repeat ${nextValue ? "enabled" : "disabled"}`);
       return nextValue;
     });
   }, [addToHistory]);
@@ -1121,12 +1727,16 @@ export function MainScreen() {
           closeRadioListTab();
         } else if (activeTab === "music-list" && showMusicListTab) {
           closeMusicListTab();
+        } else if (activeTab === "youtube-list" && showYouTubeListTab) {
+          closeYouTubeListTab();
         } else if (showHelpTab) {
           closeHelpTab();
         } else if (showRadioListTab) {
           closeRadioListTab();
         } else if (showMusicListTab) {
           closeMusicListTab();
+        } else if (showYouTubeListTab) {
+          closeYouTubeListTab();
         } else {
           addToHistory("[INFO] No temporary tab is open");
         }
@@ -1136,6 +1746,13 @@ export function MainScreen() {
       if (isLoading) {
         addToHistory(`$ ${command}`);
         addToHistory("[ERROR] Wait for the current process to finish");
+        return;
+      }
+
+      if (isAwaitingYouTubeApiKey) {
+        addToHistory("$ ********");
+        setYouTubeApiKey(rawCommand);
+        setIsAwaitingYouTubeApiKey(false);
         return;
       }
 
@@ -1181,7 +1798,7 @@ export function MainScreen() {
         return;
       }
 
-      if (cmd === "pp version") {
+      if (cmd === "version") {
         addToHistory(`[INFO] Prompt Play v${version}`);
         return;
       }
@@ -1197,7 +1814,7 @@ export function MainScreen() {
       } else if (cmd.startsWith("theme use ")) {
         const themeId = cmd.slice(10).trim();
         applyTheme(themeId);
-      } else if (cmd === "pp music" || cmd === "music") {
+      } else if (cmd === "music") {
         selectSource("local");
       } else if (pathCommandMatch?.[1].toLowerCase() === "music") {
         selectSource("local");
@@ -1211,26 +1828,34 @@ export function MainScreen() {
       } else if (cmd === "music list") {
         selectSource("local");
         openMusicListTab();
-      } else if (cmd === "pp radio" || cmd === "radio" || cmd === "fm") {
+      } else if (cmd === "radio" || cmd === "fm") {
         selectSource("radio");
+      } else if (cmd === "yt") {
+        selectSource("yt");
+      } else if (cmd === "yt list") {
+        openYouTubeListTab();
+      } else if (cmd === "yt auth") {
+        setIsAwaitingYouTubeApiKey(true);
+      } else if (cmd === "yt auth clear") {
+        clearYouTubeApiKey();
+      } else if (cmd.startsWith("yt add ")) {
+        void saveYouTubePlaylist(rawCommand.slice("yt add ".length));
       } else if (
-        cmd === "pp home" ||
-        cmd === "pp exit" ||
         cmd === "home" ||
         cmd === "exit"
       ) {
         navigate("/");
-      } else if (cmd === "pp quit" || cmd === "quit") {
+      } else if (cmd === "quit") {
         window.App.quit();
-      } else if (cmd === "pp clear") {
+      } else if (cmd === "clear") {
         setCommandHistory(["$ "]);
-      } else if (cmd === "pp open now-playing") {
+      } else if (cmd === "open now-playing") {
         setActiveTab("now-playing");
         addToHistory("[OK] Selected cat now_playing.txt tab");
-      } else if (cmd === "pp open visualizer") {
+      } else if (cmd === "open visualizer") {
         setActiveTab("visualizer");
         addToHistory("[OK] Selected ./visualizer --mode=spectrum tab");
-      } else if (cmd === "pp open controls") {
+      } else if (cmd === "open controls") {
         setActiveTab("controls");
         addToHistory("[OK] Selected ./player-controls tab");
       } else if (cmd === "radio list" || cmd === "ls -ra") {
@@ -1260,8 +1885,8 @@ export function MainScreen() {
         if (currentItem) {
           setIsPlaying(true);
           addToHistory("[PLAYING] Playback resumed");
-        } else if (activeItems.length > 0) {
-          playItem(activeItems[0]);
+        } else if (queueItems.length > 0) {
+          playItem(queueItems[0]);
         }
       } else if (cmd === "pause" || cmd === "stop") {
         clearConnectionTimers();
@@ -1271,23 +1896,49 @@ export function MainScreen() {
         nextItem();
       } else if (cmd === "prev" || cmd === "p") {
         prevItem();
-      } else if (cmd === "aleatorio" || cmd === "shuffle") {
+      } else if (cmd === "shuffle") {
         toggleShuffle();
-      } else if (
-        cmd === "repetir" ||
-        cmd === "repetir musica" ||
-        cmd === "repeat"
-      ) {
+      } else if (cmd === "repeat") {
         toggleRepeat();
       } else if (cmd.startsWith("play ")) {
         const query = normalizeCommand(rawCommand.slice(5).replace(/"/g, ""));
         const itemIndex = Number.parseInt(query, 10);
+        const isYouTubePlaylistCommand =
+          activeSourceMode === "yt" &&
+          activeTab === "youtube-list" &&
+          showYouTubeListTab;
+
+        if (isYouTubePlaylistCommand) {
+          const playlistId =
+            Number.isInteger(itemIndex) &&
+            itemIndex >= 1 &&
+            itemIndex <= youtubeStorage.youtube.playlists.length
+              ? youtubeStorage.youtube.playlists[itemIndex - 1]
+              : youtubeStorage.youtube.playlists.find((playlistId) => {
+                  const playlist = youtubeStorage.youtube.playlistDetails.find(
+                    (item) => item.id === playlistId,
+                  );
+
+                  return normalizeCommand(
+                    playlist?.title ?? playlistId,
+                  ).includes(query);
+                });
+
+          if (playlistId) {
+            playYouTubePlaylist(playlistId);
+          } else {
+            addToHistory(`[ERROR] YouTube playlist not found: ${query}`);
+          }
+
+          return;
+        }
+
         const found =
           Number.isInteger(itemIndex) &&
           itemIndex >= 1 &&
-          itemIndex <= activeItems.length
-            ? activeItems[itemIndex - 1]
-            : activeItems.find(
+          itemIndex <= visibleItems.length
+            ? visibleItems[itemIndex - 1]
+            : visibleItems.find(
                 (item) =>
                   normalizeCommand(item.title).includes(query) ||
                   normalizeCommand(item.artist).includes(query),
@@ -1303,7 +1954,7 @@ export function MainScreen() {
       } else if (cmd === "list" || cmd === "ls") {
         addToHistory(`[INFO] Listing ${activeSource.label}...`);
         const listedItems =
-          activeSourceMode === "radio" ? recentRadioItems : activeItems;
+          activeSourceMode === "radio" ? recentRadioItems : visibleItems;
 
         if (listedItems.length === 0 && activeSourceMode === "radio") {
           addToHistory("[INFO] No recently played radios yet");
@@ -1314,6 +1965,12 @@ export function MainScreen() {
         if (listedItems.length === 0 && activeSourceMode === "local") {
           addToHistory("[INFO] no recent musics to listen");
           addToHistory("[HINT] type music -- path pathname to config");
+          return;
+        }
+
+        if (listedItems.length === 0 && activeSourceMode === "yt") {
+          addToHistory("[INFO] no youtube videos selected");
+          addToHistory("[HINT] Use 'yt list' and 'play 1' to select a playlist");
           return;
         }
 
@@ -1338,10 +1995,10 @@ export function MainScreen() {
           );
           addToHistory(`[STATUS] Volume: ${Math.round(volume * 100)}%`);
           addToHistory(
-            `[STATUS] Aleatorio: ${isShuffleEnabled ? "on" : "off"}`,
+            `[STATUS] Shuffle: ${isShuffleEnabled ? "on" : "off"}`,
           );
           addToHistory(
-            `[STATUS] Repetir musica: ${isRepeatEnabled ? "on" : "off"}`,
+            `[STATUS] Repeat: ${isRepeatEnabled ? "on" : "off"}`,
           );
           addToHistory(
             `[STATUS] Audio API: ${isConnected ? "Connected" : "Procedural"}`,
@@ -1400,17 +2057,25 @@ export function MainScreen() {
       closeHelpTab,
       closeMusicListTab,
       closeRadioListTab,
+      closeYouTubeListTab,
+      clearYouTubeApiKey,
       currentItem,
       navigate,
       openHelpTab,
       openMusicListTab,
       openRadioListTab,
+      openYouTubeListTab,
       playItem,
+      playYouTubePlaylist,
       nextItem,
       prevItem,
+      queueItems,
       selectSource,
       scanMusicPath,
       selectMusicFolder,
+      setYouTubeApiKey,
+      saveYouTubePlaylist,
+      visibleItems,
       volume,
       isShuffleEnabled,
       isRepeatEnabled,
@@ -1418,6 +2083,7 @@ export function MainScreen() {
       clearConnectionTimers,
       simulateLoading,
       isLoading,
+      isAwaitingYouTubeApiKey,
       handleVolumeChange,
       muteVolume,
       unmuteVolume,
@@ -1427,8 +2093,11 @@ export function MainScreen() {
       showHelpTab,
       showMusicListTab,
       showRadioListTab,
+      showYouTubeListTab,
       tabs,
       recentRadioItems,
+      youtubeStorage.youtube.playlistDetails,
+      youtubeStorage.youtube.playlists,
     ],
   );
 
@@ -1439,8 +2108,9 @@ export function MainScreen() {
       }
 
       if (
-        activeTab === "radio-list" &&
-        showRadioListTab &&
+        (activeTab === "radio-list" ||
+          activeTab === "tracks" ||
+          activeTab === "youtube-list") &&
         !event.altKey &&
         !event.ctrlKey &&
         !event.metaKey &&
@@ -1448,7 +2118,23 @@ export function MainScreen() {
         (event.key === "ArrowDown" || event.key === "ArrowUp")
       ) {
         event.preventDefault();
-        scrollRadioList(event.key === "ArrowDown" ? "down" : "up");
+        const direction = event.key === "ArrowDown" ? "down" : "up";
+
+        if (activeTab === "radio-list" && showRadioListTab) {
+          scrollRadioList(direction);
+          return;
+        }
+
+        if (activeTab === "youtube-list" && showYouTubeListTab) {
+          scrollYouTubeList(direction);
+          return;
+        }
+
+        if (activeTab === "tracks") {
+          scrollTrackList(direction);
+          return;
+        }
+
         return;
       }
 
@@ -1477,7 +2163,15 @@ export function MainScreen() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeTab, cycleTab, scrollRadioList, showRadioListTab]);
+  }, [
+    activeTab,
+    cycleTab,
+    scrollRadioList,
+    scrollTrackList,
+    scrollYouTubeList,
+    showRadioListTab,
+    showYouTubeListTab,
+  ]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -1530,7 +2224,7 @@ export function MainScreen() {
   useEffect(() => {
     const audio = audioRef.current;
 
-    if (!audio || !currentItem) {
+    if (!audio || !currentItem || currentItem.mode === "yt") {
       return;
     }
 
@@ -1557,7 +2251,7 @@ export function MainScreen() {
   useEffect(() => {
     const audio = audioRef.current;
 
-    if (!audio || !currentItem) {
+    if (!audio || !currentItem || currentItem.mode === "yt") {
       return;
     }
 
@@ -1580,6 +2274,65 @@ export function MainScreen() {
     }
   }, [currentItem, addToHistory, clearConnectionTimers, isPlaying]);
 
+  const handlePlayerEnded = useCallback(() => {
+    if (didHandleEndedRef.current) {
+      return;
+    }
+
+    didHandleEndedRef.current = true;
+    addToHistory("[INFO] Item ended");
+
+    if (isRepeatEnabled && currentItem) {
+      addToHistory("[INFO] Repeating current item");
+      playItem(currentItem);
+      return;
+    }
+
+    nextItem();
+  }, [addToHistory, currentItem, isRepeatEnabled, nextItem, playItem]);
+
+  useEffect(() => {
+    if (currentItem?.mode !== "yt" || !isPlaying || duration <= 0) {
+      return;
+    }
+
+    const timerId = window.setInterval(() => {
+      setCurrentTime((prev) => {
+        const nextTime = Math.min(prev + 1, duration);
+
+        if (nextTime >= duration) {
+          window.setTimeout(handlePlayerEnded, 0);
+        }
+
+        return nextTime;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timerId);
+  }, [currentItem?.mode, duration, handlePlayerEnded, isPlaying]);
+
+  const renderPlayerControls = () => (
+    <PlayerControls
+      currentItem={currentItem}
+      currentTime={currentTime}
+      duration={duration}
+      isPlaying={isPlaying}
+      isRepeatEnabled={isRepeatEnabled}
+      isShuffleEnabled={isShuffleEnabled}
+      onEnded={handlePlayerEnded}
+      onNext={nextItem}
+      onPrev={prevItem}
+      onSeek={handleSeek}
+      onToggleMute={volume > 0 ? muteVolume : unmuteVolume}
+      onTogglePlay={togglePlay}
+      onToggleRepeat={toggleRepeat}
+      onToggleShuffle={toggleShuffle}
+      onVolumeChange={handleVolumeChange}
+      source={activeSource}
+      volume={volume}
+    />
+  );
+
   const renderTabContent = () => {
     switch (activeTab) {
       case "tracks":
@@ -1589,6 +2342,7 @@ export function MainScreen() {
             isPlaying={isPlaying}
             items={visibleItems}
             onSelectItem={playItem}
+            scrollContainerRef={trackListScrollRef}
             source={activeSource}
           />
         );
@@ -1611,26 +2365,7 @@ export function MainScreen() {
           />
         );
       case "controls":
-        return (
-          <PlayerControls
-            currentItem={currentItem}
-            currentTime={currentTime}
-            duration={duration}
-            isPlaying={isPlaying}
-            isRepeatEnabled={isRepeatEnabled}
-            isShuffleEnabled={isShuffleEnabled}
-            onNext={nextItem}
-            onPrev={prevItem}
-            onSeek={handleSeek}
-            onToggleMute={volume > 0 ? muteVolume : unmuteVolume}
-            onTogglePlay={togglePlay}
-            onToggleRepeat={toggleRepeat}
-            onToggleShuffle={toggleShuffle}
-            onVolumeChange={handleVolumeChange}
-            source={activeSource}
-            volume={volume}
-          />
-        );
+        return renderPlayerControls();
       case "radio-list":
         return (
           <RadioListTab
@@ -1644,6 +2379,15 @@ export function MainScreen() {
         );
       case "music-list":
         return <MusicListTab libraries={musicLibraries} />;
+      case "youtube-list":
+        return (
+          <YouTubeListTab
+            currentPlaylistId={selectedYouTubePlaylistId}
+            onSelectPlaylist={playYouTubePlaylist}
+            scrollContainerRef={youtubeListScrollRef}
+            youtube={youtubeStorage.youtube}
+          />
+        );
       case "help":
         return <HelpTab source={activeSource} />;
       default:
@@ -1664,11 +2408,26 @@ export function MainScreen() {
               tabs={tabs}
             />
             <div
-              className={`min-h-0 flex-1 overflow-hidden bg-background ${
+              className={`relative min-h-0 flex-1 overflow-hidden bg-background ${
                 activeTab === "controls" ? "" : "pointer-events-none"
               }`}
             >
-              {renderTabContent()}
+              {activeSourceMode === "yt" ? (
+                <>
+                  <div
+                    className={
+                      activeTab === "controls"
+                        ? "h-full"
+                        : "pointer-events-none absolute h-px w-px overflow-hidden opacity-0"
+                    }
+                  >
+                    {renderPlayerControls()}
+                  </div>
+                  {activeTab === "controls" ? null : renderTabContent()}
+                </>
+              ) : (
+                renderTabContent()
+              )}
             </div>
             <TerminalPrompt
               history={commandHistory}
@@ -1681,6 +2440,9 @@ export function MainScreen() {
               onCycleTab={cycleTab}
               promptContext={
                 activeSourceMode === "local" ? "music" : activeSourceMode
+              }
+              promptLabel={
+                isAwaitingYouTubeApiKey ? "YouTube API Key:" : undefined
               }
               themePicker={
                 isThemePickerOpen
