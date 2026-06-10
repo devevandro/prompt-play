@@ -1,21 +1,10 @@
-import type { PlayerQueueItem } from 'shared/types'
+import type {
+  PlayerQueueItem,
+  YouTubePlaylistSummary,
+  YouTubeStorage,
+} from 'shared/types'
 
 export const YOUTUBE_STORAGE_KEY = 'prompt-play-youtube'
-
-export interface YouTubePlaylistSummary {
-  id: string
-  title: string
-  videoCount: number
-}
-
-export interface YouTubeStorage {
-  youtube: {
-    apiKey: string
-    playlists: string[]
-    playlistDetails: YouTubePlaylistSummary[]
-    items: PlayerQueueItem[]
-  }
-}
 
 export function createEmptyYouTubeStorage(): YouTubeStorage {
   return {
@@ -28,59 +17,49 @@ export function createEmptyYouTubeStorage(): YouTubeStorage {
   }
 }
 
-export function readStoredYouTube(): YouTubeStorage {
-  try {
-    const storedValue = localStorage.getItem(YOUTUBE_STORAGE_KEY)
+export function normalizeYouTubeStorage(
+  stored: Partial<YouTubeStorage> | null | undefined
+): YouTubeStorage {
+  const youtube = stored?.youtube
 
-    if (!storedValue) {
-      return createEmptyYouTubeStorage()
-    }
-
-    const stored = JSON.parse(storedValue) as Partial<YouTubeStorage>
-    const youtube = stored.youtube
-
-    if (!youtube) {
-      return createEmptyYouTubeStorage()
-    }
-
-    return {
-      youtube: {
-        apiKey: typeof youtube.apiKey === 'string' ? youtube.apiKey : '',
-        playlists: Array.isArray(youtube.playlists)
-          ? youtube.playlists.filter(
-              (playlistId): playlistId is string =>
-                typeof playlistId === 'string'
-            )
-          : [],
-        playlistDetails: Array.isArray(youtube.playlistDetails)
-          ? youtube.playlistDetails
-              .filter(
-                (playlist): playlist is YouTubePlaylistSummary =>
-                  typeof playlist.id === 'string' &&
-                  typeof playlist.title === 'string'
-              )
-              .map(playlist => ({
-                ...playlist,
-                videoCount:
-                  typeof playlist.videoCount === 'number'
-                    ? playlist.videoCount
-                    : 0,
-              }))
-          : [],
-        items: Array.isArray(youtube.items)
-          ? youtube.items.filter(
-              (item): item is PlayerQueueItem =>
-                item?.mode === 'yt' &&
-                typeof item.id === 'string' &&
-                typeof item.title === 'string' &&
-                typeof item.artist === 'string' &&
-                typeof item.src === 'string'
-            )
-          : [],
-      },
-    }
-  } catch {
+  if (!youtube) {
     return createEmptyYouTubeStorage()
+  }
+
+  return {
+    youtube: {
+      apiKey: typeof youtube.apiKey === 'string' ? youtube.apiKey : '',
+      playlists: Array.isArray(youtube.playlists)
+        ? youtube.playlists.filter(
+            (playlistId): playlistId is string => typeof playlistId === 'string'
+          )
+        : [],
+      playlistDetails: Array.isArray(youtube.playlistDetails)
+        ? youtube.playlistDetails
+            .filter(
+              (playlist): playlist is YouTubePlaylistSummary =>
+                typeof playlist.id === 'string' &&
+                typeof playlist.title === 'string'
+            )
+            .map(playlist => ({
+              ...playlist,
+              videoCount:
+                typeof playlist.videoCount === 'number'
+                  ? playlist.videoCount
+                  : 0,
+            }))
+        : [],
+      items: Array.isArray(youtube.items)
+        ? youtube.items.filter(
+            (item): item is PlayerQueueItem =>
+              item?.mode === 'yt' &&
+              typeof item.id === 'string' &&
+              typeof item.title === 'string' &&
+              typeof item.artist === 'string' &&
+              typeof item.src === 'string'
+          )
+        : [],
+    },
   }
 }
 

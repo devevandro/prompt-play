@@ -1,6 +1,6 @@
 import type { RefObject } from 'react'
 
-import type { YouTubeStorage } from 'renderer/lib/youtube'
+import type { YouTubeStorage } from 'shared/types'
 
 export function YouTubeListTab({
   currentPlaylistId,
