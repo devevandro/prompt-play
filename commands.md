@@ -23,8 +23,8 @@ Reference for commands accepted by the Prompt Play terminal input.
 | `resume` | Resumes the current item. |
 | `pause` | Pauses playback. |
 | `stop` | Pauses playback. |
-| `next` or `n` | Plays the next item from the active source. |
-| `prev` or `p` | Plays the previous item from the active source. |
+| `next` or `n` | Plays the next item from the active source. Not available in YouTube mode; use `play [number]` there. |
+| `prev` or `p` | Plays the previous item from the active source. Not available in YouTube mode; use `play [number]` there. |
 | `shuffle` | Toggles random playback order for the active source. |
 | `repeat` | Toggles repeat for the current item. |
 
@@ -84,12 +84,13 @@ for durations because `playlistItems` does not include duration metadata.
 The `ls -la` tab renders video title, artist/channel when available, and total
 video duration for the selected playlist only. The `yt playlists` tab lists
 saved playlists; run `play [number]` there to choose which playlist feeds
-`ls -la`, `next`, and `prev`. The `./player-controls` tab renders the current
-YouTube video as an autoplaying embedded player and stays mounted while
-navigating between YouTube tabs so playback can continue. Volume commands and
-the volume control send YouTube iframe API commands too. When a YouTube video
-ends while playback is active, the player advances to the next selected playlist
-item automatically.
+`ls -la`. In YouTube mode, use `play [number]` from the selected playlist list
+to move to a specific video; `next`, `n`, `prev`, and `p` are not available.
+The `./player-controls` tab renders the current YouTube video as an autoplaying
+embedded player and stays mounted while navigating between YouTube tabs so
+playback can continue. Volume commands and the volume control send YouTube
+iframe API commands too. When a YouTube video ends while playback is active,
+the player advances to the next selected playlist item automatically.
 
 ## Volume
 
@@ -110,6 +111,7 @@ item automatically.
 | `home` or `exit` | Returns from the player to the first access screen. |
 | `quit` | Closes the application. |
 | `clear` | Clears terminal history. |
+| `clear all` | Stops and clears the current playback state for radio, music, and YouTube without deleting saved libraries, radios, playlists, or API keys. |
 | `version` | Shows the current project version. |
 | `open now-playing` | Opens the `cat now_playing.txt` tab. |
 | `open visualizer` | Opens the `./visualizer --mode=spectrum` tab. |
@@ -174,6 +176,7 @@ Theme picker controls: `Up`/`Down` selects a theme, `Enter` applies it, and
 | `help`, `h`, or `?` | Opens the temporary help tab. |
 | `:q` | Closes the active temporary tab. |
 | `clear` | Clears terminal history. |
+| `clear all` | Stops and clears playback for radio, music, and YouTube while keeping saved configuration. |
 
 ## Input Shortcuts
 
