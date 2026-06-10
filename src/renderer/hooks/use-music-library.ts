@@ -1,42 +1,36 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 
+import {
+  useRemoveStoredValue,
+  useSetStoredValue,
+  useStoredValue,
+} from 'renderer/hooks/use-app-storage'
 import type { MusicLibrary, PlayerQueueItem } from 'shared/types'
 
 export const MUSIC_LIBRARY_STORAGE_KEY = 'prompt-play-music-libraries'
 
 type AddToHistory = (command: string) => void
 
-function readStoredMusicLibraries(): MusicLibrary[] {
-  try {
-    const storedValue = localStorage.getItem(MUSIC_LIBRARY_STORAGE_KEY)
-
-    if (!storedValue) {
-      return []
-    }
-
-    const libraries = JSON.parse(storedValue) as MusicLibrary[]
-
-    if (!Array.isArray(libraries)) {
-      return []
-    }
-
-    return libraries.filter(
-      library =>
-        typeof library.id === 'string' &&
-        typeof library.name === 'string' &&
-        typeof library.path === 'string' &&
-        typeof library.musicCount === 'number' &&
-        Array.isArray(library.items)
-    )
-  } catch {
+function normalizeMusicLibraries(
+  storedValue: MusicLibrary[] | null | undefined
+): MusicLibrary[] {
+  if (!Array.isArray(storedValue)) {
     return []
   }
+
+  return storedValue.filter(
+    library =>
+      typeof library.id === 'string' &&
+      typeof library.name === 'string' &&
+      typeof library.path === 'string' &&
+      typeof library.musicCount === 'number' &&
+      Array.isArray(library.items)
+  )
 }
 
 export function getDefaultMusicLocations() {
-  const username = window.App.username
-  const homePath = username ? `/Users/${username}` : '~'
+  const homePath = window.App.homePath
 
   return [
     { name: 'Music', path: `${homePath}/Music` },
@@ -55,19 +49,25 @@ export function useMusicLibrary({
   setCurrentItem: Dispatch<SetStateAction<PlayerQueueItem | null>>
   setIsLoading: Dispatch<SetStateAction<boolean>>
 }) {
-  const [musicLibraries, setMusicLibraries] = useState<MusicLibrary[]>(
-    readStoredMusicLibraries
+  const { data: storedMusicLibraries, isFetched: hasFetchedStoredLibraries } =
+    useStoredValue<MusicLibrary[]>(MUSIC_LIBRARY_STORAGE_KEY)
+  const { mutate: persistMusicLibraries } = useSetStoredValue<MusicLibrary[]>(
+    MUSIC_LIBRARY_STORAGE_KEY
   )
+  const { mutate: removeStoredMusicLibraries } = useRemoveStoredValue(
+    MUSIC_LIBRARY_STORAGE_KEY
+  )
+  const [musicLibraries, setMusicLibraries] = useState<MusicLibrary[]>([])
+  const hasHydratedMusicLibrariesRef = useRef(false)
 
   useEffect(() => {
-    localStorage.setItem(
-      MUSIC_LIBRARY_STORAGE_KEY,
-      JSON.stringify(musicLibraries)
-    )
-  }, [musicLibraries])
+    if (!hasFetchedStoredLibraries || hasHydratedMusicLibrariesRef.current) {
+      return
+    }
 
-  useEffect(() => {
-    const storedLibraries = readStoredMusicLibraries()
+    hasHydratedMusicLibrariesRef.current = true
+    const storedLibraries = normalizeMusicLibraries(storedMusicLibraries)
+    setMusicLibraries(storedLibraries)
 
     if (storedLibraries.length === 0) {
       return
@@ -81,6 +81,7 @@ export function useMusicLibrary({
       .then(libraries => {
         if (isMounted) {
           setMusicLibraries(libraries)
+          persistMusicLibraries(libraries)
         }
       })
       .catch(() => {
@@ -90,19 +91,24 @@ export function useMusicLibrary({
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [hasFetchedStoredLibraries, persistMusicLibraries, storedMusicLibraries])
 
   const storeMusicLibrary = useCallback(
     (library: MusicLibrary) => {
-      setMusicLibraries(prev => [
-        library,
-        ...prev.filter(item => item.path !== library.path),
-      ])
+      setMusicLibraries(prev => {
+        const nextLibraries = [
+          library,
+          ...prev.filter(item => item.path !== library.path),
+        ]
+
+        persistMusicLibraries(nextLibraries)
+        return nextLibraries
+      })
       addToHistory(`[OK] Configured music folder: ${library.name}`)
       addToHistory(`[INFO] Path: ${library.path}`)
       addToHistory(`[INFO] ${library.musicCount} musics found`)
     },
-    [addToHistory]
+    [addToHistory, persistMusicLibraries]
   )
 
   const updateLocalItemDuration = useCallback(
@@ -114,8 +120,8 @@ export function useMusicLibrary({
       setCurrentItem(prev =>
         prev?.id === item.id ? { ...prev, duration: nextDuration } : prev
       )
-      setMusicLibraries(prev =>
-        prev.map(library => ({
+      setMusicLibraries(prev => {
+        const nextLibraries = prev.map(library => ({
           ...library,
           items: library.items.map(libraryItem =>
             libraryItem.id === item.id
@@ -123,9 +129,12 @@ export function useMusicLibrary({
               : libraryItem
           ),
         }))
-      )
+
+        persistMusicLibraries(nextLibraries)
+        return nextLibraries
+      })
     },
-    [setCurrentItem]
+    [persistMusicLibraries, setCurrentItem]
   )
 
   const scanMusicPath = useCallback(
@@ -174,8 +183,14 @@ export function useMusicLibrary({
     }
   }, [addToHistory, openMusicListTab, setIsLoading, storeMusicLibrary])
 
+  const resetMusicLibraries = useCallback(() => {
+    setMusicLibraries([])
+    removeStoredMusicLibraries()
+  }, [removeStoredMusicLibraries])
+
   return {
     musicLibraries,
+    resetMusicLibraries,
     scanMusicPath,
     selectMusicFolder,
     updateLocalItemDuration,

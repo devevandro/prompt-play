@@ -9,11 +9,11 @@ import {
   sourceCommandLabel,
 } from 'renderer/lib/player-utils'
 import { THEMES, type ThemeId } from 'renderer/lib/themes'
-import type { YouTubeStorage } from 'renderer/lib/youtube'
 import type {
   PlayerQueueItem,
   PlayerSource,
   PlayerSourceMode,
+  YouTubeStorage,
 } from 'shared/types'
 import { version } from '../../../package.json'
 
