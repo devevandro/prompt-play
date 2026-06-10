@@ -80,7 +80,7 @@ export function HomeScreen() {
                 Prompt Play v{version}
               </h1>
               <p className="text-terminal-gray">
-                Not is a terminal. It's a music player.
+                A terminal-first media platform.
               </p>
               <div className="space-y-2 text-terminal-white/80 mt-5">
                 <p>Available sources</p>
