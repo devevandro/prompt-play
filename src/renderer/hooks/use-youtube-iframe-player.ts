@@ -24,18 +24,15 @@ export function useYouTubeIframePlayer({
       return ''
     }
 
-    const embedOrigin = /^https?:\/\//.test(window.location.origin)
-      ? window.location.origin
-      : 'https://www.youtube.com'
     const params = new URLSearchParams({
       autoplay: '1',
       controls: '0',
       disablekb: '1',
       enablejsapi: '1',
       modestbranding: '1',
-      origin: embedOrigin,
       playsinline: '1',
       rel: '0',
+      widget_referrer: 'https://www.youtube.com/',
     })
 
     return `https://www.youtube.com/embed/${videoId}?${params.toString()}`

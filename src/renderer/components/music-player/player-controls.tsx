@@ -119,7 +119,6 @@ export function PlayerControls({
                 key={embedUrl}
                 onLoad={markFrameReady}
                 ref={iframeRef}
-                referrerPolicy="strict-origin-when-cross-origin"
                 src={embedUrl}
                 title={currentItem?.title ?? 'YouTube player'}
               />

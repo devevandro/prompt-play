@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 
 import {
+  createEmptyYouTubeStorage,
   fetchYouTubePlaylistItems,
   parseYouTubePlaylistId,
   readStoredYouTube,
@@ -26,8 +27,15 @@ export function useYouTubeLibrary({
   const [selectedYouTubePlaylistId, setSelectedYouTubePlaylistId] = useState<
     string | null
   >(() => readStoredYouTube().youtube.playlists[0] ?? null)
+  const shouldSkipNextPersistRef = useRef(false)
 
   useEffect(() => {
+    if (shouldSkipNextPersistRef.current) {
+      shouldSkipNextPersistRef.current = false
+      localStorage.removeItem(YOUTUBE_STORAGE_KEY)
+      return
+    }
+
     localStorage.setItem(YOUTUBE_STORAGE_KEY, JSON.stringify(youtubeStorage))
   }, [youtubeStorage])
 
@@ -58,6 +66,16 @@ export function useYouTubeLibrary({
       },
     }))
     addToHistory('[OK] YouTube API key removed')
+  }, [addToHistory])
+
+  const cleanYouTubeConfig = useCallback(() => {
+    setIsAwaitingYouTubeApiKey(false)
+    setSelectedYouTubePlaylistId(null)
+    shouldSkipNextPersistRef.current = true
+    setYouTubeStorage(createEmptyYouTubeStorage())
+    localStorage.removeItem(YOUTUBE_STORAGE_KEY)
+    addToHistory('[OK] YouTube configuration cleaned')
+    addToHistory('[INFO] Removed API key, playlists, and cached videos')
   }, [addToHistory])
 
   const saveYouTubePlaylist = useCallback(
@@ -130,6 +148,7 @@ export function useYouTubeLibrary({
   )
 
   return {
+    cleanYouTubeConfig,
     clearYouTubeApiKey,
     isAwaitingYouTubeApiKey,
     saveYouTubePlaylist,
