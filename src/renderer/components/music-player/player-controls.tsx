@@ -64,14 +64,13 @@ export function PlayerControls({
 }: PlayerControlsProps) {
   const canSeek = source.supportsSeek && duration > 0
   const progress = canSeek ? (currentTime / duration) * 100 : 0
-  const { embedUrl, iframeRef, markFrameReady, seekTo } =
-    useYouTubeIframePlayer({
-      currentItem,
-      isPlaying,
-      onEnded,
-      sourceMode: source.mode,
-      volume,
-    })
+  const { containerRef, hasVideo, seekTo } = useYouTubeIframePlayer({
+    currentItem,
+    isPlaying,
+    onEnded,
+    sourceMode: source.mode,
+    volume,
+  })
 
   const handleProgressClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     if (!canSeek) {
@@ -111,16 +110,10 @@ export function PlayerControls({
       <div className="flex flex-1 flex-col justify-center space-y-6 p-6">
         {source.mode === 'yt' && (
           <div className="mx-auto aspect-video w-full max-w-xl overflow-hidden rounded bg-muted">
-            {embedUrl ? (
-              <iframe
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="pointer-events-none h-full w-full"
-                key={embedUrl}
-                onLoad={markFrameReady}
-                ref={iframeRef}
-                src={embedUrl}
-                title={currentItem?.title ?? 'YouTube player'}
+            {hasVideo ? (
+              <div
+                className="h-full w-full [&_iframe]:h-full [&_iframe]:w-full"
+                ref={containerRef}
               />
             ) : (
               <div className="flex h-full items-center justify-center font-mono text-terminal-gray text-xs">

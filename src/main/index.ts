@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import { join } from 'node:path'
 
 import { makeAppWithSingleInstanceLock } from 'lib/electron-app/factories/app/instance'
 import { makeAppSetup } from 'lib/electron-app/factories/app/setup'
@@ -9,7 +10,10 @@ import {
 } from 'main/audio/local-audio-protocol'
 import { registerPlayerIpc } from 'main/ipc/register-player-ipc'
 import { registerAppMenu } from 'main/menu/app-menu'
-import { registerYouTubePlayerHeaders } from 'main/youtube/player-headers'
+import {
+  startRendererStaticServer,
+  stopRendererStaticServer,
+} from 'main/renderer/static-server'
 import { ENVIRONMENT } from 'shared/constants'
 import { waitFor } from 'shared/utils'
 import { MainWindow } from './windows/main'
@@ -22,7 +26,11 @@ makeAppWithSingleInstanceLock(async () => {
   registerPlayerIpc()
   registerLocalAudioProtocol()
   registerAppMenu()
-  registerYouTubePlayerHeaders()
+
+  if (!ENVIRONMENT.IS_DEV) {
+    await startRendererStaticServer(join(__dirname, '../renderer'))
+    app.once('before-quit', stopRendererStaticServer)
+  }
 
   const window = await makeAppSetup(MainWindow)
 

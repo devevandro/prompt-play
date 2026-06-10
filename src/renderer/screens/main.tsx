@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Header } from 'renderer/components/header'
+import { Header } from 'renderer/components/Header'
 
 import { HelpTab } from 'renderer/components/music-player/help-tab'
 import { MusicListTab } from 'renderer/components/music-player/music-list-tab'
