@@ -74,3 +74,28 @@ export interface MusicLibrary {
   musicCount: number
   items: PlayerQueueItem[]
 }
+
+export interface YouTubePlaylistSummary {
+  id: string
+  title: string
+  videoCount: number
+}
+
+export interface YouTubeStorage {
+  youtube: {
+    apiKey: string
+    playlists: string[]
+    playlistDetails: YouTubePlaylistSummary[]
+    items: PlayerQueueItem[]
+  }
+}
+
+export type AppStorageKey =
+  | 'prompt-play-theme'
+  | 'prompt-play-music-libraries'
+  | 'prompt-play-youtube'
+
+export interface AppStorageRequest<T = unknown> {
+  key: AppStorageKey
+  value?: T
+}

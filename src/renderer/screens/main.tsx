@@ -13,6 +13,11 @@ import { TerminalTabs } from 'renderer/components/music-player/terminal-tabs'
 import { TrackList } from 'renderer/components/music-player/track-list'
 import { Visualizer } from 'renderer/components/music-player/visualizer'
 import { YouTubeListTab } from 'renderer/components/music-player/youtube-list-tab'
+import {
+  useClearStoredValues,
+  useSetStoredValue,
+  useStoredValue,
+} from 'renderer/hooks/use-app-storage'
 import { useAudioAnalyzer } from 'renderer/hooks/use-audio-analyzer'
 import { useMusicLibrary } from 'renderer/hooks/use-music-library'
 import { usePlayerCommands } from 'renderer/hooks/use-player-commands'
@@ -111,9 +116,15 @@ export function MainScreen() {
   const volumeRef = useRef(volume)
   const previousVolumeRef = useRef(volume)
   const didHandleEndedRef = useRef(false)
+  const shouldSkipNextThemePersistRef = useRef(false)
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
     null
   )
+  const { data: storedTheme, isFetched: hasFetchedStoredTheme } =
+    useStoredValue<ThemeId>('prompt-play-theme')
+  const { mutate: persistTheme } =
+    useSetStoredValue<ThemeId>('prompt-play-theme')
+  const { mutateAsync: clearStoredValues } = useClearStoredValues()
 
   const addToHistory = useCallback((command: string) => {
     setCommandHistory(prev => [...prev.slice(-30), command])
@@ -188,6 +199,7 @@ export function MainScreen() {
 
   const {
     musicLibraries,
+    resetMusicLibraries,
     scanMusicPath,
     selectMusicFolder,
     updateLocalItemDuration,
@@ -208,6 +220,7 @@ export function MainScreen() {
     setIsAwaitingYouTubeApiKey,
     setSelectedYouTubePlaylistId,
     setYouTubeApiKey,
+    resetYouTubeStorage,
     youtubeStorage,
   } = useYouTubeLibrary({
     addToHistory,
@@ -215,13 +228,13 @@ export function MainScreen() {
     setIsLoading,
   })
 
+  const localItems = useMemo(
+    () => musicLibraries[0]?.items ?? [],
+    [musicLibraries]
+  )
   const items = useMemo(
-    () => [
-      ...musicLibraries.flatMap(library => library.items),
-      ...radioItems,
-      ...youtubeStorage.youtube.items,
-    ],
-    [musicLibraries, radioItems, youtubeStorage.youtube.items]
+    () => [...localItems, ...radioItems, ...youtubeStorage.youtube.items],
+    [localItems, radioItems, youtubeStorage.youtube.items]
   )
   const activeSource = useMemo(() => {
     const source = PLAYER_SOURCES[activeSourceMode]
@@ -335,19 +348,28 @@ export function MainScreen() {
   }, [activeSourceMode, currentItem])
 
   useEffect(() => {
-    const storedTheme = localStorage.getItem('prompt-play-theme')
+    if (!hasFetchedStoredTheme) {
+      return
+    }
+
     const theme = storedTheme ? getThemeById(storedTheme) : undefined
 
     if (theme) {
       setActiveTheme(theme.id)
       setSelectedThemeIndex(THEMES.findIndex(item => item.id === theme.id))
     }
-  }, [])
+  }, [hasFetchedStoredTheme, storedTheme])
 
   useEffect(() => {
     document.documentElement.dataset.theme = activeTheme
-    localStorage.setItem('prompt-play-theme', activeTheme)
-  }, [activeTheme])
+
+    if (!hasFetchedStoredTheme || shouldSkipNextThemePersistRef.current) {
+      shouldSkipNextThemePersistRef.current = false
+      return
+    }
+
+    persistTheme(activeTheme)
+  }, [activeTheme, hasFetchedStoredTheme, persistTheme])
 
   const simulateLoading = useCallback(
     async (
@@ -399,8 +421,9 @@ export function MainScreen() {
     [addToHistory, clearConnectionTimers]
   )
 
-  const clearAllPlayback = useCallback(() => {
+  const clearAllPlayback = useCallback(async () => {
     clearConnectionTimers()
+    await clearStoredValues()
     didHandleEndedRef.current = false
 
     if (audioRef.current) {
@@ -413,8 +436,21 @@ export function MainScreen() {
     setCurrentTime(0)
     setDuration(0)
     setIsPlaying(false)
+    shouldSkipNextThemePersistRef.current = activeTheme !== 'default'
+    setActiveTheme('default')
+    setSelectedThemeIndex(THEMES.findIndex(item => item.id === 'default'))
+    resetMusicLibraries()
+    resetYouTubeStorage()
     addToHistory('[OK] Cleared playback for radio, music, and YouTube')
-  }, [addToHistory, clearConnectionTimers])
+    addToHistory('[OK] Removed saved Electron Storage data')
+  }, [
+    addToHistory,
+    activeTheme,
+    clearConnectionTimers,
+    clearStoredValues,
+    resetMusicLibraries,
+    resetYouTubeStorage,
+  ])
 
   const playItem = useCallback(
     (item: PlayerQueueItem) => {
