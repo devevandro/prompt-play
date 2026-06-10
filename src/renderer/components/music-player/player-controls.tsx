@@ -62,6 +62,7 @@ export function PlayerControls({
   onToggleMute,
   onVolumeChange,
 }: PlayerControlsProps) {
+  const canSkip = source.mode !== 'yt'
   const canSeek = source.supportsSeek && duration > 0
   const progress = canSeek ? (currentTime / duration) * 100 : 0
   const { containerRef, hasVideo, seekTo } = useYouTubeIframePlayer({
@@ -147,14 +148,16 @@ export function PlayerControls({
             <Shuffle className="h-5 w-5" />
           </button>
 
-          <button
-            aria-label="Previous item"
-            className="rounded bg-muted/50 p-3 text-terminal-white transition-colors hover:bg-terminal-cyan/10 hover:text-terminal-cyan"
-            onClick={onPrev}
-            type="button"
-          >
-            <SkipBack className="h-6 w-6" />
-          </button>
+          {canSkip && (
+            <button
+              aria-label="Previous item"
+              className="rounded bg-muted/50 p-3 text-terminal-white transition-colors hover:bg-terminal-cyan/10 hover:text-terminal-cyan"
+              onClick={onPrev}
+              type="button"
+            >
+              <SkipBack className="h-6 w-6" />
+            </button>
+          )}
 
           <button
             aria-label={isPlaying ? 'Pause' : 'Play'}
@@ -169,14 +172,16 @@ export function PlayerControls({
             )}
           </button>
 
-          <button
-            aria-label="Next item"
-            className="rounded bg-muted/50 p-3 text-terminal-white transition-colors hover:bg-terminal-cyan/10 hover:text-terminal-cyan"
-            onClick={onNext}
-            type="button"
-          >
-            <SkipForward className="h-6 w-6" />
-          </button>
+          {canSkip && (
+            <button
+              aria-label="Next item"
+              className="rounded bg-muted/50 p-3 text-terminal-white transition-colors hover:bg-terminal-cyan/10 hover:text-terminal-cyan"
+              onClick={onNext}
+              type="button"
+            >
+              <SkipForward className="h-6 w-6" />
+            </button>
+          )}
 
           <button
             aria-label="Repeat current item"
@@ -264,9 +269,15 @@ export function PlayerControls({
         <span>
           <kbd className="text-terminal-cyan">↑/↓</kbd> volume
         </span>
-        <span>
-          <kbd className="text-terminal-cyan">n/p</kbd> next/prev
-        </span>
+        {canSkip ? (
+          <span>
+            <kbd className="text-terminal-cyan">n/p</kbd> next/prev
+          </span>
+        ) : (
+          <span>
+            <kbd className="text-terminal-cyan">play #</kbd> select video
+          </span>
+        )}
       </div>
     </div>
   )

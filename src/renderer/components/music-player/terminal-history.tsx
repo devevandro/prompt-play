@@ -41,7 +41,7 @@ function formatLine(line: string) {
 
 function getHistoryBlocks(history: string[]) {
   return history.reduce<HistoryBlock[]>((blocks, line, lineIndex) => {
-    if (!/^\[[A-Z]+\]/.test(line)) {
+    if (line.startsWith('$')) {
       return blocks
     }
 

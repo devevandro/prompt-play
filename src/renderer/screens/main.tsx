@@ -399,6 +399,23 @@ export function MainScreen() {
     [addToHistory, clearConnectionTimers]
   )
 
+  const clearAllPlayback = useCallback(() => {
+    clearConnectionTimers()
+    didHandleEndedRef.current = false
+
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.removeAttribute('src')
+      audioRef.current.load()
+    }
+
+    setCurrentItem(null)
+    setCurrentTime(0)
+    setDuration(0)
+    setIsPlaying(false)
+    addToHistory('[OK] Cleared playback for radio, music, and YouTube')
+  }, [addToHistory, clearConnectionTimers])
+
   const playItem = useCallback(
     (item: PlayerQueueItem) => {
       clearConnectionTimers()
@@ -623,6 +640,7 @@ export function MainScreen() {
     addToHistory,
     applyTheme,
     cleanYouTubeConfig,
+    clearAllPlayback,
     clearConnectionTimers,
     clearYouTubeApiKey,
     closeHelpTab,
