@@ -32,8 +32,15 @@ export function useYouTubeIframePlayer({
       modestbranding: '1',
       playsinline: '1',
       rel: '0',
-      widget_referrer: 'https://www.youtube.com/',
     })
+
+    if (window.location.origin.startsWith('http')) {
+      params.set('origin', window.location.origin)
+    }
+
+    if (window.location.href.startsWith('http')) {
+      params.set('widget_referrer', window.location.href)
+    }
 
     return `https://www.youtube.com/embed/${videoId}?${params.toString()}`
   }, [currentItem?.src, currentItem?.videoId, sourceMode])

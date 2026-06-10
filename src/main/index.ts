@@ -9,7 +9,6 @@ import {
 } from 'main/audio/local-audio-protocol'
 import { registerPlayerIpc } from 'main/ipc/register-player-ipc'
 import { registerAppMenu } from 'main/menu/app-menu'
-import { registerYouTubePlayerHeaders } from 'main/youtube/player-headers'
 import { ENVIRONMENT } from 'shared/constants'
 import { waitFor } from 'shared/utils'
 import { MainWindow } from './windows/main'
@@ -22,7 +21,6 @@ makeAppWithSingleInstanceLock(async () => {
   registerPlayerIpc()
   registerLocalAudioProtocol()
   registerAppMenu()
-  registerYouTubePlayerHeaders()
 
   const window = await makeAppSetup(MainWindow)
 

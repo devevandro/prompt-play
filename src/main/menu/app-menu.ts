@@ -59,6 +59,21 @@ function getViewMenu(): MenuItemConstructorOptions {
   }
 }
 
+function getEditMenu(): MenuItemConstructorOptions {
+  return {
+    label: 'Edit',
+    submenu: [
+      { label: 'Undo', role: 'undo' },
+      { label: 'Redo', role: 'redo' },
+      { type: 'separator' },
+      { label: 'Cut', role: 'cut' },
+      { label: 'Copy', role: 'copy' },
+      { label: 'Paste', role: 'paste' },
+      { label: 'Select All', role: 'selectAll' },
+    ],
+  }
+}
+
 function getHelpMenu(): MenuItemConstructorOptions {
   return {
     label: 'Help',
@@ -120,6 +135,11 @@ function getPromptPlayMenu(): MenuItemConstructorOptions {
 
 export function registerAppMenu() {
   Menu.setApplicationMenu(
-    Menu.buildFromTemplate([getPromptPlayMenu(), getViewMenu(), getHelpMenu()])
+    Menu.buildFromTemplate([
+      getPromptPlayMenu(),
+      getEditMenu(),
+      getViewMenu(),
+      getHelpMenu(),
+    ])
   )
 }

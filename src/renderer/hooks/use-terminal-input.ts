@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { FormEvent, KeyboardEvent } from 'react'
+import type { ClipboardEvent, FormEvent, KeyboardEvent } from 'react'
 
 import { TERMINAL_COMMANDS } from 'renderer/lib/terminal-commands'
 
@@ -196,6 +196,33 @@ export function useTerminalInput({
     }
   }
 
+  const handlePaste = (event: ClipboardEvent<HTMLInputElement>) => {
+    const pastedText = event.clipboardData.getData('text')
+
+    if (!pastedText) {
+      return
+    }
+
+    event.preventDefault()
+
+    const target = event.currentTarget
+    const selectionStart = target.selectionStart ?? input.length
+    const selectionEnd = target.selectionEnd ?? selectionStart
+    const nextInput = `${input.slice(0, selectionStart)}${pastedText}${input.slice(
+      selectionEnd
+    )}`
+
+    setInput(nextInput)
+
+    requestAnimationFrame(() => {
+      target.setSelectionRange(
+        selectionStart + pastedText.length,
+        selectionStart + pastedText.length
+      )
+      focusInput()
+    })
+  }
+
   const acceptSuggestion = (suggestion: string) => {
     setInput(suggestion)
     setShowSuggestions(false)
@@ -207,6 +234,7 @@ export function useTerminalInput({
     containerRef,
     focusInput,
     handleKeyDown,
+    handlePaste,
     handleSubmit,
     input,
     inputRef,

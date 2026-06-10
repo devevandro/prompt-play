@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Header } from 'renderer/components/header'
+import { Header } from 'renderer/components/Header'
 import { version } from '../../../package.json'
 import { Prompt } from 'renderer/components/prompt'
 

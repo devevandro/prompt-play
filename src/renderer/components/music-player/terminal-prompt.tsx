@@ -31,6 +31,7 @@ export function TerminalPrompt({
     containerRef,
     focusInput,
     handleKeyDown,
+    handlePaste,
     handleSubmit,
     input,
     inputRef,
@@ -75,6 +76,7 @@ export function TerminalPrompt({
                   className="w-full bg-transparent font-mono text-terminal-white text-xs caret-terminal-green outline-none"
                   onChange={event => setInput(event.target.value)}
                   onKeyDown={handleKeyDown}
+                  onPaste={handlePaste}
                   onPointerDown={focusInput}
                   placeholder="type 'help' to show commands"
                   ref={inputRef}
