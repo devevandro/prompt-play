@@ -2,6 +2,75 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { PlayerQueueItem, PlayerSourceMode } from 'shared/types'
 
+interface YouTubePlayer {
+  cueVideoById: (videoId: string) => void
+  destroy: () => void
+  loadVideoById: (videoId: string) => void
+  mute: () => void
+  pauseVideo: () => void
+  playVideo: () => void
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void
+  setVolume: (volume: number) => void
+  unMute: () => void
+}
+
+interface YouTubeApi {
+  Player: new (
+    element: HTMLElement,
+    options: {
+      events: {
+        onReady: () => void
+        onStateChange: (event: { data: number }) => void
+      }
+      playerVars: Record<string, string>
+      videoId: string
+    }
+  ) => YouTubePlayer
+}
+
+declare global {
+  interface Window {
+    YT?: YouTubeApi
+    onYouTubeIframeAPIReady?: () => void
+  }
+}
+
+let youTubeApiPromise: Promise<YouTubeApi> | null = null
+
+function loadYouTubeIframeApi() {
+  if (window.YT?.Player) {
+    return Promise.resolve(window.YT)
+  }
+
+  if (youTubeApiPromise) {
+    return youTubeApiPromise
+  }
+
+  youTubeApiPromise = new Promise(resolve => {
+    const previousReadyCallback = window.onYouTubeIframeAPIReady
+
+    window.onYouTubeIframeAPIReady = () => {
+      previousReadyCallback?.()
+
+      if (window.YT) {
+        resolve(window.YT)
+      }
+    }
+
+    if (
+      !document.querySelector(
+        'script[src="https://www.youtube.com/iframe_api"]'
+      )
+    ) {
+      const script = document.createElement('script')
+      script.src = 'https://www.youtube.com/iframe_api'
+      document.head.appendChild(script)
+    }
+  })
+
+  return youTubeApiPromise
+}
+
 export function useYouTubeIframePlayer({
   currentItem,
   isPlaying,
@@ -15,15 +84,12 @@ export function useYouTubeIframePlayer({
   sourceMode: PlayerSourceMode
   volume: number
 }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null)
-  const [isFrameReady, setIsFrameReady] = useState(false)
-  const embedUrl = useMemo(() => {
-    const videoId = currentItem?.videoId ?? currentItem?.src
-
-    if (sourceMode !== 'yt' || !videoId) {
-      return ''
-    }
-
+  const containerRef = useRef<HTMLDivElement>(null)
+  const playerRef = useRef<YouTubePlayer | null>(null)
+  const lastVideoIdRef = useRef('')
+  const [isPlayerReady, setIsPlayerReady] = useState(false)
+  const videoId = currentItem?.videoId ?? currentItem?.src ?? ''
+  const playerVars = useMemo(() => {
     const params = new URLSearchParams({
       autoplay: '1',
       controls: '0',
@@ -42,94 +108,137 @@ export function useYouTubeIframePlayer({
       params.set('widget_referrer', window.location.href)
     }
 
-    return `https://www.youtube.com/embed/${videoId}?${params.toString()}`
-  }, [currentItem?.src, currentItem?.videoId, sourceMode])
+    return Object.fromEntries(params.entries())
+  }, [])
 
-  const sendCommand = useCallback(
-    (func: string, args: unknown[] = []) => {
-      if (!isFrameReady) {
-        return
+  const setPlayerVolume = useCallback(
+    (player: YouTubePlayer = playerRef.current as YouTubePlayer) => {
+      const volumePercent = Math.round(volume * 100)
+      player.setVolume(volumePercent)
+
+      if (volumePercent === 0) {
+        player.mute()
+      } else {
+        player.unMute()
       }
-
-      iframeRef.current?.contentWindow?.postMessage(
-        JSON.stringify({
-          event: 'command',
-          func,
-          args,
-        }),
-        '*'
-      )
     },
-    [isFrameReady]
+    [volume]
   )
 
   useEffect(() => {
-    setIsFrameReady(false)
-  }, [embedUrl])
-
-  useEffect(() => {
-    if (sourceMode !== 'yt' || !iframeRef.current || !isFrameReady) {
+    if (sourceMode !== 'yt' || !videoId || !containerRef.current) {
+      playerRef.current?.destroy()
+      playerRef.current = null
+      lastVideoIdRef.current = ''
+      setIsPlayerReady(false)
       return
     }
 
-    sendCommand('addEventListener', ['onStateChange'])
-    sendCommand(isPlaying ? 'playVideo' : 'pauseVideo')
-  }, [isFrameReady, isPlaying, sendCommand, sourceMode])
+    let isCancelled = false
 
-  useEffect(() => {
-    if (sourceMode !== 'yt') {
-      return
-    }
+    if (!playerRef.current) {
+      setIsPlayerReady(false)
+      containerRef.current.replaceChildren(document.createElement('div'))
 
-    const handleMessage = (event: MessageEvent) => {
-      if (!event.origin.includes('youtube.com')) {
-        return
-      }
-
-      try {
-        const data =
-          typeof event.data === 'string' ? JSON.parse(event.data) : event.data
-
-        const playerState =
-          data?.event === 'onStateChange'
-            ? data.info
-            : data?.event === 'infoDelivery'
-              ? data.info?.playerState
-              : undefined
-
-        if (playerState === 0 && isPlaying) {
-          onEnded?.()
+      void loadYouTubeIframeApi().then(api => {
+        if (isCancelled || !containerRef.current) {
+          return
         }
-      } catch {
-        // Ignore non-JSON messages from the embedded player.
+
+        const playerTarget = containerRef.current.firstElementChild
+
+        if (!(playerTarget instanceof HTMLElement)) {
+          return
+        }
+
+        playerRef.current = new api.Player(playerTarget, {
+          videoId,
+          playerVars,
+          events: {
+            onReady: () => {
+              if (isCancelled || !playerRef.current) {
+                return
+              }
+
+              lastVideoIdRef.current = videoId
+              setIsPlayerReady(true)
+              setPlayerVolume(playerRef.current)
+
+              if (isPlaying) {
+                playerRef.current.playVideo()
+              }
+            },
+            onStateChange: event => {
+              if (event.data === 0) {
+                onEnded?.()
+              }
+            },
+          },
+        })
+      })
+
+      return () => {
+        isCancelled = true
       }
     }
 
-    window.addEventListener('message', handleMessage)
-    return () => window.removeEventListener('message', handleMessage)
-  }, [isPlaying, onEnded, sourceMode])
+    if (isPlayerReady && lastVideoIdRef.current !== videoId) {
+      if (isPlaying) {
+        playerRef.current.loadVideoById(videoId)
+      } else {
+        playerRef.current.cueVideoById(videoId)
+      }
+      lastVideoIdRef.current = videoId
+    }
+
+    return () => {
+      isCancelled = true
+    }
+  }, [
+    isPlayerReady,
+    isPlaying,
+    onEnded,
+    playerVars,
+    setPlayerVolume,
+    sourceMode,
+    videoId,
+  ])
 
   useEffect(() => {
-    if (sourceMode !== 'yt' || !isFrameReady) {
+    if (sourceMode !== 'yt' || !isPlayerReady || !playerRef.current) {
       return
     }
 
-    const volumePercent = Math.round(volume * 100)
-    sendCommand('setVolume', [volumePercent])
-    sendCommand(volumePercent === 0 ? 'mute' : 'unMute')
-  }, [isFrameReady, sendCommand, sourceMode, volume])
+    if (isPlaying) {
+      playerRef.current.playVideo()
+    } else {
+      playerRef.current.pauseVideo()
+    }
+  }, [isPlayerReady, isPlaying, sourceMode])
 
-  const seekTo = useCallback(
-    (time: number) => {
-      sendCommand('seekTo', [time, true])
+  useEffect(() => {
+    if (sourceMode !== 'yt' || !isPlayerReady || !playerRef.current) {
+      return
+    }
+
+    setPlayerVolume(playerRef.current)
+  }, [isPlayerReady, setPlayerVolume, sourceMode])
+
+  useEffect(
+    () => () => {
+      playerRef.current?.destroy()
+      playerRef.current = null
     },
-    [sendCommand]
+    []
   )
+
+  const seekTo = useCallback((time: number) => {
+    playerRef.current?.seekTo(time, true)
+  }, [])
 
   return {
-    embedUrl,
-    iframeRef,
-    markFrameReady: () => setIsFrameReady(true),
+    containerRef,
+    hasVideo: sourceMode === 'yt' && Boolean(videoId),
     seekTo,
   }
 }
