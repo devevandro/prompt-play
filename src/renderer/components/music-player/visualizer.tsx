@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 
 import type { PlayerSource } from '../../../shared/types'
 
-const BAR_IDS = Array.from({ length: 48 }, (_, index) => `bar-${index}`)
+const BAR_COUNT = 64
+const BAR_IDS = Array.from({ length: BAR_COUNT }, (_, index) => `bar-${index}`)
 
 interface VisualizerProps {
   isPlaying: boolean
@@ -19,7 +20,9 @@ export function Visualizer({
   frequencyData,
   isAudioConnected = false,
 }: VisualizerProps) {
-  const [animatedBars, setAnimatedBars] = useState<number[]>(Array(48).fill(5))
+  const [animatedBars, setAnimatedBars] = useState<number[]>(
+    Array(BAR_COUNT).fill(5)
+  )
   const [visualTime, setVisualTime] = useState(0)
 
   useEffect(() => {
@@ -45,10 +48,9 @@ export function Visualizer({
     const hasFrequencySignal = frequencyData?.some(value => value > 0)
 
     if (frequencyData && hasFrequencySignal && isAudioConnected) {
-      const barCount = 48
-      const step = Math.floor(frequencyData.length / barCount)
+      const step = Math.max(1, Math.floor(frequencyData.length / BAR_COUNT))
 
-      return Array.from({ length: barCount }, (_, index) => {
+      return Array.from({ length: BAR_COUNT }, (_, index) => {
         const frequencyIndex = Math.min(index * step, frequencyData.length - 1)
         const value = frequencyData[frequencyIndex] || 0
 
@@ -56,28 +58,47 @@ export function Visualizer({
       })
     }
 
-    return Array.from({ length: 48 }, (_, index) => {
+    return Array.from({ length: BAR_COUNT }, (_, index) => {
       if (!isPlaying) {
         return 5
       }
 
-      const time = (currentTime + visualTime * 2.8) * 4
-      const wave1 = Math.sin(time + index * 0.34) * 0.34
-      const wave2 = Math.sin(time * 1.9 + index * 0.62) * 0.22
-      const wave3 = Math.sin(time * 1.3 + index * 0.18) * 0.24
-      const wave4 = Math.cos(time * 2.7 + index * 0.46) * 0.18
-      const bassBoost = index < 8 ? 0.24 : 0
-      const trebleBoost = index > 36 ? 0.14 : 0
+      const time = visualTime * 5.2 + currentTime * 0.18
+      const normalizedIndex = index / BAR_COUNT
+      const sourcePulse =
+        source.mode === 'radio' ? 0.9 : source.mode === 'yt' ? 0.72 : 0.58
+      const bassEnvelope = Math.max(0, 1 - normalizedIndex * 2.5)
+      const midEnvelope = Math.sin(normalizedIndex * Math.PI)
+      const trebleEnvelope = Math.max(0, normalizedIndex - 0.58)
+      const kick = Math.max(0, Math.sin(time * sourcePulse)) * bassEnvelope
+      const wave1 = Math.sin(time * 1.7 + index * 0.28) * 0.28
+      const wave2 = Math.sin(time * 2.9 + index * 0.61) * 0.18
+      const wave3 = Math.cos(time * 1.1 + index * 0.17) * 0.16
+      const shimmer =
+        Math.max(0, Math.sin(time * 4.4 + index * 0.73)) * trebleEnvelope
       const combined =
-        wave1 + wave2 + wave3 + wave4 + bassBoost + trebleBoost + 0.5
+        0.16 +
+        kick * 0.58 +
+        midEnvelope * 0.24 +
+        shimmer * 0.52 +
+        wave1 +
+        wave2 +
+        wave3
 
-      return Math.max(5, Math.min(100, combined * 100))
+      return Math.max(6, Math.min(100, combined * 92))
     })
-  }, [frequencyData, isAudioConnected, isPlaying, currentTime, visualTime])
+  }, [
+    frequencyData,
+    isAudioConnected,
+    isPlaying,
+    currentTime,
+    source.mode,
+    visualTime,
+  ])
 
   useEffect(() => {
     if (!isPlaying) {
-      setAnimatedBars(Array(48).fill(5))
+      setAnimatedBars(Array(BAR_COUNT).fill(5))
       return
     }
 
@@ -147,6 +168,9 @@ export function Visualizer({
           <span>5kHz</span>
           <span>10kHz</span>
           <span>20kHz</span>
+        </div>
+        <div className="mt-3 text-center font-mono text-[10px] text-terminal-gray">
+          {isAudioConnected ? 'fft input' : `${source.mode} synthetic spectrum`}
         </div>
       </div>
     </div>
