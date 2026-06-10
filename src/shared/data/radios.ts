@@ -181,4 +181,14 @@ export const radios: Radio[] = [
     frequency: 'Web Rádio',
     url: 'https://ssl1.transmissaodigital.com:20421/stream',
   },
+  {
+    id: '62345db9770c6cc4s0222t',
+    name: 'Patos FM',
+    img: 'https://patosfm.agoranoar.com.br/storage/img/layouts/1647872021_786589802.png',
+    state: 'Bahia',
+    region: 'Nordeste',
+    city: 'Ipecaetá',
+    frequency: '87.9',
+    url: 'https://stm51.srvstm.com:11422/stream',
+  },
 ]
