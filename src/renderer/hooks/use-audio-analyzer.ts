@@ -51,8 +51,7 @@ export function useAudioAnalyzer(
       analyserRef.current = analyser
       sourceRef.current = source
       setIsConnected(true)
-    } catch (error) {
-      console.log('[audio-analyzer] Error connecting audio analyzer:', error)
+    } catch {
       setIsConnected(false)
     }
   }, [audioElement])

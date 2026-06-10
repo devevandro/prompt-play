@@ -8,8 +8,8 @@ import {
   Volume2,
   VolumeX,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { useYouTubeIframePlayer } from 'renderer/hooks/use-youtube-iframe-player'
 import type { PlayerQueueItem, PlayerSource } from '../../../shared/types'
 
 interface PlayerControlsProps {
@@ -62,115 +62,16 @@ export function PlayerControls({
   onToggleMute,
   onVolumeChange,
 }: PlayerControlsProps) {
-  const iframeRef = useRef<HTMLIFrameElement>(null)
-  const [isYouTubeFrameReady, setIsYouTubeFrameReady] = useState(false)
   const canSeek = source.supportsSeek && duration > 0
   const progress = canSeek ? (currentTime / duration) * 100 : 0
-  const youtubeEmbedUrl = useMemo(() => {
-    const videoId = currentItem?.videoId ?? currentItem?.src
-
-    if (source.mode !== 'yt' || !videoId) {
-      return ''
-    }
-
-    const params = new URLSearchParams({
-      autoplay: '1',
-      controls: '0',
-      disablekb: '1',
-      enablejsapi: '1',
-      modestbranding: '1',
-      origin: window.location.origin,
-      playsinline: '1',
-      rel: '0',
+  const { embedUrl, iframeRef, markFrameReady, seekTo } =
+    useYouTubeIframePlayer({
+      currentItem,
+      isPlaying,
+      onEnded,
+      sourceMode: source.mode,
+      volume,
     })
-
-    return `https://www.youtube.com/embed/${videoId}?${params.toString()}`
-  }, [currentItem?.src, currentItem?.videoId, source.mode])
-  useEffect(() => {
-    setIsYouTubeFrameReady(false)
-  }, [youtubeEmbedUrl])
-
-  useEffect(() => {
-    if (source.mode !== 'yt' || !iframeRef.current || !isYouTubeFrameReady) {
-      return
-    }
-
-    iframeRef.current.contentWindow?.postMessage(
-      JSON.stringify({
-        event: 'command',
-        func: 'addEventListener',
-        args: ['onStateChange'],
-      }),
-      '*'
-    )
-
-    iframeRef.current.contentWindow?.postMessage(
-      JSON.stringify({
-        event: 'command',
-        func: isPlaying ? 'playVideo' : 'pauseVideo',
-        args: [],
-      }),
-      '*'
-    )
-  }, [isPlaying, isYouTubeFrameReady, source.mode, youtubeEmbedUrl])
-
-  useEffect(() => {
-    if (source.mode !== 'yt') {
-      return
-    }
-
-    const handleMessage = (event: MessageEvent) => {
-      if (!event.origin.includes('youtube.com')) {
-        return
-      }
-
-      try {
-        const data =
-          typeof event.data === 'string' ? JSON.parse(event.data) : event.data
-
-        const playerState =
-          data?.event === 'onStateChange'
-            ? data.info
-            : data?.event === 'infoDelivery'
-              ? data.info?.playerState
-              : undefined
-
-        if (playerState === 0 && isPlaying) {
-          onEnded?.()
-        }
-      } catch {
-        // Ignore non-JSON messages from the embedded player.
-      }
-    }
-
-    window.addEventListener('message', handleMessage)
-    return () => window.removeEventListener('message', handleMessage)
-  }, [isPlaying, onEnded, source.mode])
-
-  useEffect(() => {
-    if (source.mode !== 'yt' || !isYouTubeFrameReady) {
-      return
-    }
-
-    const volumePercent = Math.round(volume * 100)
-    sendYouTubeCommand('setVolume', [volumePercent])
-    sendYouTubeCommand(volumePercent === 0 ? 'mute' : 'unMute')
-  }, [isYouTubeFrameReady, source.mode, volume])
-
-  const sendYouTubeCommand = (func: string, args: unknown[] = []) => {
-    if (!isYouTubeFrameReady) {
-      return
-    }
-
-    iframeRef.current?.contentWindow?.postMessage(
-      JSON.stringify({
-        event: 'command',
-        func,
-        args,
-      }),
-      '*'
-    )
-  }
 
   const handleProgressClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     if (!canSeek) {
@@ -181,7 +82,7 @@ export function PlayerControls({
     const percentage = (event.clientX - rect.left) / rect.width
 
     if (source.mode === 'yt') {
-      sendYouTubeCommand('seekTo', [percentage * duration, true])
+      seekTo(percentage * duration)
     }
 
     onSeek(percentage * duration)
@@ -210,15 +111,16 @@ export function PlayerControls({
       <div className="flex flex-1 flex-col justify-center space-y-6 p-6">
         {source.mode === 'yt' && (
           <div className="mx-auto aspect-video w-full max-w-xl overflow-hidden rounded bg-muted">
-            {youtubeEmbedUrl ? (
+            {embedUrl ? (
               <iframe
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
                 className="pointer-events-none h-full w-full"
-                key={youtubeEmbedUrl}
-                onLoad={() => setIsYouTubeFrameReady(true)}
+                key={embedUrl}
+                onLoad={markFrameReady}
                 ref={iframeRef}
-                src={youtubeEmbedUrl}
+                referrerPolicy="strict-origin-when-cross-origin"
+                src={embedUrl}
                 title={currentItem?.title ?? 'YouTube player'}
               />
             ) : (
