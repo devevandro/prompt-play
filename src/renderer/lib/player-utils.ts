@@ -94,6 +94,7 @@ export function getSourceCommandMode(
   if (
     cmd === 'yt list' ||
     cmd === 'yt auth' ||
+    cmd === 'yt clean' ||
     cmd === 'yt auth clear' ||
     cmd.startsWith('yt add ')
   ) {

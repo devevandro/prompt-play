@@ -200,6 +200,7 @@ export function MainScreen() {
   const { radioItems, radioStatuses, recentRadioItems, setRecentRadioIds } =
     useRadioSource({ activeTab, showRadioListTab })
   const {
+    cleanYouTubeConfig,
     clearYouTubeApiKey,
     isAwaitingYouTubeApiKey,
     saveYouTubePlaylist,
@@ -621,6 +622,7 @@ export function MainScreen() {
     activeTheme,
     addToHistory,
     applyTheme,
+    cleanYouTubeConfig,
     clearConnectionTimers,
     clearYouTubeApiKey,
     closeHelpTab,

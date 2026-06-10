@@ -25,6 +25,7 @@ export const TERMINAL_COMMANDS = [
   'yt list',
   'yt auth',
   'yt auth clear',
+  'yt clean',
   'yt add',
   'radio',
   'radio list',

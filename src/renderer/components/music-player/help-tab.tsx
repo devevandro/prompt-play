@@ -34,6 +34,7 @@ export function HelpTab({ source }: { source: PlayerSource }) {
       'yt',
       'yt auth',
       'yt auth clear',
+      'yt clean',
       'yt add playlist-url-or-id',
       'yt list',
       'source yt',

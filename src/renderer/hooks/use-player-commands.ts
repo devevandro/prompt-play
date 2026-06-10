@@ -33,6 +33,7 @@ export function usePlayerCommands({
   activeTheme,
   addToHistory,
   applyTheme,
+  cleanYouTubeConfig,
   clearConnectionTimers,
   clearYouTubeApiKey,
   closeHelpTab,
@@ -90,6 +91,7 @@ export function usePlayerCommands({
   activeTheme: ThemeId
   addToHistory: AddToHistory
   applyTheme: (themeId: string) => void
+  cleanYouTubeConfig: () => void
   clearConnectionTimers: () => void
   clearYouTubeApiKey: () => void
   closeHelpTab: () => void
@@ -268,6 +270,8 @@ export function usePlayerCommands({
         openYouTubeListTab()
       } else if (cmd === 'yt auth') {
         setIsAwaitingYouTubeApiKey(true)
+      } else if (cmd === 'yt clean') {
+        cleanYouTubeConfig()
       } else if (cmd === 'yt auth clear') {
         clearYouTubeApiKey()
       } else if (cmd.startsWith('yt add ')) {
@@ -480,6 +484,7 @@ export function usePlayerCommands({
       activeTheme,
       addToHistory,
       applyTheme,
+      cleanYouTubeConfig,
       clearConnectionTimers,
       clearYouTubeApiKey,
       closeHelpTab,
