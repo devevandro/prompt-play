@@ -15,7 +15,7 @@ export async function MainWindow() {
     maxHeight: 550,
     resizable: true,
     show: false,
-    autoHideMenuBar: true,
+    autoHideMenuBar: false,
     backgroundColor: '#18191f',
     center: true,
     movable: true,
