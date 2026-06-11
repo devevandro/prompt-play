@@ -1,7 +1,7 @@
 type PromptProps = {
-  text: string;
-};
+  text: string
+}
 
 export function Prompt({ text }: PromptProps) {
-  return <span className="text-terminal-cyan">{text}</span>;
+  return <span className="text-terminal-cyan">{text}</span>
 }

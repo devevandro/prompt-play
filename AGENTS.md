@@ -40,9 +40,12 @@ open a temporary full radio-list tab next to `./player-controls`, following the
 same temporary-tab pattern as help. Local music folders are configured with
 `music -- path [path]` or `music config`; `music list` opens a temporary
 `music lists` tab and shows suggested `~/Music` and `~/Downloads` paths when no
-library has been stored.
+library has been stored. The last configured music folder is the active music
+folder for `list`, `ls -la`, `play`, and the playback queue; previously saved
+folders remain visible in `music list` but are not merged into the active music
+list.
 
-YouTube configuration is stored temporarily in `localStorage` under
+YouTube configuration is stored in Electron Storage under
 `prompt-play-youtube`. `yt auth` opens an interactive `YouTube API Key:` prompt,
 `yt auth clear` removes the stored key, and `yt add [playlist-url-or-id]`
 accepts either a full playlist URL or a plain playlist id. YouTube playlist
@@ -67,8 +70,9 @@ audio element and Web Audio visualizer. Keep CSP changes in
 metadata is populated during folder scans in the main process: MP3 files may use
 ID3 title, artist, album, and estimated duration; the renderer also updates
 duration from browser `loadedmetadata` when available. Stored libraries live in
-`localStorage` under `prompt-play-music-libraries` and are refreshed on player
-startup.
+Electron Storage under `prompt-play-music-libraries` and are refreshed on player
+startup. The `clear all` command stops playback and removes saved Electron
+Storage data.
 
 ## Theme Typography
 

@@ -93,9 +93,9 @@ Local music:
 
 | Command | Action |
 | --- | --- |
-| `music -- path [path]` | Scan and store a music folder. |
-| `music config` | Select a music folder with the native folder picker. |
-| `music list` | Open the temporary stored-library list tab. |
+| `music -- path [path]` | Scan and store a music folder, then make it active. |
+| `music config` | Select a music folder with the native folder picker and make it active. |
+| `music list` | Open the temporary saved-folder list tab. |
 | `ls -la` | Open the active source list tab. |
 
 Sources and radio:
@@ -134,6 +134,7 @@ Tabs and utility:
 | `status` or `info` | Show current playback status. |
 | `:q` | Close a temporary tab. |
 | `clear` | Clear terminal history. |
+| `clear all` | Stop playback and remove saved Electron Storage data. |
 | `home` or `exit` | Return to first access. |
 
 See [commands.md](commands.md) for the full command reference.
@@ -176,13 +177,22 @@ renderer can use the Web Audio API for visualization. The renderer CSP in
 
 ## YouTube Notes
 
-YouTube settings are stored in `localStorage` under `prompt-play-youtube`.
 `yt auth` prompts for the API key, and `yt add [playlist-url-or-id]` accepts
 either a full playlist URL or a plain playlist id. Playlist loading follows
 YouTube pagination, stores total video counts, caches title/channel/video id and
 duration metadata, and renders the selected playlist in `ls -la`. The embedded
 YouTube player stays mounted while moving between YouTube tabs so playback can
 continue and advance automatically.
+
+## Storage Notes
+
+Prompt Play persists app data through Electron Storage under the app user-data
+directory. Saved music folders live under `prompt-play-music-libraries`, and
+YouTube settings live under `prompt-play-youtube`. In local music mode, the
+last folder selected with `music -- path [path]` or `music config` is the active
+folder for `list`, `ls -la`, `play`, and the playback queue; older saved
+folders remain available in `music list` but are not merged into the active
+music list. `clear all` stops playback and removes saved Electron Storage data.
 
 ## Documentation
 

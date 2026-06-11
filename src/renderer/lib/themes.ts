@@ -1,32 +1,32 @@
 export const THEMES = [
   {
-    id: "default",
-    name: "Default",
+    id: 'default',
+    name: 'Default',
   },
   {
-    id: "tokyo-night",
-    name: "Tokyo Night",
+    id: 'tokyo-night',
+    name: 'Tokyo Night',
   },
   {
-    id: "dark-soul",
-    name: "Dark Soul",
+    id: 'dark-soul',
+    name: 'Dark Soul',
   },
   {
-    id: "dark-petroleum-blue",
-    name: "Dark Petroleum Blue",
+    id: 'dark-petroleum-blue',
+    name: 'Dark Petroleum Blue',
   },
   {
-    id: "synthwave",
-    name: "Synthwave",
+    id: 'synthwave',
+    name: 'Synthwave',
   },
   {
-    id: "shell-pink",
-    name: "Shell Pink",
+    id: 'shell-pink',
+    name: 'Shell Pink',
   },
-] as const;
+] as const
 
-export type ThemeId = (typeof THEMES)[number]["id"];
+export type ThemeId = (typeof THEMES)[number]['id']
 
 export function getThemeById(themeId: string) {
-  return THEMES.find((theme) => theme.id === themeId);
+  return THEMES.find(theme => theme.id === themeId)
 }
