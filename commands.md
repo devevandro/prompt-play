@@ -115,6 +115,7 @@ the player advances to the next selected playlist item automatically.
 | `home` or `exit` | Returns from the player to the first access screen. |
 | `quit` | Closes the application. |
 | `clear` | Clears terminal history. |
+| `clear playback` | Stops and clears the current playback state for radio, music, and YouTube without removing saved data. |
 | `clear all` | Stops and clears the current playback state for radio, music, and YouTube, then removes saved Electron Storage data. |
 | `version` | Shows the current project version. |
 | `open now-playing` | Opens the `cat now_playing.txt` tab. |
@@ -180,6 +181,7 @@ Theme picker controls: `Up`/`Down` selects a theme, `Enter` applies it, and
 | `help`, `h`, or `?` | Opens the temporary help tab. |
 | `:q` | Closes the active temporary tab. |
 | `clear` | Clears terminal history. |
+| `clear playback` | Stops and clears playback for radio, music, and YouTube without removing saved data. |
 | `clear all` | Stops and clears playback for radio, music, and YouTube, then removes saved Electron Storage data. |
 
 ## Input Shortcuts

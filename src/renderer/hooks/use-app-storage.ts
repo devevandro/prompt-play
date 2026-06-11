@@ -16,23 +16,27 @@ export function useStoredValue<T>(key: AppStorageKey) {
 export function useSetStoredValue<T>(key: AppStorageKey) {
   const queryClient = useQueryClient()
 
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: (value: T) => window.App.setStorageValue(key, value),
     onSuccess: (_data, value) => {
       queryClient.setQueryData(getStorageQueryKey(key), value)
     },
   })
+
+  return mutation.mutateAsync
 }
 
 export function useRemoveStoredValue(key: AppStorageKey) {
   const queryClient = useQueryClient()
 
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: () => window.App.removeStorageValue(key),
     onSuccess: () => {
       queryClient.setQueryData(getStorageQueryKey(key), null)
     },
   })
+
+  return mutation.mutateAsync
 }
 
 export function useClearStoredValues() {

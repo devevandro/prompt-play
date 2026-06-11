@@ -51,10 +51,10 @@ export function useMusicLibrary({
 }) {
   const { data: storedMusicLibraries, isFetched: hasFetchedStoredLibraries } =
     useStoredValue<MusicLibrary[]>(MUSIC_LIBRARY_STORAGE_KEY)
-  const { mutate: persistMusicLibraries } = useSetStoredValue<MusicLibrary[]>(
+  const persistMusicLibraries = useSetStoredValue<MusicLibrary[]>(
     MUSIC_LIBRARY_STORAGE_KEY
   )
-  const { mutate: removeStoredMusicLibraries } = useRemoveStoredValue(
+  const removeStoredMusicLibraries = useRemoveStoredValue(
     MUSIC_LIBRARY_STORAGE_KEY
   )
   const [musicLibraries, setMusicLibraries] = useState<MusicLibrary[]>([])
@@ -81,7 +81,7 @@ export function useMusicLibrary({
       .then(libraries => {
         if (isMounted) {
           setMusicLibraries(libraries)
-          persistMusicLibraries(libraries)
+          void persistMusicLibraries(libraries)
         }
       })
       .catch(() => {
@@ -94,21 +94,19 @@ export function useMusicLibrary({
   }, [hasFetchedStoredLibraries, persistMusicLibraries, storedMusicLibraries])
 
   const storeMusicLibrary = useCallback(
-    (library: MusicLibrary) => {
-      setMusicLibraries(prev => {
-        const nextLibraries = [
-          library,
-          ...prev.filter(item => item.path !== library.path),
-        ]
+    async (library: MusicLibrary) => {
+      const nextLibraries = [
+        library,
+        ...musicLibraries.filter(item => item.path !== library.path),
+      ]
 
-        persistMusicLibraries(nextLibraries)
-        return nextLibraries
-      })
+      await persistMusicLibraries(nextLibraries)
+      setMusicLibraries(nextLibraries)
       addToHistory(`[OK] Configured music folder: ${library.name}`)
       addToHistory(`[INFO] Path: ${library.path}`)
       addToHistory(`[INFO] ${library.musicCount} musics found`)
     },
-    [addToHistory, persistMusicLibraries]
+    [addToHistory, musicLibraries, persistMusicLibraries]
   )
 
   const updateLocalItemDuration = useCallback(
@@ -130,7 +128,7 @@ export function useMusicLibrary({
           ),
         }))
 
-        persistMusicLibraries(nextLibraries)
+        void persistMusicLibraries(nextLibraries)
         return nextLibraries
       })
     },
@@ -151,10 +149,14 @@ export function useMusicLibrary({
 
       try {
         const library = await window.App.scanMusicFolder(path)
-        storeMusicLibrary(library)
+        await storeMusicLibrary(library)
         openMusicListTab()
-      } catch {
-        addToHistory(`[ERROR] Could not access music folder: ${path}`)
+      } catch (error) {
+        addToHistory(
+          `[ERROR] Could not configure music folder: ${
+            error instanceof Error ? error.message : path
+          }`
+        )
       } finally {
         setIsLoading(false)
       }
@@ -174,18 +176,22 @@ export function useMusicLibrary({
         return
       }
 
-      storeMusicLibrary(library)
+      await storeMusicLibrary(library)
       openMusicListTab()
-    } catch {
-      addToHistory('[ERROR] Could not select music folder')
+    } catch (error) {
+      addToHistory(
+        `[ERROR] Could not select music folder: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`
+      )
     } finally {
       setIsLoading(false)
     }
   }, [addToHistory, openMusicListTab, setIsLoading, storeMusicLibrary])
 
-  const resetMusicLibraries = useCallback(() => {
+  const resetMusicLibraries = useCallback(async () => {
     setMusicLibraries([])
-    removeStoredMusicLibraries()
+    await removeStoredMusicLibraries()
   }, [removeStoredMusicLibraries])
 
   return {

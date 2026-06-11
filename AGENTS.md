@@ -71,8 +71,8 @@ metadata is populated during folder scans in the main process: MP3 files may use
 ID3 title, artist, album, and estimated duration; the renderer also updates
 duration from browser `loadedmetadata` when available. Stored libraries live in
 Electron Storage under `prompt-play-music-libraries` and are refreshed on player
-startup. The `clear all` command stops playback and removes saved Electron
-Storage data.
+startup. The `clear playback` command stops playback without removing saved
+data, while `clear all` stops playback and removes saved Electron Storage data.
 
 ## Theme Typography
 
