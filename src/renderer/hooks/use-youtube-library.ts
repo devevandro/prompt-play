@@ -28,10 +28,9 @@ export function useYouTubeLibrary({
 }) {
   const { data: storedYouTube, isFetched: hasFetchedStoredYouTube } =
     useStoredValue<YouTubeStorage>(YOUTUBE_STORAGE_KEY)
-  const { mutate: persistYouTubeStorage } =
+  const persistYouTubeStorage =
     useSetStoredValue<YouTubeStorage>(YOUTUBE_STORAGE_KEY)
-  const { mutate: removeStoredYouTube } =
-    useRemoveStoredValue(YOUTUBE_STORAGE_KEY)
+  const removeStoredYouTube = useRemoveStoredValue(YOUTUBE_STORAGE_KEY)
   const [youtubeStorage, setYouTubeStorage] = useState<YouTubeStorage>(
     createEmptyYouTubeStorage
   )
@@ -53,51 +52,71 @@ export function useYouTubeLibrary({
   }, [hasFetchedStoredYouTube, storedYouTube])
 
   const setYouTubeApiKey = useCallback(
-    (apiKey: string) => {
+    async (apiKey: string) => {
       if (!apiKey) {
         addToHistory('[ERROR] YouTube API key cannot be empty')
         return
       }
 
-      setYouTubeStorage(prev => {
-        const nextStorage = {
-          youtube: {
-            ...prev.youtube,
-            apiKey,
-          },
-        }
-
-        persistYouTubeStorage(nextStorage)
-        return nextStorage
-      })
-      addToHistory('[OK] YouTube API key saved')
-    },
-    [addToHistory, persistYouTubeStorage]
-  )
-
-  const clearYouTubeApiKey = useCallback(() => {
-    setIsAwaitingYouTubeApiKey(false)
-    setYouTubeStorage(prev => {
       const nextStorage = {
         youtube: {
-          ...prev.youtube,
-          apiKey: '',
+          ...youtubeStorage.youtube,
+          apiKey,
         },
       }
 
-      persistYouTubeStorage(nextStorage)
-      return nextStorage
-    })
-    addToHistory('[OK] YouTube API key removed')
-  }, [addToHistory, persistYouTubeStorage])
+      try {
+        await persistYouTubeStorage(nextStorage)
+        setYouTubeStorage(nextStorage)
+        addToHistory('[OK] YouTube API key saved')
+      } catch (error) {
+        addToHistory(
+          `[ERROR] Could not save YouTube API key: ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`
+        )
+      }
+    },
+    [addToHistory, persistYouTubeStorage, youtubeStorage.youtube]
+  )
 
-  const cleanYouTubeConfig = useCallback(() => {
+  const clearYouTubeApiKey = useCallback(async () => {
+    setIsAwaitingYouTubeApiKey(false)
+    const nextStorage = {
+      youtube: {
+        ...youtubeStorage.youtube,
+        apiKey: '',
+      },
+    }
+
+    try {
+      await persistYouTubeStorage(nextStorage)
+      setYouTubeStorage(nextStorage)
+      addToHistory('[OK] YouTube API key removed')
+    } catch (error) {
+      addToHistory(
+        `[ERROR] Could not remove YouTube API key: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`
+      )
+    }
+  }, [addToHistory, persistYouTubeStorage, youtubeStorage.youtube])
+
+  const cleanYouTubeConfig = useCallback(async () => {
     setIsAwaitingYouTubeApiKey(false)
     setSelectedYouTubePlaylistId(null)
-    setYouTubeStorage(createEmptyYouTubeStorage())
-    removeStoredYouTube()
-    addToHistory('[OK] YouTube configuration cleaned')
-    addToHistory('[INFO] Removed API key, playlists, and cached videos')
+    try {
+      await removeStoredYouTube()
+      setYouTubeStorage(createEmptyYouTubeStorage())
+      addToHistory('[OK] YouTube configuration cleaned')
+      addToHistory('[INFO] Removed API key, playlists, and cached videos')
+    } catch (error) {
+      addToHistory(
+        `[ERROR] Could not clean YouTube configuration: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`
+      )
+    }
   }, [addToHistory, removeStoredYouTube])
 
   const saveYouTubePlaylist = useCallback(
@@ -124,34 +143,36 @@ export function useYouTubeLibrary({
       try {
         const playlist = await fetchYouTubePlaylistItems(apiKey, playlistId)
 
-        setYouTubeStorage(prev => {
-          const nextStorage = {
-            youtube: {
-              ...prev.youtube,
-              playlists: [
-                playlistId,
-                ...prev.youtube.playlists.filter(id => id !== playlistId),
-              ],
-              playlistDetails: [
-                {
-                  id: playlistId,
-                  title: playlist.playlistTitle,
-                  videoCount: playlist.videoCount,
-                },
-                ...prev.youtube.playlistDetails.filter(
-                  item => item.id !== playlistId
-                ),
-              ],
-              items: [
-                ...prev.youtube.items.filter(item => item.album !== playlistId),
-                ...playlist.items,
-              ],
-            },
-          }
+        const nextStorage = {
+          youtube: {
+            ...youtubeStorage.youtube,
+            playlists: [
+              playlistId,
+              ...youtubeStorage.youtube.playlists.filter(
+                id => id !== playlistId
+              ),
+            ],
+            playlistDetails: [
+              {
+                id: playlistId,
+                title: playlist.playlistTitle,
+                videoCount: playlist.videoCount,
+              },
+              ...youtubeStorage.youtube.playlistDetails.filter(
+                item => item.id !== playlistId
+              ),
+            ],
+            items: [
+              ...youtubeStorage.youtube.items.filter(
+                item => item.album !== playlistId
+              ),
+              ...playlist.items,
+            ],
+          },
+        }
 
-          persistYouTubeStorage(nextStorage)
-          return nextStorage
-        })
+        await persistYouTubeStorage(nextStorage)
+        setYouTubeStorage(nextStorage)
         setSelectedYouTubePlaylistId(playlistId)
         addToHistory(`[OK] Saved YouTube playlist: ${playlist.playlistTitle}`)
         addToHistory(`[INFO] ${playlist.items.length} videos found`)
@@ -172,14 +193,17 @@ export function useYouTubeLibrary({
       persistYouTubeStorage,
       setIsLoading,
       youtubeStorage.youtube.apiKey,
+      youtubeStorage.youtube.items,
+      youtubeStorage.youtube.playlistDetails,
+      youtubeStorage.youtube.playlists,
     ]
   )
 
-  const resetYouTubeStorage = useCallback(() => {
+  const resetYouTubeStorage = useCallback(async () => {
     setIsAwaitingYouTubeApiKey(false)
     setSelectedYouTubePlaylistId(null)
+    await removeStoredYouTube()
     setYouTubeStorage(createEmptyYouTubeStorage())
-    removeStoredYouTube()
   }, [removeStoredYouTube])
 
   return {

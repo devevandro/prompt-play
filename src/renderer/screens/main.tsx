@@ -116,14 +116,12 @@ export function MainScreen() {
   const volumeRef = useRef(volume)
   const previousVolumeRef = useRef(volume)
   const didHandleEndedRef = useRef(false)
-  const shouldSkipNextThemePersistRef = useRef(false)
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
     null
   )
   const { data: storedTheme, isFetched: hasFetchedStoredTheme } =
     useStoredValue<ThemeId>('prompt-play-theme')
-  const { mutate: persistTheme } =
-    useSetStoredValue<ThemeId>('prompt-play-theme')
+  const persistTheme = useSetStoredValue<ThemeId>('prompt-play-theme')
   const { mutateAsync: clearStoredValues } = useClearStoredValues()
 
   const addToHistory = useCallback((command: string) => {
@@ -362,14 +360,7 @@ export function MainScreen() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = activeTheme
-
-    if (!hasFetchedStoredTheme || shouldSkipNextThemePersistRef.current) {
-      shouldSkipNextThemePersistRef.current = false
-      return
-    }
-
-    persistTheme(activeTheme)
-  }, [activeTheme, hasFetchedStoredTheme, persistTheme])
+  }, [activeTheme])
 
   const simulateLoading = useCallback(
     async (
@@ -421,9 +412,8 @@ export function MainScreen() {
     [addToHistory, clearConnectionTimers]
   )
 
-  const clearAllPlayback = useCallback(async () => {
+  const clearPlayback = useCallback(() => {
     clearConnectionTimers()
-    await clearStoredValues()
     didHandleEndedRef.current = false
 
     if (audioRef.current) {
@@ -436,21 +426,66 @@ export function MainScreen() {
     setCurrentTime(0)
     setDuration(0)
     setIsPlaying(false)
-    shouldSkipNextThemePersistRef.current = activeTheme !== 'default'
-    setActiveTheme('default')
-    setSelectedThemeIndex(THEMES.findIndex(item => item.id === 'default'))
-    resetMusicLibraries()
-    resetYouTubeStorage()
     addToHistory('[OK] Cleared playback for radio, music, and YouTube')
-    addToHistory('[OK] Removed saved Electron Storage data')
+  }, [addToHistory, clearConnectionTimers])
+
+  const clearAllPlayback = useCallback(async () => {
+    clearPlayback()
+
+    try {
+      await clearStoredValues()
+      setActiveTheme('default')
+      setSelectedThemeIndex(THEMES.findIndex(item => item.id === 'default'))
+      await resetMusicLibraries()
+      await resetYouTubeStorage()
+      addToHistory('[OK] Removed saved Electron Storage data')
+    } catch (error) {
+      addToHistory(
+        `[ERROR] Could not remove saved Electron Storage data: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`
+      )
+    }
   }, [
     addToHistory,
-    activeTheme,
-    clearConnectionTimers,
+    clearPlayback,
     clearStoredValues,
     resetMusicLibraries,
     resetYouTubeStorage,
   ])
+
+  const getPlayerDiagnostics = useCallback(async () => {
+    const lines = ['Prompt Play Diagnostic', '']
+    const addStatus = (label: string, isOk: boolean, detail?: string) => {
+      lines.push(
+        `${label}: ${isOk ? 'OK' : 'ERROR'}${detail ? ` (${detail})` : ''}`
+      )
+    }
+
+    addStatus('Renderer', typeof window !== 'undefined' && Boolean(window.App))
+    addStatus('Audio Engine', Boolean(audioRef.current))
+    addStatus('Radio Streams', radioItems.length > 0)
+    addStatus(
+      'YouTube Embed',
+      typeof document.createElement('iframe').src === 'string'
+    )
+
+    try {
+      await window.App.getStorageValue('prompt-play-theme')
+      addStatus('Storage', true)
+    } catch (error) {
+      addStatus(
+        'Storage',
+        false,
+        error instanceof Error ? error.message : 'unknown error'
+      )
+    }
+
+    lines.push('')
+    lines.push(`Version: ${version}`)
+
+    return lines
+  }, [radioItems.length])
 
   const playItem = useCallback(
     (item: PlayerQueueItem) => {
@@ -633,7 +668,7 @@ export function MainScreen() {
   }, [addToHistory])
 
   const applyTheme = useCallback(
-    (themeId: string) => {
+    async (themeId: string) => {
       const theme = getThemeById(themeId)
 
       if (!theme) {
@@ -642,12 +677,21 @@ export function MainScreen() {
         return
       }
 
-      setActiveTheme(theme.id)
-      setSelectedThemeIndex(THEMES.findIndex(item => item.id === theme.id))
-      setIsThemePickerOpen(false)
-      addToHistory(`[INFO] Theme changed to ${theme.name}.`)
+      try {
+        await persistTheme(theme.id)
+        setActiveTheme(theme.id)
+        setSelectedThemeIndex(THEMES.findIndex(item => item.id === theme.id))
+        setIsThemePickerOpen(false)
+        addToHistory(`[INFO] Theme changed to ${theme.name}.`)
+      } catch (error) {
+        addToHistory(
+          `[ERROR] Could not save theme: ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`
+        )
+      }
     },
-    [addToHistory]
+    [addToHistory, persistTheme]
   )
 
   const moveThemeSelection = useCallback((direction: 'next' | 'prev') => {
@@ -662,7 +706,7 @@ export function MainScreen() {
 
   const selectTheme = useCallback(
     (index = selectedThemeIndex) => {
-      applyTheme(THEMES[index]?.id ?? activeTheme)
+      void applyTheme(THEMES[index]?.id ?? activeTheme)
     },
     [activeTheme, applyTheme, selectedThemeIndex]
   )
@@ -677,6 +721,7 @@ export function MainScreen() {
     applyTheme,
     cleanYouTubeConfig,
     clearAllPlayback,
+    clearPlayback,
     clearConnectionTimers,
     clearYouTubeApiKey,
     closeHelpTab,
@@ -684,6 +729,7 @@ export function MainScreen() {
     closeRadioListTab,
     closeYouTubeListTab,
     currentItem,
+    getPlayerDiagnostics,
     handleVolumeChange,
     isAwaitingYouTubeApiKey,
     isConnected,
