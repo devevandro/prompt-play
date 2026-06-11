@@ -134,6 +134,7 @@ Tabs and utility:
 | `status` or `info` | Show current playback status. |
 | `:q` | Close a temporary tab. |
 | `clear` | Clear terminal history. |
+| `clear playback` | Stop playback without removing saved data. |
 | `clear all` | Stop playback and remove saved Electron Storage data. |
 | `home` or `exit` | Return to first access. |
 
@@ -192,7 +193,8 @@ YouTube settings live under `prompt-play-youtube`. In local music mode, the
 last folder selected with `music -- path [path]` or `music config` is the active
 folder for `list`, `ls -la`, `play`, and the playback queue; older saved
 folders remain available in `music list` but are not merged into the active
-music list. `clear all` stops playback and removes saved Electron Storage data.
+music list. `clear playback` stops playback without removing saved data, while
+`clear all` stops playback and removes saved Electron Storage data.
 
 ## Documentation
 
