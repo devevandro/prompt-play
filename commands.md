@@ -23,8 +23,8 @@ Reference for commands accepted by the Prompt Play terminal input.
 | `resume` | Resumes the current item. |
 | `pause` | Pauses playback. |
 | `stop` | Pauses playback. |
-| `next` or `n` | Plays the next item from the active source. |
-| `prev` or `p` | Plays the previous item from the active source. |
+| `next` or `n` | Plays the next item from the active source. Not available in YouTube mode; use `play [number]` there. |
+| `prev` or `p` | Plays the previous item from the active source. Not available in YouTube mode; use `play [number]` there. |
 | `shuffle` | Toggles random playback order for the active source. |
 | `repeat` | Toggles repeat for the current item. |
 
@@ -53,15 +53,15 @@ and `yt add` are rejected outside YouTube mode. Use `source local`,
 | --- | --- |
 | `list` or `ls` | Lists items from the active source. |
 | `ls -la` | Opens the active source list tab. For radio, this tab shows the 5 most recently played radios. |
-| `music -- path [path]` | Scans and stores a local music folder. Relative paths are resolved from the app, home, `~/Music`, and `~/Downloads`. |
+| `music -- path [path]` | Scans and stores a local music folder. Relative paths are resolved from the app, home, `~/Music`, and `~/Downloads`. The scanned folder becomes the active music folder. |
 | `radio -- path [path]` | Not supported. Radio stations are configured in `src/shared/data/radios.ts`; use `radio list` or `ls -ra` to view them. |
-| `music config` | Opens the native folder picker and stores the selected music folder. |
-| `music list` | Opens the temporary `music lists` tab. When no library is configured, it shows suggested `~/Music` and `~/Downloads` paths. |
+| `music config` | Opens the native folder picker, stores the selected music folder, and makes it the active music folder. |
+| `music list` | Opens the temporary `music lists` tab with saved music folders. When no library is configured, it shows suggested `~/Music` and `~/Downloads` paths. |
 | `radio list` or `ls -ra` | Opens a temporary `radio list` tab with every configured radio. |
 | `yt list` | Opens the temporary `yt playlists` tab. |
 | `yt auth` | Starts the interactive YouTube API key prompt. Enter the key at `YouTube API Key:`. |
-| `yt auth clear` | Removes the saved YouTube API key from `localStorage`. |
-| `yt add [playlist-url-or-id]` | Fetches a YouTube playlist from a full playlist URL or playlist id, saves the playlist id, total video count, and cached video metadata in `localStorage`. |
+| `yt auth clear` | Removes the saved YouTube API key from Electron Storage. |
+| `yt add [playlist-url-or-id]` | Fetches a YouTube playlist from a full playlist URL or playlist id, saves the playlist id, total video count, and cached video metadata in Electron Storage. |
 | `play [number]` in `yt playlists` | Selects and starts the playlist by its 1-based position. Example: `play 1`. |
 | `status` or `info` | Shows active source, current item, creator/city/channel, volume, random/repeat state, and audio API status. |
 
@@ -69,12 +69,16 @@ For radio sources, `list`, `ls`, and the `ls -la` tab show only the 5 most
 recently played radios. Use `radio list` or `ls -ra` to verify the full radio
 listing from `src/shared/data/radios.ts` in a temporary tab.
 
-For local music, scans are persisted in `localStorage` under
+For local music, scans are persisted in Electron Storage under
 `prompt-play-music-libraries`. Stored libraries are refreshed when the player
 opens so duration and ID3 artist/title/album metadata can be updated without
-reconfiguring the folder.
+reconfiguring the folder. The active music folder is always the last folder
+selected with `music -- path [path]` or `music config`; `list`, `ls`, `ls -la`,
+`play`, and the playback queue use only that folder. Previously saved folders
+remain available in `music list`, but they are not merged into the active music
+list.
 
-For YouTube, configuration is persisted in `localStorage` under
+For YouTube, configuration is persisted in Electron Storage under
 `prompt-play-youtube` using a JSON shape with a `youtube.apiKey` and
 `youtube.playlists` array. The `yt add` command uses the YouTube
 `playlists` API for the title and total video count, then uses the
@@ -84,12 +88,13 @@ for durations because `playlistItems` does not include duration metadata.
 The `ls -la` tab renders video title, artist/channel when available, and total
 video duration for the selected playlist only. The `yt playlists` tab lists
 saved playlists; run `play [number]` there to choose which playlist feeds
-`ls -la`, `next`, and `prev`. The `./player-controls` tab renders the current
-YouTube video as an autoplaying embedded player and stays mounted while
-navigating between YouTube tabs so playback can continue. Volume commands and
-the volume control send YouTube iframe API commands too. When a YouTube video
-ends while playback is active, the player advances to the next selected playlist
-item automatically.
+`ls -la`. In YouTube mode, use `play [number]` from the selected playlist list
+to move to a specific video; `next`, `n`, `prev`, and `p` are not available.
+The `./player-controls` tab renders the current YouTube video as an autoplaying
+embedded player and stays mounted while navigating between YouTube tabs so
+playback can continue. Volume commands and the volume control send YouTube
+iframe API commands too. When a YouTube video ends while playback is active,
+the player advances to the next selected playlist item automatically.
 
 ## Volume
 
@@ -110,6 +115,7 @@ item automatically.
 | `home` or `exit` | Returns from the player to the first access screen. |
 | `quit` | Closes the application. |
 | `clear` | Clears terminal history. |
+| `clear all` | Stops and clears the current playback state for radio, music, and YouTube, then removes saved Electron Storage data. |
 | `version` | Shows the current project version. |
 | `open now-playing` | Opens the `cat now_playing.txt` tab. |
 | `open visualizer` | Opens the `./visualizer --mode=spectrum` tab. |
@@ -174,6 +180,7 @@ Theme picker controls: `Up`/`Down` selects a theme, `Enter` applies it, and
 | `help`, `h`, or `?` | Opens the temporary help tab. |
 | `:q` | Closes the active temporary tab. |
 | `clear` | Clears terminal history. |
+| `clear all` | Stops and clears playback for radio, music, and YouTube, then removes saved Electron Storage data. |
 
 ## Input Shortcuts
 

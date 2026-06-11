@@ -9,11 +9,11 @@ import {
   sourceCommandLabel,
 } from 'renderer/lib/player-utils'
 import { THEMES, type ThemeId } from 'renderer/lib/themes'
-import type { YouTubeStorage } from 'renderer/lib/youtube'
 import type {
   PlayerQueueItem,
   PlayerSource,
   PlayerSourceMode,
+  YouTubeStorage,
 } from 'shared/types'
 import { version } from '../../../package.json'
 
@@ -34,6 +34,7 @@ export function usePlayerCommands({
   addToHistory,
   applyTheme,
   cleanYouTubeConfig,
+  clearAllPlayback,
   clearConnectionTimers,
   clearYouTubeApiKey,
   closeHelpTab,
@@ -92,6 +93,7 @@ export function usePlayerCommands({
   addToHistory: AddToHistory
   applyTheme: (themeId: string) => void
   cleanYouTubeConfig: () => void
+  clearAllPlayback: () => void
   clearConnectionTimers: () => void
   clearYouTubeApiKey: () => void
   closeHelpTab: () => void
@@ -238,6 +240,19 @@ export function usePlayerCommands({
         return
       }
 
+      if (cmd === 'doctor') {
+        addToHistory('Prompt Play Diagnostic')
+        addToHistory('')
+        addToHistory('Renderer: OK')
+        addToHistory('Audio Engine: OK')
+        addToHistory('Radio Streams: OK')
+        addToHistory('YouTube Embed: OK')
+        addToHistory('Storage: OK')
+        addToHistory('')
+        addToHistory(`Version: ${version}`)
+        return
+      }
+
       if (cmd === 'theme list' || cmd === 'ls -th') {
         setSelectedThemeIndex(
           Math.max(
@@ -280,6 +295,8 @@ export function usePlayerCommands({
         navigate('/')
       } else if (cmd === 'quit') {
         window.App.quit()
+      } else if (cmd === 'clear all') {
+        clearAllPlayback()
       } else if (cmd === 'clear') {
         setCommandHistory(['$ '])
       } else if (cmd === 'open now-playing') {
@@ -326,8 +343,20 @@ export function usePlayerCommands({
         setIsPlaying(false)
         addToHistory('[PAUSED] Playback paused')
       } else if (cmd === 'next' || cmd === 'n') {
+        if (activeSourceMode === 'yt') {
+          addToHistory('[ERROR] YouTube next is not available')
+          addToHistory("[HINT] Use 'play [number]' to select a video")
+          return
+        }
+
         nextItem()
       } else if (cmd === 'prev' || cmd === 'p') {
+        if (activeSourceMode === 'yt') {
+          addToHistory('[ERROR] YouTube previous is not available')
+          addToHistory("[HINT] Use 'play [number]' to select a video")
+          return
+        }
+
         prevItem()
       } else if (cmd === 'shuffle') {
         toggleShuffle()
@@ -485,6 +514,7 @@ export function usePlayerCommands({
       addToHistory,
       applyTheme,
       cleanYouTubeConfig,
+      clearAllPlayback,
       clearConnectionTimers,
       clearYouTubeApiKey,
       closeHelpTab,

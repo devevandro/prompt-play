@@ -3,11 +3,32 @@ import type { OpenDialogOptions } from 'electron'
 
 import { scanMusicFolder } from 'main/audio/music-scanner'
 import { checkStreamUrl } from 'main/radio/check-stream'
+import {
+  clearStoredValues,
+  getStoredValue,
+  removeStoredValue,
+  setStoredValue,
+} from 'main/storage/app-storage'
+import type { AppStorageKey, AppStorageRequest } from 'shared/types'
 
 export function registerPlayerIpc() {
   ipcMain.handle('app:quit', () => {
     app.quit()
   })
+
+  ipcMain.handle('storage:get', (_event, key: AppStorageKey) =>
+    getStoredValue(key)
+  )
+
+  ipcMain.handle('storage:set', (_event, request: AppStorageRequest) =>
+    setStoredValue(request)
+  )
+
+  ipcMain.handle('storage:remove', (_event, key: AppStorageKey) =>
+    removeStoredValue(key)
+  )
+
+  ipcMain.handle('storage:clear', () => clearStoredValues())
 
   ipcMain.handle('radio:check-stream', (_event, url: string) =>
     checkStreamUrl(url)

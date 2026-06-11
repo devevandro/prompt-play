@@ -62,6 +62,7 @@ export function PlayerControls({
   onToggleMute,
   onVolumeChange,
 }: PlayerControlsProps) {
+  const canSkip = source.mode !== 'yt'
   const canSeek = source.supportsSeek && duration > 0
   const progress = canSeek ? (currentTime / duration) * 100 : 0
   const { containerRef, hasVideo, seekTo } = useYouTubeIframePlayer({
@@ -140,25 +141,27 @@ export function PlayerControls({
             aria-pressed={isShuffleEnabled}
             className={`p-2 transition-colors hover:text-terminal-cyan ${
               isShuffleEnabled ? 'text-terminal-cyan' : 'text-terminal-gray'
-            }`}
+            } cursor-pointer`}
             onClick={onToggleShuffle}
             type="button"
           >
             <Shuffle className="h-5 w-5" />
           </button>
 
-          <button
-            aria-label="Previous item"
-            className="rounded bg-muted/50 p-3 text-terminal-white transition-colors hover:bg-terminal-cyan/10 hover:text-terminal-cyan"
-            onClick={onPrev}
-            type="button"
-          >
-            <SkipBack className="h-6 w-6" />
-          </button>
+          {canSkip && (
+            <button
+              aria-label="Previous item"
+              className="rounded bg-muted/50 p-3 text-terminal-white transition-colors hover:bg-terminal-cyan/10 hover:text-terminal-cyan cursor-pointer"
+              onClick={onPrev}
+              type="button"
+            >
+              <SkipBack className="h-6 w-6" />
+            </button>
+          )}
 
           <button
             aria-label={isPlaying ? 'Pause' : 'Play'}
-            className="rounded-full bg-terminal-green p-5 text-background transition-colors hover:bg-terminal-cyan"
+            className="rounded-full bg-terminal-green p-5 text-background transition-colors hover:bg-terminal-cyan cursor-pointer"
             onClick={onTogglePlay}
             type="button"
           >
@@ -169,21 +172,23 @@ export function PlayerControls({
             )}
           </button>
 
-          <button
-            aria-label="Next item"
-            className="rounded bg-muted/50 p-3 text-terminal-white transition-colors hover:bg-terminal-cyan/10 hover:text-terminal-cyan"
-            onClick={onNext}
-            type="button"
-          >
-            <SkipForward className="h-6 w-6" />
-          </button>
+          {canSkip && (
+            <button
+              aria-label="Next item"
+              className="rounded bg-muted/50 p-3 text-terminal-white transition-colors hover:bg-terminal-cyan/10 hover:text-terminal-cyan cursor-pointer"
+              onClick={onNext}
+              type="button"
+            >
+              <SkipForward className="h-6 w-6" />
+            </button>
+          )}
 
           <button
             aria-label="Repeat current item"
             aria-pressed={isRepeatEnabled}
             className={`p-2 transition-colors hover:text-terminal-cyan ${
               isRepeatEnabled ? 'text-terminal-cyan' : 'text-terminal-gray'
-            }`}
+            } cursor-pointer`}
             onClick={onToggleRepeat}
             type="button"
           >
@@ -224,7 +229,7 @@ export function PlayerControls({
         <div className="flex items-center justify-center gap-3 px-4">
           <button
             aria-label={volume > 0 ? 'Mute' : 'Unmute'}
-            className="p-1 text-terminal-gray transition-colors hover:text-terminal-white"
+            className="p-1 text-terminal-gray transition-colors hover:text-terminal-white cursor-pointer"
             onClick={onToggleMute}
             type="button"
           >
@@ -242,7 +247,7 @@ export function PlayerControls({
             type="button"
           >
             <div
-              className="h-full rounded bg-terminal-yellow transition-all group-hover:bg-terminal-cyan"
+              className="h-full rounded bg-terminal-yellow transition-all group-hover:bg-terminal-cyan cursor-pointer"
               style={{ width: `${volume * 100}%` }}
             />
           </button>
@@ -264,9 +269,15 @@ export function PlayerControls({
         <span>
           <kbd className="text-terminal-cyan">↑/↓</kbd> volume
         </span>
-        <span>
-          <kbd className="text-terminal-cyan">n/p</kbd> next/prev
-        </span>
+        {canSkip ? (
+          <span>
+            <kbd className="text-terminal-cyan">n/p</kbd> next/prev
+          </span>
+        ) : (
+          <span>
+            <kbd className="text-terminal-cyan">play #</kbd> select video
+          </span>
+        )}
       </div>
     </div>
   )

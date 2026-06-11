@@ -43,6 +43,7 @@ export const TERMINAL_COMMANDS = [
   'mute',
   'unmute',
   'clear',
+  'clear all',
   'version',
   'open now-playing',
   'open visualizer',
