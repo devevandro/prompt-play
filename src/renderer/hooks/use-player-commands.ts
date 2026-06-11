@@ -35,6 +35,7 @@ export function usePlayerCommands({
   applyTheme,
   cleanYouTubeConfig,
   clearAllPlayback,
+  clearPlayback,
   clearConnectionTimers,
   clearYouTubeApiKey,
   closeHelpTab,
@@ -42,6 +43,7 @@ export function usePlayerCommands({
   closeRadioListTab,
   closeYouTubeListTab,
   currentItem,
+  getPlayerDiagnostics,
   handleVolumeChange,
   isAwaitingYouTubeApiKey,
   isConnected,
@@ -91,16 +93,18 @@ export function usePlayerCommands({
   activeTab: string
   activeTheme: ThemeId
   addToHistory: AddToHistory
-  applyTheme: (themeId: string) => void
-  cleanYouTubeConfig: () => void
-  clearAllPlayback: () => void
+  applyTheme: (themeId: string) => Promise<void>
+  cleanYouTubeConfig: () => Promise<void>
+  clearAllPlayback: () => Promise<void>
+  clearPlayback: () => void
   clearConnectionTimers: () => void
-  clearYouTubeApiKey: () => void
+  clearYouTubeApiKey: () => Promise<void>
   closeHelpTab: () => void
   closeMusicListTab: () => void
   closeRadioListTab: () => void
   closeYouTubeListTab: () => void
   currentItem: PlayerQueueItem | null
+  getPlayerDiagnostics: () => Promise<string[]>
   handleVolumeChange: (newVolume: number) => void
   isAwaitingYouTubeApiKey: boolean
   isConnected: boolean
@@ -131,7 +135,7 @@ export function usePlayerCommands({
   setIsPlaying: (isPlaying: boolean) => void
   setIsThemePickerOpen: (isOpen: boolean) => void
   setSelectedThemeIndex: (index: number) => void
-  setYouTubeApiKey: (apiKey: string) => void
+  setYouTubeApiKey: (apiKey: string) => Promise<void>
   showHelpTab: boolean
   showMusicListTab: boolean
   showRadioListTab: boolean
@@ -188,7 +192,7 @@ export function usePlayerCommands({
 
       if (isAwaitingYouTubeApiKey) {
         addToHistory('$ ********')
-        setYouTubeApiKey(rawCommand)
+        void setYouTubeApiKey(rawCommand)
         setIsAwaitingYouTubeApiKey(false)
         return
       }
@@ -241,15 +245,11 @@ export function usePlayerCommands({
       }
 
       if (cmd === 'doctor') {
-        addToHistory('Prompt Play Diagnostic')
-        addToHistory('')
-        addToHistory('Renderer: OK')
-        addToHistory('Audio Engine: OK')
-        addToHistory('Radio Streams: OK')
-        addToHistory('YouTube Embed: OK')
-        addToHistory('Storage: OK')
-        addToHistory('')
-        addToHistory(`Version: ${version}`)
+        void getPlayerDiagnostics().then(lines => {
+          for (const line of lines) {
+            addToHistory(line)
+          }
+        })
         return
       }
 
@@ -262,7 +262,7 @@ export function usePlayerCommands({
         )
         setIsThemePickerOpen(true)
       } else if (cmd.startsWith('theme use ')) {
-        applyTheme(cmd.slice(10).trim())
+        void applyTheme(cmd.slice(10).trim())
       } else if (cmd === 'music') {
         selectSource('local')
       } else if (pathCommandMatch?.[1].toLowerCase() === 'music') {
@@ -286,17 +286,19 @@ export function usePlayerCommands({
       } else if (cmd === 'yt auth') {
         setIsAwaitingYouTubeApiKey(true)
       } else if (cmd === 'yt clean') {
-        cleanYouTubeConfig()
+        void cleanYouTubeConfig()
       } else if (cmd === 'yt auth clear') {
-        clearYouTubeApiKey()
+        void clearYouTubeApiKey()
       } else if (cmd.startsWith('yt add ')) {
         void saveYouTubePlaylist(rawCommand.slice('yt add '.length))
       } else if (cmd === 'home' || cmd === 'exit') {
         navigate('/')
       } else if (cmd === 'quit') {
         window.App.quit()
+      } else if (cmd === 'clear playback') {
+        clearPlayback()
       } else if (cmd === 'clear all') {
-        clearAllPlayback()
+        void clearAllPlayback()
       } else if (cmd === 'clear') {
         setCommandHistory(['$ '])
       } else if (cmd === 'open now-playing') {
@@ -515,6 +517,7 @@ export function usePlayerCommands({
       applyTheme,
       cleanYouTubeConfig,
       clearAllPlayback,
+      clearPlayback,
       clearConnectionTimers,
       clearYouTubeApiKey,
       closeHelpTab,
@@ -522,6 +525,7 @@ export function usePlayerCommands({
       closeRadioListTab,
       closeYouTubeListTab,
       currentItem,
+      getPlayerDiagnostics,
       handleVolumeChange,
       isAwaitingYouTubeApiKey,
       isConnected,
