@@ -53,7 +53,15 @@ export function HelpTab({ source }: { source: PlayerSource }) {
       <div className="grid gap-5 sm:grid-cols-2">
         <section className="space-y-2">
           <h2 className="text-terminal-yellow text-xs">Core Commands</h2>
-          {['help', 'home', 'exit', 'quit', 'clear all', ':q'].map(command => (
+          {[
+            'help',
+            'home',
+            'exit',
+            'quit',
+            'clear playback',
+            'clear all',
+            ':q',
+          ].map(command => (
             <div className="text-terminal-white" key={command}>
               {command}
             </div>
