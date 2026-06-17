@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import type { RefObject } from 'react'
 
 import type { RadioStreamStatus } from 'renderer/hooks/use-radio-source'
@@ -18,6 +19,21 @@ export function RadioListTab({
   radioStatuses: Record<string, RadioStreamStatus>
   scrollContainerRef: RefObject<HTMLDivElement | null>
 }) {
+  useEffect(() => {
+    const container = scrollContainerRef.current
+
+    if (!container || !currentItem) {
+      return
+    }
+
+    const activeElement = container.querySelector('[data-player-active="true"]')
+
+    activeElement?.scrollIntoView({
+      block: 'nearest',
+      behavior: 'smooth',
+    })
+  }, [currentItem, scrollContainerRef])
+
   return (
     <div className="flex h-full flex-col">
       <div className="px-4 py-3">
@@ -52,6 +68,7 @@ export function RadioListTab({
                   ? 'bg-terminal-green/10 text-terminal-green'
                   : 'text-terminal-white hover:bg-muted/50'
               }`}
+              data-player-active={isActive ? 'true' : undefined}
               key={item.id}
               onClick={() => onSelectItem(item)}
               type="button"
