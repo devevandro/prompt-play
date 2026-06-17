@@ -35,9 +35,11 @@ export function usePlayerCommands({
   applyTheme,
   cleanYouTubeConfig,
   clearAllPlayback,
+  clearMusicLibraries,
   clearPlayback,
   clearConnectionTimers,
   clearYouTubeApiKey,
+  clearYouTubePlaylists,
   closeHelpTab,
   closeMusicListTab,
   closeRadioListTab,
@@ -62,6 +64,7 @@ export function usePlayerCommands({
   prevItem,
   queueItems,
   recentRadioItems,
+  removeYouTubePlaylist,
   saveYouTubePlaylist,
   scanMusicPath,
   selectMusicFolder,
@@ -96,9 +99,11 @@ export function usePlayerCommands({
   applyTheme: (themeId: string) => Promise<void>
   cleanYouTubeConfig: () => Promise<void>
   clearAllPlayback: () => Promise<void>
+  clearMusicLibraries: () => Promise<void>
   clearPlayback: () => void
   clearConnectionTimers: () => void
   clearYouTubeApiKey: () => Promise<void>
+  clearYouTubePlaylists: () => Promise<void>
   closeHelpTab: () => void
   closeMusicListTab: () => void
   closeRadioListTab: () => void
@@ -123,6 +128,7 @@ export function usePlayerCommands({
   prevItem: () => void
   queueItems: PlayerQueueItem[]
   recentRadioItems: PlayerQueueItem[]
+  removeYouTubePlaylist: (playlistQuery: string) => Promise<void>
   saveYouTubePlaylist: (playlistInput: string) => Promise<void>
   scanMusicPath: (folderPath: string) => Promise<void>
   selectMusicFolder: () => Promise<void>
@@ -277,6 +283,11 @@ export function usePlayerCommands({
       } else if (cmd === 'music list') {
         selectSource('local')
         openMusicListTab()
+      } else if (cmd === 'music clear' || cmd === 'music reset') {
+        if (currentItem?.mode === 'local') {
+          clearPlayback()
+        }
+        void clearMusicLibraries()
       } else if (cmd === 'radio' || cmd === 'fm') {
         selectSource('radio')
       } else if (cmd === 'yt') {
@@ -287,8 +298,18 @@ export function usePlayerCommands({
         setIsAwaitingYouTubeApiKey(true)
       } else if (cmd === 'yt clean') {
         void cleanYouTubeConfig()
+      } else if (cmd === 'yt clear' || cmd === 'yt clear playlists') {
+        if (currentItem?.mode === 'yt') {
+          clearPlayback()
+        }
+        void clearYouTubePlaylists()
       } else if (cmd === 'yt auth clear') {
         void clearYouTubeApiKey()
+      } else if (cmd.startsWith('yt remove ')) {
+        if (currentItem?.mode === 'yt') {
+          clearPlayback()
+        }
+        void removeYouTubePlaylist(rawCommand.slice('yt remove '.length))
       } else if (cmd.startsWith('yt add ')) {
         void saveYouTubePlaylist(rawCommand.slice('yt add '.length))
       } else if (cmd === 'home' || cmd === 'exit') {
@@ -345,20 +366,8 @@ export function usePlayerCommands({
         setIsPlaying(false)
         addToHistory('[PAUSED] Playback paused')
       } else if (cmd === 'next' || cmd === 'n') {
-        if (activeSourceMode === 'yt') {
-          addToHistory('[ERROR] YouTube next is not available')
-          addToHistory("[HINT] Use 'play [number]' to select a video")
-          return
-        }
-
         nextItem()
       } else if (cmd === 'prev' || cmd === 'p') {
-        if (activeSourceMode === 'yt') {
-          addToHistory('[ERROR] YouTube previous is not available')
-          addToHistory("[HINT] Use 'play [number]' to select a video")
-          return
-        }
-
         prevItem()
       } else if (cmd === 'shuffle') {
         toggleShuffle()
@@ -398,7 +407,11 @@ export function usePlayerCommands({
         }
 
         const playableItems =
-          activeSourceMode === 'radio' ? activeItems : visibleItems
+          activeSourceMode === 'radio' &&
+          activeTab === 'radio-list' &&
+          showRadioListTab
+            ? activeItems
+            : visibleItems
         const found =
           Number.isInteger(itemIndex) &&
           itemIndex >= 1 &&
@@ -517,9 +530,11 @@ export function usePlayerCommands({
       applyTheme,
       cleanYouTubeConfig,
       clearAllPlayback,
+      clearMusicLibraries,
       clearPlayback,
       clearConnectionTimers,
       clearYouTubeApiKey,
+      clearYouTubePlaylists,
       closeHelpTab,
       closeMusicListTab,
       closeRadioListTab,
@@ -544,6 +559,7 @@ export function usePlayerCommands({
       prevItem,
       queueItems,
       recentRadioItems,
+      removeYouTubePlaylist,
       saveYouTubePlaylist,
       scanMusicPath,
       selectMusicFolder,

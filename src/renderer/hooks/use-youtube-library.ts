@@ -119,6 +119,102 @@ export function useYouTubeLibrary({
     }
   }, [addToHistory, removeStoredYouTube])
 
+  const clearYouTubePlaylists = useCallback(async () => {
+    setSelectedYouTubePlaylistId(null)
+    const nextStorage = {
+      youtube: {
+        ...youtubeStorage.youtube,
+        playlists: [],
+        playlistDetails: [],
+        items: [],
+      },
+    }
+
+    try {
+      await persistYouTubeStorage(nextStorage)
+      setYouTubeStorage(nextStorage)
+      addToHistory('[OK] Removed YouTube playlists and cached videos')
+      addToHistory('[INFO] YouTube API key was kept')
+    } catch (error) {
+      addToHistory(
+        `[ERROR] Could not clear YouTube playlists: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`
+      )
+    }
+  }, [addToHistory, persistYouTubeStorage, youtubeStorage.youtube])
+
+  const removeYouTubePlaylist = useCallback(
+    async (playlistQuery: string) => {
+      const query = playlistQuery.trim().toLowerCase()
+      const itemIndex = Number.parseInt(query, 10)
+      const playlistId =
+        Number.isInteger(itemIndex) &&
+        itemIndex >= 1 &&
+        itemIndex <= youtubeStorage.youtube.playlists.length
+          ? youtubeStorage.youtube.playlists[itemIndex - 1]
+          : youtubeStorage.youtube.playlists.find(id => {
+              const playlist = youtubeStorage.youtube.playlistDetails.find(
+                item => item.id === id
+              )
+
+              return (
+                id.toLowerCase().includes(query) ||
+                playlist?.title.toLowerCase().includes(query)
+              )
+            })
+
+      if (!playlistId) {
+        addToHistory(`[ERROR] YouTube playlist not found: ${playlistQuery}`)
+        return
+      }
+
+      const playlistTitle =
+        youtubeStorage.youtube.playlistDetails.find(
+          playlist => playlist.id === playlistId
+        )?.title ?? playlistId
+      const remainingPlaylists = youtubeStorage.youtube.playlists.filter(
+        id => id !== playlistId
+      )
+      const nextStorage = {
+        youtube: {
+          ...youtubeStorage.youtube,
+          playlists: remainingPlaylists,
+          playlistDetails: youtubeStorage.youtube.playlistDetails.filter(
+            item => item.id !== playlistId
+          ),
+          items: youtubeStorage.youtube.items.filter(
+            item => item.album !== playlistId
+          ),
+        },
+      }
+
+      try {
+        await persistYouTubeStorage(nextStorage)
+        setYouTubeStorage(nextStorage)
+        setSelectedYouTubePlaylistId(currentPlaylistId =>
+          currentPlaylistId === playlistId
+            ? (remainingPlaylists[0] ?? null)
+            : currentPlaylistId
+        )
+        addToHistory(`[OK] Removed YouTube playlist: ${playlistTitle}`)
+      } catch (error) {
+        addToHistory(
+          `[ERROR] Could not remove YouTube playlist: ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`
+        )
+      }
+    },
+    [
+      addToHistory,
+      persistYouTubeStorage,
+      youtubeStorage.youtube.items,
+      youtubeStorage.youtube.playlistDetails,
+      youtubeStorage.youtube.playlists,
+    ]
+  )
+
   const saveYouTubePlaylist = useCallback(
     async (playlistInput: string) => {
       const playlistId = parseYouTubePlaylistId(playlistInput)
@@ -208,8 +304,10 @@ export function useYouTubeLibrary({
 
   return {
     cleanYouTubeConfig,
+    clearYouTubePlaylists,
     clearYouTubeApiKey,
     isAwaitingYouTubeApiKey,
+    removeYouTubePlaylist,
     saveYouTubePlaylist,
     selectedYouTubePlaylistId,
     setIsAwaitingYouTubeApiKey,

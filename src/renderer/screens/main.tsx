@@ -196,6 +196,7 @@ export function MainScreen() {
   }, [activeTab, addToHistory])
 
   const {
+    clearMusicLibraries,
     musicLibraries,
     resetMusicLibraries,
     scanMusicPath,
@@ -212,7 +213,9 @@ export function MainScreen() {
   const {
     cleanYouTubeConfig,
     clearYouTubeApiKey,
+    clearYouTubePlaylists,
     isAwaitingYouTubeApiKey,
+    removeYouTubePlaylist,
     saveYouTubePlaylist,
     selectedYouTubePlaylistId,
     setIsAwaitingYouTubeApiKey,
@@ -287,9 +290,13 @@ export function MainScreen() {
         ? selectedYouTubeItems
         : activeItems
   const queueItems =
-    activeSourceMode === 'yt' && selectedYouTubePlaylistId
-      ? selectedYouTubeItems
-      : activeItems
+    activeSourceMode === 'radio'
+      ? activeTab === 'radio-list' && showRadioListTab
+        ? radioItems
+        : recentRadioItems
+      : activeSourceMode === 'yt' && selectedYouTubePlaylistId
+        ? selectedYouTubeItems
+        : activeItems
   const tabs = useMemo(
     () =>
       getTabs(
@@ -721,9 +728,11 @@ export function MainScreen() {
     applyTheme,
     cleanYouTubeConfig,
     clearAllPlayback,
+    clearMusicLibraries,
     clearPlayback,
     clearConnectionTimers,
     clearYouTubeApiKey,
+    clearYouTubePlaylists,
     closeHelpTab,
     closeMusicListTab,
     closeRadioListTab,
@@ -748,6 +757,7 @@ export function MainScreen() {
     prevItem,
     queueItems,
     recentRadioItems,
+    removeYouTubePlaylist,
     saveYouTubePlaylist,
     scanMusicPath,
     selectMusicFolder,
@@ -968,25 +978,18 @@ export function MainScreen() {
     nextItem()
   }, [addToHistory, currentItem, isRepeatEnabled, nextItem, playItem])
 
-  useEffect(() => {
-    if (currentItem?.mode !== 'yt' || !isPlaying || duration <= 0) {
-      return
-    }
+  const handleYouTubeProgress = useCallback(
+    (nextCurrentTime: number, nextDuration: number) => {
+      if (Number.isFinite(nextCurrentTime)) {
+        setCurrentTime(Math.max(0, nextCurrentTime))
+      }
 
-    const timerId = window.setInterval(() => {
-      setCurrentTime(prev => {
-        const nextTime = Math.min(prev + 1, duration)
-
-        if (nextTime >= duration) {
-          window.setTimeout(handlePlayerEnded, 0)
-        }
-
-        return nextTime
-      })
-    }, 1000)
-
-    return () => window.clearInterval(timerId)
-  }, [currentItem?.mode, duration, handlePlayerEnded, isPlaying])
+      if (Number.isFinite(nextDuration) && nextDuration > 0) {
+        setDuration(Math.round(nextDuration))
+      }
+    },
+    []
+  )
 
   const renderPlayerControls = () => (
     <PlayerControls
@@ -999,6 +1002,7 @@ export function MainScreen() {
       onEnded={handlePlayerEnded}
       onNext={nextItem}
       onPrev={prevItem}
+      onProgress={handleYouTubeProgress}
       onSeek={handleSeek}
       onToggleMute={volume > 0 ? muteVolume : unmuteVolume}
       onTogglePlay={togglePlay}

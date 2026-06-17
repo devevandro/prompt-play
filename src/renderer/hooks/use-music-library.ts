@@ -194,7 +194,21 @@ export function useMusicLibrary({
     await removeStoredMusicLibraries()
   }, [removeStoredMusicLibraries])
 
+  const clearMusicLibraries = useCallback(async () => {
+    try {
+      await resetMusicLibraries()
+      addToHistory('[OK] Removed saved music folders and cached music list')
+    } catch (error) {
+      addToHistory(
+        `[ERROR] Could not clear music folders: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`
+      )
+    }
+  }, [addToHistory, resetMusicLibraries])
+
   return {
+    clearMusicLibraries,
     musicLibraries,
     resetMusicLibraries,
     scanMusicPath,
