@@ -5,6 +5,8 @@ import type { PlayerQueueItem, PlayerSourceMode } from 'shared/types'
 interface YouTubePlayer {
   cueVideoById: (videoId: string) => void
   destroy: () => void
+  getCurrentTime: () => number
+  getDuration: () => number
   loadVideoById: (videoId: string) => void
   mute: () => void
   pauseVideo: () => void
@@ -75,12 +77,14 @@ export function useYouTubeIframePlayer({
   currentItem,
   isPlaying,
   onEnded,
+  onProgress,
   sourceMode,
   volume,
 }: {
   currentItem: PlayerQueueItem | null
   isPlaying: boolean
   onEnded?: () => void
+  onProgress?: (currentTime: number, duration: number) => void
   sourceMode: PlayerSourceMode
   volume: number
 }) {
@@ -125,6 +129,14 @@ export function useYouTubeIframePlayer({
     [volume]
   )
 
+  const requestPlayback = useCallback((player: YouTubePlayer) => {
+    player.playVideo()
+
+    window.setTimeout(() => {
+      player.playVideo()
+    }, 250)
+  }, [])
+
   useEffect(() => {
     if (sourceMode !== 'yt' || !videoId || !containerRef.current) {
       playerRef.current?.destroy()
@@ -165,12 +177,20 @@ export function useYouTubeIframePlayer({
               setPlayerVolume(playerRef.current)
 
               if (isPlaying) {
-                playerRef.current.playVideo()
+                requestPlayback(playerRef.current)
               }
             },
             onStateChange: event => {
               if (event.data === 0) {
                 onEnded?.()
+                return
+              }
+
+              if (event.data === 1 && playerRef.current) {
+                onProgress?.(
+                  playerRef.current.getCurrentTime(),
+                  playerRef.current.getDuration()
+                )
               }
             },
           },
@@ -185,6 +205,7 @@ export function useYouTubeIframePlayer({
     if (isPlayerReady && lastVideoIdRef.current !== videoId) {
       if (isPlaying) {
         playerRef.current.loadVideoById(videoId)
+        requestPlayback(playerRef.current)
       } else {
         playerRef.current.cueVideoById(videoId)
       }
@@ -198,7 +219,9 @@ export function useYouTubeIframePlayer({
     isPlayerReady,
     isPlaying,
     onEnded,
+    onProgress,
     playerVars,
+    requestPlayback,
     setPlayerVolume,
     sourceMode,
     videoId,
@@ -210,11 +233,35 @@ export function useYouTubeIframePlayer({
     }
 
     if (isPlaying) {
-      playerRef.current.playVideo()
+      requestPlayback(playerRef.current)
     } else {
       playerRef.current.pauseVideo()
     }
-  }, [isPlayerReady, isPlaying, sourceMode])
+  }, [isPlayerReady, isPlaying, requestPlayback, sourceMode])
+
+  useEffect(() => {
+    if (
+      sourceMode !== 'yt' ||
+      !isPlayerReady ||
+      !isPlaying ||
+      !playerRef.current
+    ) {
+      return
+    }
+
+    const timerId = window.setInterval(() => {
+      if (!playerRef.current) {
+        return
+      }
+
+      onProgress?.(
+        playerRef.current.getCurrentTime(),
+        playerRef.current.getDuration()
+      )
+    }, 1000)
+
+    return () => window.clearInterval(timerId)
+  }, [isPlayerReady, isPlaying, onProgress, sourceMode])
 
   useEffect(() => {
     if (sourceMode !== 'yt' || !isPlayerReady || !playerRef.current) {
