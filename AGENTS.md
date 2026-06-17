@@ -24,26 +24,31 @@ When adding player behavior, update the source configuration in
 source. The current commands are `sources`, `source local`, `source radio`,
 `source yt`, `music`, `radio`, `fm`, `yt`, `yt list`, `yt auth`,
 `yt auth clear`, `yt add [playlist-url-or-id]`,
-`music -- path [path]`, `radio -- path [path]`, `music config`, `music list`,
-`play`, `play [number]`, `play [name]`, `resume`, `pause`, `stop`, `list`,
-`ls`, `ls -la`, `status`, `info`, `next`, `n`, `prev`, `p`, `shuffle`,
-`repeat`, `vol [0-100]`, `vol +[number]`, `vol -[number]`, `mute`,
-`unmute`, `theme list`, `ls -th`, `theme use [theme]`, `radio list`,
-`ls -ra`, `open now-playing`, `open visualizer`, `open controls`,
-`tab [number]`, `home`, `exit`, `quit`, `clear`, `version`, `help`, `h`,
-`?`, and `:q`.
+`yt remove [playlist-number-or-name]`, `yt clear`, `yt clear playlists`,
+`yt clean`, `music -- path [path]`, `radio -- path [path]`, `music config`,
+`music list`, `music clear`, `music reset`, `play`, `play [number]`,
+`play [name]`, `resume`, `pause`, `stop`, `list`, `ls`, `ls -la`, `status`,
+`info`, `next`, `n`, `prev`, `p`, `shuffle`, `repeat`, `vol [0-100]`,
+`vol +[number]`, `vol -[number]`, `mute`, `unmute`, `theme list`, `ls -th`,
+`theme use [theme]`, `radio list`, `ls -ra`, `open now-playing`,
+`open visualizer`, `open controls`, `tab [number]`, `home`, `exit`, `quit`,
+`clear`, `clear playback`, `clear all`, `version`, `help`, `h`, `?`, and
+`:q`.
 
 Radio is live streaming and should not expose seek controls; local files and
 YouTube playlists can expose duration and seeking. The radio `ls -la` source
 tab shows the 5 most recently played radios, while `radio list` and `ls -ra`
 open a temporary full radio-list tab next to `./player-controls`, following the
-same temporary-tab pattern as help. Local music folders are configured with
+same temporary-tab pattern as help. Radio `next` and `prev` must use the
+visible radio context: recent radios on `ls -la`, and all radios while the
+temporary `radio list` tab is active. Local music folders are configured with
 `music -- path [path]` or `music config`; `music list` opens a temporary
 `music lists` tab and shows suggested `~/Music` and `~/Downloads` paths when no
 library has been stored. The last configured music folder is the active music
 folder for `list`, `ls -la`, `play`, and the playback queue; previously saved
 folders remain visible in `music list` but are not merged into the active music
-list.
+list. `music clear` and `music reset` remove saved folders and cached music
+lists without clearing YouTube data or theme settings.
 
 YouTube configuration is stored in Electron Storage under
 `prompt-play-youtube`. `yt auth` opens an interactive `YouTube API Key:` prompt,
@@ -56,7 +61,12 @@ playlist in the source list. `yt list` opens the temporary `yt playlists` tab;
 from that tab, `play [number]` selects and starts the playlist. YouTube playback
 uses an embedded player in `./player-controls`, keeps playback mounted while
 navigating between YouTube tabs, supports volume/mute commands through the
-iframe API, and advances automatically when the current video ends.
+iframe API, supports `next` and `prev` within the selected playlist queue, and
+advances automatically when the current video ends. `yt remove [number-or-name]`
+removes one saved playlist and its cached videos, while `yt clear` and
+`yt clear playlists` remove playlists and cached videos without removing the
+API key. `yt clean` remains the command for removing all YouTube configuration,
+including the API key.
 
 Player tab changes should be terminal-driven through commands such as
 `tab [number]`, `open now-playing`, `open visualizer`, `open controls`, and
@@ -73,6 +83,8 @@ duration from browser `loadedmetadata` when available. Stored libraries live in
 Electron Storage under `prompt-play-music-libraries` and are refreshed on player
 startup. The `clear playback` command stops playback without removing saved
 data, while `clear all` stops playback and removes saved Electron Storage data.
+Prefer source-specific cleanup commands such as `music clear` and
+`yt clear playlists` when only one library source should be reset.
 
 ## Theme Typography
 
@@ -95,7 +107,9 @@ Current theme font mapping:
 Theme font files are loaded from Google Fonts in `src/renderer/index.html`.
 Dark Soul and Shell Pink use larger theme-specific text scale variables in
 `globals.css` because Datatype and Lekton render visually smaller and tighter
-than the other monospace fonts.
+than the other monospace fonts. Theme selection is persisted under
+`prompt-play-theme`; `theme use [theme]` should accept both theme ids and
+human-readable names after normalization.
 
 ## Build, Test, and Development Commands
 
