@@ -92,7 +92,8 @@ export function useYouTubeIframePlayer({
   const playerRef = useRef<YouTubePlayer | null>(null)
   const lastVideoIdRef = useRef('')
   const [isPlayerReady, setIsPlayerReady] = useState(false)
-  const videoId = currentItem?.videoId ?? currentItem?.src ?? ''
+  const videoId =
+    currentItem?.mode === 'yt' ? (currentItem.videoId ?? currentItem.src) : ''
   const playerVars = useMemo(() => {
     const params = new URLSearchParams({
       autoplay: '1',

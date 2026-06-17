@@ -4,6 +4,16 @@ Prompt Play is an Electron desktop music player with a terminal-style
 interface. It supports local music files, online radio streams, and YouTube
 playlist sources from one shared player UI.
 
+## Security Notice
+
+Prompt Play is open source.
+
+Because the application is not currently code signed, Windows SmartScreen and macOS Gatekeeper may display security warnings during installation.
+
+The source code is available for inspection:
+
+https://github.com/devevandro/prompt-play
+
 ## Features
 
 - Local music folder scanning with persisted libraries.

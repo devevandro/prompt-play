@@ -3,7 +3,7 @@
   "name": "prompt-play",
   "productName": "Prompt Play",
   "description": "A desktop application to listen musics and radios stations, and to watch videos on YouTube.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "main": "./node_modules/.dev/main/index.mjs",
   "resources": "src/resources",
   "author": {
