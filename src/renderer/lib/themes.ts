@@ -27,6 +27,21 @@ export const THEMES = [
 
 export type ThemeId = (typeof THEMES)[number]['id']
 
+function normalizeThemeInput(theme: string) {
+  return theme
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-')
+}
+
 export function getThemeById(themeId: string) {
-  return THEMES.find(theme => theme.id === themeId)
+  const normalizedThemeId = normalizeThemeInput(themeId)
+
+  return THEMES.find(
+    theme =>
+      theme.id === normalizedThemeId ||
+      normalizeThemeInput(theme.name) === normalizedThemeId
+  )
 }

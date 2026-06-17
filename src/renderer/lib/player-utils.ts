@@ -75,6 +75,8 @@ export function getSourceCommandMode(
   if (
     cmd === 'music' ||
     cmd === 'music config' ||
+    cmd === 'music clear' ||
+    cmd === 'music reset' ||
     cmd === 'music list' ||
     pathCommandSource === 'music'
   ) {
@@ -95,7 +97,10 @@ export function getSourceCommandMode(
     cmd === 'yt list' ||
     cmd === 'yt auth' ||
     cmd === 'yt clean' ||
+    cmd === 'yt clear' ||
+    cmd === 'yt clear playlists' ||
     cmd === 'yt auth clear' ||
+    cmd.startsWith('yt remove ') ||
     cmd.startsWith('yt add ')
   ) {
     return 'yt'

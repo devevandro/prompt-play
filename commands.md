@@ -23,8 +23,8 @@ Reference for commands accepted by the Prompt Play terminal input.
 | `resume` | Resumes the current item. |
 | `pause` | Pauses playback. |
 | `stop` | Pauses playback. |
-| `next` or `n` | Plays the next item from the active source. Not available in YouTube mode; use `play [number]` there. |
-| `prev` or `p` | Plays the previous item from the active source. Not available in YouTube mode; use `play [number]` there. |
+| `next` or `n` | Plays the next item from the active queue. In radio mode, this follows the recent list on `ls -la` and the full station list on `radio list` or `ls -ra`. |
+| `prev` or `p` | Plays the previous item from the active queue. In radio mode, this follows the recent list on `ls -la` and the full station list on `radio list` or `ls -ra`. |
 | `shuffle` | Toggles random playback order for the active source. |
 | `repeat` | Toggles repeat for the current item. |
 
@@ -57,17 +57,24 @@ and `yt add` are rejected outside YouTube mode. Use `source local`,
 | `radio -- path [path]` | Not supported. Radio stations are configured in `src/shared/data/radios.ts`; use `radio list` or `ls -ra` to view them. |
 | `music config` | Opens the native folder picker, stores the selected music folder, and makes it the active music folder. |
 | `music list` | Opens the temporary `music lists` tab with saved music folders. When no library is configured, it shows suggested `~/Music` and `~/Downloads` paths. |
+| `music clear` or `music reset` | Removes saved music folders and cached music lists without removing YouTube data or the selected theme. |
 | `radio list` or `ls -ra` | Opens a temporary `radio list` tab with every configured radio. |
 | `yt list` | Opens the temporary `yt playlists` tab. |
 | `yt auth` | Starts the interactive YouTube API key prompt. Enter the key at `YouTube API Key:`. |
 | `yt auth clear` | Removes the saved YouTube API key from Electron Storage. |
 | `yt add [playlist-url-or-id]` | Fetches a YouTube playlist from a full playlist URL or playlist id, saves the playlist id, total video count, and cached video metadata in Electron Storage. |
+| `yt remove [number-or-name]` | Removes one saved YouTube playlist and its cached videos by playlist position, id, or title match. |
+| `yt clear` or `yt clear playlists` | Removes saved YouTube playlists and cached videos while keeping the saved API key. |
+| `yt clean` | Removes the saved YouTube API key, playlists, and cached videos. |
 | `play [number]` in `yt playlists` | Selects and starts the playlist by its 1-based position. Example: `play 1`. |
 | `status` or `info` | Shows active source, current item, creator/city/channel, volume, random/repeat state, and audio API status. |
 
 For radio sources, `list`, `ls`, and the `ls -la` tab show only the 5 most
 recently played radios. Use `radio list` or `ls -ra` to verify the full radio
-listing from `src/shared/data/radios.ts` in a temporary tab.
+listing from `src/shared/data/radios.ts` in a temporary tab. The playback queue
+follows the visible radio context: `next` and `prev` use the recent list on
+`ls -la`, and the full station list while the temporary `radio list` tab is
+open.
 
 For local music, scans are persisted in Electron Storage under
 `prompt-play-music-libraries`. Stored libraries are refreshed when the player
@@ -89,12 +96,14 @@ The `ls -la` tab renders video title, artist/channel when available, and total
 video duration for the selected playlist only. The `yt playlists` tab lists
 saved playlists; run `play [number]` there to choose which playlist feeds
 `ls -la`. In YouTube mode, use `play [number]` from the selected playlist list
-to move to a specific video; `next`, `n`, `prev`, and `p` are not available.
+to move to a specific video, or `next`, `n`, `prev`, and `p` to move through
+the selected playlist queue.
 The `./player-controls` tab renders the current YouTube video as an autoplaying
 embedded player and stays mounted while navigating between YouTube tabs so
 playback can continue. Volume commands and the volume control send YouTube
 iframe API commands too. When a YouTube video ends while playback is active,
-the player advances to the next selected playlist item automatically.
+the player advances to the next selected playlist item automatically from the
+YouTube iframe end event.
 
 ## Volume
 
@@ -117,6 +126,9 @@ the player advances to the next selected playlist item automatically.
 | `clear` | Clears terminal history. |
 | `clear playback` | Stops and clears the current playback state for radio, music, and YouTube without removing saved data. |
 | `clear all` | Stops and clears the current playback state for radio, music, and YouTube, then removes saved Electron Storage data. |
+| `music clear` or `music reset` | Removes saved music folders and cached music lists. |
+| `yt clear` or `yt clear playlists` | Removes YouTube playlists and cached videos while keeping the saved API key. |
+| `yt clean` | Removes all YouTube configuration, including the API key. |
 | `version` | Shows the current project version. |
 | `open now-playing` | Opens the `cat now_playing.txt` tab. |
 | `open visualizer` | Opens the `./visualizer --mode=spectrum` tab. |
@@ -168,9 +180,12 @@ Web Audio analysis because many live streams do not allow CORS access for
 | `theme use tokyo-night` | Applies the Tokyo Night theme. |
 | `theme use dark-soul` | Applies the Dark Soul theme. |
 | `theme use dark-petroleum-blue` | Applies the Dark Petroleum Blue theme. |
+| `theme use shell-pink` | Applies the Shell Pink theme. |
+| `theme use synthwave` | Applies the Synthwave theme. |
 
 Theme picker controls: `Up`/`Down` selects a theme, `Enter` applies it, and
-`Esc` closes the picker.
+`Esc` closes the picker. `theme use [theme]` accepts either the command id or
+the theme name, such as `theme use dark-soul` or `theme use dark soul`.
 
 ## System
 
@@ -183,6 +198,9 @@ Theme picker controls: `Up`/`Down` selects a theme, `Enter` applies it, and
 | `clear` | Clears terminal history. |
 | `clear playback` | Stops and clears playback for radio, music, and YouTube without removing saved data. |
 | `clear all` | Stops and clears playback for radio, music, and YouTube, then removes saved Electron Storage data. |
+| `music clear` or `music reset` | Removes saved music folders and cached music lists. |
+| `yt clear` or `yt clear playlists` | Removes YouTube playlists and cached videos while keeping the saved API key. |
+| `yt clean` | Removes all YouTube configuration, including the API key. |
 
 ## Input Shortcuts
 

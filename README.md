@@ -12,7 +12,7 @@ playlist sources from one shared player UI.
   requests and CORS support.
 - Online radio mode with a full radio-list tab and recently played radio list.
 - YouTube playlist mode with API-key setup, playlist caching, embedded video
-  playback, volume controls, and automatic advance.
+  playback, volume controls, playlist navigation, and automatic advance.
 - Source-aware player controls, seek handling, status footer, and visualizer.
 - Terminal commands for playback, sources, volume, tabs, themes, and app
   navigation.
@@ -96,6 +96,7 @@ Local music:
 | `music -- path [path]` | Scan and store a music folder, then make it active. |
 | `music config` | Select a music folder with the native folder picker and make it active. |
 | `music list` | Open the temporary saved-folder list tab. |
+| `music clear` | Remove saved music folders and cached music lists. |
 | `ls -la` | Open the active source list tab. |
 
 Sources and radio:
@@ -116,6 +117,9 @@ YouTube:
 | `yt auth` | Start the interactive YouTube API key prompt. |
 | `yt auth clear` | Remove the saved YouTube API key. |
 | `yt add [playlist-url-or-id]` | Fetch and cache a YouTube playlist. |
+| `yt remove [number-or-name]` | Remove one saved YouTube playlist and cached videos. |
+| `yt clear playlists` | Remove playlists and cached videos while keeping the API key. |
+| `yt clean` | Remove all YouTube configuration, including the API key. |
 | `yt list` | Open the temporary saved-playlist list tab. |
 | `play [number]` in `yt playlists` | Select and start a saved playlist. |
 
@@ -136,6 +140,8 @@ Tabs and utility:
 | `clear` | Clear terminal history. |
 | `clear playback` | Stop playback without removing saved data. |
 | `clear all` | Stop playback and remove saved Electron Storage data. |
+| `music clear` | Remove saved music folders and cached music lists. |
+| `yt clear playlists` | Remove YouTube playlists while keeping the API key. |
 | `home` or `exit` | Return to first access. |
 
 See [commands.md](commands.md) for the full command reference.
@@ -143,8 +149,9 @@ See [commands.md](commands.md) for the full command reference.
 ## Themes
 
 Themes can be selected with `theme list`, `ls -th`, or `theme use [theme]`.
-Each theme applies its own font family through the shared terminal typography
-tokens.
+`theme use [theme]` accepts ids such as `dark-soul` and names such as
+`dark soul`. Each theme applies its own font family through the shared terminal
+typography tokens and is persisted for the next launch.
 
 | Theme | Command id | Font family |
 | --- | --- | --- |
@@ -183,7 +190,9 @@ either a full playlist URL or a plain playlist id. Playlist loading follows
 YouTube pagination, stores total video counts, caches title/channel/video id and
 duration metadata, and renders the selected playlist in `ls -la`. The embedded
 YouTube player stays mounted while moving between YouTube tabs so playback can
-continue and advance automatically.
+continue and advance automatically. Use `next` and `prev` to navigate the
+selected playlist, `yt remove [number-or-name]` to remove one playlist, and
+`yt clear playlists` to remove playlist data while keeping the API key.
 
 ## Storage Notes
 
@@ -194,7 +203,9 @@ last folder selected with `music -- path [path]` or `music config` is the active
 folder for `list`, `ls -la`, `play`, and the playback queue; older saved
 folders remain available in `music list` but are not merged into the active
 music list. `clear playback` stops playback without removing saved data, while
-`clear all` stops playback and removes saved Electron Storage data.
+`clear all` stops playback and removes saved Electron Storage data. Use
+`music clear` to reset saved music folders only, or `yt clear playlists` to
+reset YouTube playlists without removing the API key.
 
 ## Documentation
 

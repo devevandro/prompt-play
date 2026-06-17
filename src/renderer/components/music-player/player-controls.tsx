@@ -24,6 +24,7 @@ interface PlayerControlsProps {
   onTogglePlay: () => void
   onNext: () => void
   onEnded?: () => void
+  onProgress?: (currentTime: number, duration: number) => void
   onPrev: () => void
   onToggleRepeat: () => void
   onToggleShuffle: () => void
@@ -55,6 +56,7 @@ export function PlayerControls({
   onTogglePlay,
   onNext,
   onEnded,
+  onProgress,
   onPrev,
   onToggleRepeat,
   onToggleShuffle,
@@ -62,13 +64,14 @@ export function PlayerControls({
   onToggleMute,
   onVolumeChange,
 }: PlayerControlsProps) {
-  const canSkip = source.mode !== 'yt'
+  const canSkip = true
   const canSeek = source.supportsSeek && duration > 0
   const progress = canSeek ? (currentTime / duration) * 100 : 0
   const { containerRef, hasVideo, seekTo } = useYouTubeIframePlayer({
     currentItem,
     isPlaying,
     onEnded,
+    onProgress,
     sourceMode: source.mode,
     volume,
   })
