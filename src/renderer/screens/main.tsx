@@ -6,6 +6,7 @@ import { HelpTab } from 'renderer/components/music-player/help-tab'
 import { MusicListTab } from 'renderer/components/music-player/music-list-tab'
 import { NowPlaying } from 'renderer/components/music-player/now-playing'
 import { PlayerControls } from 'renderer/components/music-player/player-controls'
+import { RadioHistoryTab } from 'renderer/components/music-player/radio-history-tab'
 import { RadioListTab } from 'renderer/components/music-player/radio-list-tab'
 import { StatusFooter } from 'renderer/components/music-player/status-footer'
 import { TerminalPrompt } from 'renderer/components/music-player/terminal-prompt'
@@ -36,6 +37,8 @@ import type {
   PlayerQueueItem,
   PlayerSource,
   PlayerSourceMode,
+  RadioHistoryEntry,
+  RadioMetadata,
 } from 'shared/types'
 import { version } from '../../../package.json'
 
@@ -43,6 +46,7 @@ function getTabs(
   source: PlayerSource,
   showHelpTab: boolean,
   showRadioListTab: boolean,
+  showRadioHistoryTab: boolean,
   showMusicListTab: boolean,
   showYouTubeListTab: boolean
 ) {
@@ -55,6 +59,14 @@ function getTabs(
 
   if (showRadioListTab) {
     tabs.push({ id: 'radio-list', label: 'radio list', shortcut: ':q' })
+  }
+
+  if (showRadioHistoryTab) {
+    tabs.push({
+      id: 'radio-history',
+      label: 'cat radio_history.txt',
+      shortcut: ':q',
+    })
   }
 
   if (showMusicListTab) {
@@ -96,9 +108,16 @@ export function MainScreen() {
   const [volume, setVolume] = useState(0.7)
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false)
   const [isRepeatEnabled, setIsRepeatEnabled] = useState(false)
+  const [radioMetadata, setRadioMetadata] = useState<RadioMetadata | null>(null)
+  const [radioMetadataUpdatedAt, setRadioMetadataUpdatedAt] = useState<
+    number | null
+  >(null)
+  const [radioHistory, setRadioHistory] = useState<RadioHistoryEntry[]>([])
+  const [relativeTimeNow, setRelativeTimeNow] = useState(Date.now())
   const [activeTab, setActiveTab] = useState('tracks')
   const [showHelpTab, setShowHelpTab] = useState(false)
   const [showRadioListTab, setShowRadioListTab] = useState(false)
+  const [showRadioHistoryTab, setShowRadioHistoryTab] = useState(false)
   const [showMusicListTab, setShowMusicListTab] = useState(false)
   const [showYouTubeListTab, setShowYouTubeListTab] = useState(false)
   const [commandHistory, setCommandHistory] = useState<string[]>([
@@ -112,10 +131,14 @@ export function MainScreen() {
   const previousTabRef = useRef('tracks')
   const trackListScrollRef = useRef<HTMLDivElement>(null)
   const radioListScrollRef = useRef<HTMLDivElement>(null)
+  const radioHistoryScrollRef = useRef<HTMLDivElement>(null)
   const youtubeListScrollRef = useRef<HTMLDivElement>(null)
   const volumeRef = useRef(volume)
   const previousVolumeRef = useRef(volume)
   const didHandleEndedRef = useRef(false)
+  const currentRadioIdRef = useRef<string | null>(null)
+  const currentRadioNameRef = useRef('')
+  const lastRadioMetadataRef = useRef('')
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
     null
   )
@@ -139,6 +162,77 @@ export function MainScreen() {
     return () => clearConnectionTimers()
   }, [clearConnectionTimers])
 
+  useEffect(() => {
+    const interval = window.setInterval(
+      () => setRelativeTimeNow(Date.now()),
+      30_000
+    )
+
+    return () => window.clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    return window.App.onRadioMetadata(metadata => {
+      if (metadata.radioId !== currentRadioIdRef.current) {
+        return
+      }
+
+      const metadataKey = `${metadata.radioId}\u0000${metadata.title}\u0000${
+        metadata.subtitle ?? ''
+      }`
+
+      if (metadataKey === lastRadioMetadataRef.current) {
+        return
+      }
+
+      const updatedAt = Date.now()
+      lastRadioMetadataRef.current = metadataKey
+      setRadioMetadata(metadata)
+      setRadioMetadataUpdatedAt(updatedAt)
+      setRelativeTimeNow(updatedAt)
+      if (
+        metadata.isMusic &&
+        metadata.title.trim() &&
+        metadata.title.toLowerCase() !== 'unavailable'
+      ) {
+        setRadioHistory(prev =>
+          [
+            {
+              ...metadata,
+              id: `${updatedAt}-${metadata.radioId}-${metadata.title}`,
+              radioName: currentRadioNameRef.current,
+              updatedAt,
+            },
+            ...prev,
+          ].slice(0, 10)
+        )
+      }
+      addToHistory(`  ♫ now playing: ${metadata.title}`)
+
+      if (metadata.subtitle) {
+        addToHistory(`  artist: ${metadata.subtitle}`)
+      }
+    })
+  }, [addToHistory])
+
+  useEffect(() => {
+    const isPlayingRadio = currentItem?.mode === 'radio' && isPlaying
+
+    currentRadioIdRef.current = isPlayingRadio ? currentItem.id : null
+    currentRadioNameRef.current = isPlayingRadio ? currentItem.title : ''
+
+    if (!isPlayingRadio) {
+      window.App.stopRadioMetadata()
+      return
+    }
+
+    window.App.startRadioMetadata(currentItem.id, currentItem.src)
+
+    return () => {
+      window.App.stopRadioMetadata()
+    }
+  }, [currentItem, isPlaying])
+
   const closeHelpTab = useCallback(() => {
     setShowHelpTab(false)
     setActiveTab(previousTabRef.current)
@@ -149,6 +243,12 @@ export function MainScreen() {
     setShowRadioListTab(false)
     setActiveTab(previousTabRef.current)
     addToHistory('[OK] Radio list tab closed')
+  }, [addToHistory])
+
+  const closeRadioHistoryTab = useCallback(() => {
+    setShowRadioHistoryTab(false)
+    setActiveTab(previousTabRef.current)
+    addToHistory('[OK] Radio history tab closed')
   }, [addToHistory])
 
   const closeMusicListTab = useCallback(() => {
@@ -177,6 +277,14 @@ export function MainScreen() {
     setShowRadioListTab(true)
     setActiveTab('radio-list')
     addToHistory('[INFO] Opened radio list')
+  }, [activeTab, addToHistory])
+
+  const openRadioHistoryTab = useCallback(() => {
+    previousTabRef.current =
+      activeTab === 'radio-history' ? previousTabRef.current : activeTab
+    setShowRadioHistoryTab(true)
+    setActiveTab('radio-history')
+    addToHistory('[INFO] Opened radio history')
   }, [activeTab, addToHistory])
 
   const openMusicListTab = useCallback(() => {
@@ -303,6 +411,7 @@ export function MainScreen() {
         activeSource,
         showHelpTab,
         showRadioListTab,
+        showRadioHistoryTab,
         showMusicListTab,
         showYouTubeListTab
       ),
@@ -310,6 +419,7 @@ export function MainScreen() {
       activeSource,
       showHelpTab,
       showRadioListTab,
+      showRadioHistoryTab,
       showMusicListTab,
       showYouTubeListTab,
     ]
@@ -328,6 +438,13 @@ export function MainScreen() {
   const scrollRadioList = useCallback((direction: 'down' | 'up') => {
     radioListScrollRef.current?.scrollBy({
       top: direction === 'down' ? 48 : -48,
+      behavior: 'smooth',
+    })
+  }, [])
+
+  const scrollRadioHistory = useCallback((direction: 'down' | 'up') => {
+    radioHistoryScrollRef.current?.scrollBy({
+      top: direction === 'down' ? 72 : -72,
       behavior: 'smooth',
     })
   }, [])
@@ -410,6 +527,9 @@ export function MainScreen() {
 
       setActiveSourceMode(mode)
       setCurrentItem(null)
+      setRadioMetadata(null)
+      setRadioMetadataUpdatedAt(null)
+      lastRadioMetadataRef.current = ''
       setCurrentTime(0)
       setDuration(0)
       setIsPlaying(false)
@@ -430,6 +550,9 @@ export function MainScreen() {
     }
 
     setCurrentItem(null)
+    setRadioMetadata(null)
+    setRadioMetadataUpdatedAt(null)
+    lastRadioMetadataRef.current = ''
     setCurrentTime(0)
     setDuration(0)
     setIsPlaying(false)
@@ -504,6 +627,9 @@ export function MainScreen() {
 
       didHandleEndedRef.current = false
       setCurrentItem(item)
+      setRadioMetadata(null)
+      setRadioMetadataUpdatedAt(null)
+      lastRadioMetadataRef.current = ''
       setCurrentTime(0)
       setDuration(item.duration ?? 0)
       setIsPlaying(false)
@@ -512,6 +638,9 @@ export function MainScreen() {
 
       const startPlaybackAfterConnected = () => {
         addToHistory(`[PLAYING] Connected to ${item.title}`)
+        if (item.mode === 'radio') {
+          addToHistory('  ♫ now playing: unavailable')
+        }
         window.requestAnimationFrame(() => {
           setIsPlaying(true)
         })
@@ -735,6 +864,7 @@ export function MainScreen() {
     clearYouTubePlaylists,
     closeHelpTab,
     closeMusicListTab,
+    closeRadioHistoryTab,
     closeRadioListTab,
     closeYouTubeListTab,
     currentItem,
@@ -750,6 +880,7 @@ export function MainScreen() {
     nextItem,
     openHelpTab,
     openMusicListTab,
+    openRadioHistoryTab,
     openRadioListTab,
     openYouTubeListTab,
     playItem,
@@ -771,6 +902,7 @@ export function MainScreen() {
     setYouTubeApiKey,
     showHelpTab,
     showMusicListTab,
+    showRadioHistoryTab,
     showRadioListTab,
     showYouTubeListTab,
     simulateLoading,
@@ -1009,6 +1141,9 @@ export function MainScreen() {
       onToggleRepeat={toggleRepeat}
       onToggleShuffle={toggleShuffle}
       onVolumeChange={handleVolumeChange}
+      radioMetadata={radioMetadata}
+      radioMetadataUpdatedAt={radioMetadataUpdatedAt}
+      relativeTimeNow={relativeTimeNow}
       source={activeSource}
       volume={volume}
     />
@@ -1032,6 +1167,9 @@ export function MainScreen() {
           <NowPlaying
             isPlaying={isPlaying}
             item={currentItem}
+            radioMetadata={radioMetadata}
+            radioMetadataUpdatedAt={radioMetadataUpdatedAt}
+            relativeTimeNow={relativeTimeNow}
             source={activeSource}
           />
         )
@@ -1056,6 +1194,13 @@ export function MainScreen() {
             onSelectItem={playItem}
             radioStatuses={radioStatuses}
             scrollContainerRef={radioListScrollRef}
+          />
+        )
+      case 'radio-history':
+        return (
+          <RadioHistoryTab
+            entries={radioHistory}
+            scrollContainerRef={radioHistoryScrollRef}
           />
         )
       case 'music-list':
@@ -1115,7 +1260,9 @@ export function MainScreen() {
               onArrowNavigation={
                 activeTab === 'radio-list' && showRadioListTab
                   ? scrollRadioList
-                  : undefined
+                  : activeTab === 'radio-history' && showRadioHistoryTab
+                    ? scrollRadioHistory
+                    : undefined
               }
               onCommand={handleCommand}
               onCycleTab={cycleTab}
