@@ -5,6 +5,7 @@ import type {
   AppStorageKey,
   AppStorageRequest,
   MusicLibrary,
+  RadioMetadata,
 } from 'shared/types'
 
 declare global {
@@ -42,6 +43,23 @@ function getHomePath() {
 const API = {
   checkRadioStream: (url: string) =>
     ipcRenderer.invoke('radio:check-stream', url) as Promise<boolean>,
+  startRadioMetadata: (radioId: string, url: string) => {
+    ipcRenderer.send('radio:metadata:start', { radioId, url })
+  },
+  stopRadioMetadata: () => {
+    ipcRenderer.send('radio:metadata:stop')
+  },
+  onRadioMetadata: (callback: (metadata: RadioMetadata) => void) => {
+    const listener = (_event: IpcRendererEvent, metadata: RadioMetadata) => {
+      callback(metadata)
+    }
+
+    ipcRenderer.on('radio:metadata', listener)
+
+    return () => {
+      ipcRenderer.removeListener('radio:metadata', listener)
+    }
+  },
   scanMusicFolder: (folderPath: string) =>
     ipcRenderer.invoke(
       'music:scan-folder',

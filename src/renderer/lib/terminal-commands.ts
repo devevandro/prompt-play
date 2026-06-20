@@ -32,6 +32,7 @@ export const TERMINAL_COMMANDS = [
   'yt remove',
   'radio',
   'radio list',
+  'radio history',
   'fm',
   'home',
   'exit',
