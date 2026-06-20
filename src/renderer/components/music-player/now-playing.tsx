@@ -1,8 +1,19 @@
-import type { PlayerQueueItem, PlayerSource } from '../../../shared/types'
+import {
+  formatRadioMetadata,
+  formatRelativeTime,
+} from 'renderer/lib/radio-metadata'
+import type {
+  PlayerQueueItem,
+  PlayerSource,
+  RadioMetadata,
+} from '../../../shared/types'
 
 interface NowPlayingProps {
   item: PlayerQueueItem | null
   isPlaying: boolean
+  radioMetadata: RadioMetadata | null
+  radioMetadataUpdatedAt: number | null
+  relativeTimeNow: number
   source: PlayerSource
 }
 
@@ -20,7 +31,21 @@ function formatDuration(seconds: number | null, source: PlayerSource): string {
     .padStart(2, '0')}`
 }
 
-export function NowPlaying({ item, isPlaying, source }: NowPlayingProps) {
+export function NowPlaying({
+  item,
+  isPlaying,
+  radioMetadata,
+  radioMetadataUpdatedAt,
+  relativeTimeNow,
+  source,
+}: NowPlayingProps) {
+  const radioState = item?.details?.find(
+    detail => detail.label === 'state'
+  )?.value
+  const radioCity =
+    item?.details?.find(detail => detail.label === 'city')?.value ??
+    item?.artist
+
   return (
     <div className="flex h-full flex-col">
       <div className="px-4 py-3">
@@ -41,6 +66,47 @@ export function NowPlaying({ item, isPlaying, source }: NowPlayingProps) {
               <span className="text-terminal-cyan"># DICA:</span>{' '}
               {source.emptyHint}
             </div>
+          </div>
+        ) : source.mode === 'radio' ? (
+          <div className="space-y-3 text-sm">
+            <div
+              className={
+                isPlaying ? 'text-terminal-green' : 'text-terminal-yellow'
+              }
+            >
+              {isPlaying ? '▶ PLAYING' : '▐▐ PAUSED'} · {item.title}
+            </div>
+            <div className="space-y-1 text-xs">
+              <div>
+                <span className="text-terminal-cyan">state:</span>{' '}
+                <span className="text-terminal-white">
+                  {radioState ?? 'unavailable'}
+                </span>
+              </div>
+              <div>
+                <span className="text-terminal-cyan">city:</span>{' '}
+                <span className="text-terminal-white">
+                  {radioCity ?? 'unavailable'}
+                </span>
+              </div>
+            </div>
+            <div>
+              <div className="text-terminal-cyan">♫ now playing:</div>
+              <div className="mt-1 text-terminal-white">
+                {radioMetadata
+                  ? formatRadioMetadata(
+                      radioMetadata.title,
+                      radioMetadata.subtitle
+                    )
+                  : 'unavailable'}
+              </div>
+            </div>
+            {radioMetadataUpdatedAt && (
+              <div className="text-terminal-yellow text-xs">
+                updated:{' '}
+                {formatRelativeTime(radioMetadataUpdatedAt, relativeTimeNow)}
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-1 text-sm">
