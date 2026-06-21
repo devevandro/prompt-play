@@ -42,6 +42,7 @@ export function usePlayerCommands({
   clearYouTubePlaylists,
   closeHelpTab,
   closeMusicListTab,
+  closeRadioHistoryTab,
   closeRadioListTab,
   closeYouTubeListTab,
   currentItem,
@@ -57,6 +58,7 @@ export function usePlayerCommands({
   nextItem,
   openHelpTab,
   openMusicListTab,
+  openRadioHistoryTab,
   openRadioListTab,
   openYouTubeListTab,
   playItem,
@@ -78,6 +80,7 @@ export function usePlayerCommands({
   setYouTubeApiKey,
   showHelpTab,
   showMusicListTab,
+  showRadioHistoryTab,
   showRadioListTab,
   showYouTubeListTab,
   simulateLoading,
@@ -106,6 +109,7 @@ export function usePlayerCommands({
   clearYouTubePlaylists: () => Promise<void>
   closeHelpTab: () => void
   closeMusicListTab: () => void
+  closeRadioHistoryTab: () => void
   closeRadioListTab: () => void
   closeYouTubeListTab: () => void
   currentItem: PlayerQueueItem | null
@@ -121,6 +125,7 @@ export function usePlayerCommands({
   nextItem: () => void
   openHelpTab: () => void
   openMusicListTab: () => void
+  openRadioHistoryTab: () => void
   openRadioListTab: () => void
   openYouTubeListTab: () => void
   playItem: (item: PlayerQueueItem) => void
@@ -144,6 +149,7 @@ export function usePlayerCommands({
   setYouTubeApiKey: (apiKey: string) => Promise<void>
   showHelpTab: boolean
   showMusicListTab: boolean
+  showRadioHistoryTab: boolean
   showRadioListTab: boolean
   showYouTubeListTab: boolean
   simulateLoading: (
@@ -170,6 +176,8 @@ export function usePlayerCommands({
       if (cmd === ':q') {
         if (activeTab === 'help' && showHelpTab) {
           closeHelpTab()
+        } else if (activeTab === 'radio-history' && showRadioHistoryTab) {
+          closeRadioHistoryTab()
         } else if (activeTab === 'radio-list' && showRadioListTab) {
           closeRadioListTab()
         } else if (activeTab === 'music-list' && showMusicListTab) {
@@ -178,6 +186,8 @@ export function usePlayerCommands({
           closeYouTubeListTab()
         } else if (showHelpTab) {
           closeHelpTab()
+        } else if (showRadioHistoryTab) {
+          closeRadioHistoryTab()
         } else if (showRadioListTab) {
           closeRadioListTab()
         } else if (showMusicListTab) {
@@ -327,13 +337,15 @@ export function usePlayerCommands({
         addToHistory('[OK] Selected cat now_playing.txt tab')
       } else if (cmd === 'open visualizer') {
         setActiveTab('visualizer')
-        addToHistory('[OK] Selected ./visualizer --mode=spectrum tab')
+        addToHistory('[OK] Selected ./visualizer --mode=ascii tab')
       } else if (cmd === 'open controls') {
         setActiveTab('controls')
         addToHistory('[OK] Selected ./player-controls tab')
       } else if (cmd === 'radio list' || cmd === 'ls -ra') {
         selectSource('radio')
         openRadioListTab()
+      } else if (cmd === 'radio history') {
+        openRadioHistoryTab()
       } else if (cmd === 'ls -la') {
         setActiveTab('tracks')
         addToHistory('[OK] Selected ls -la tab')
@@ -537,6 +549,7 @@ export function usePlayerCommands({
       clearYouTubePlaylists,
       closeHelpTab,
       closeMusicListTab,
+      closeRadioHistoryTab,
       closeRadioListTab,
       closeYouTubeListTab,
       currentItem,
@@ -552,6 +565,7 @@ export function usePlayerCommands({
       nextItem,
       openHelpTab,
       openMusicListTab,
+      openRadioHistoryTab,
       openRadioListTab,
       openYouTubeListTab,
       playItem,
@@ -573,6 +587,7 @@ export function usePlayerCommands({
       setYouTubeApiKey,
       showHelpTab,
       showMusicListTab,
+      showRadioHistoryTab,
       showRadioListTab,
       showYouTubeListTab,
       simulateLoading,

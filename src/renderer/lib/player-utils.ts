@@ -87,6 +87,7 @@ export function getSourceCommandMode(
     cmd === 'radio' ||
     cmd === 'fm' ||
     cmd === 'radio list' ||
+    cmd === 'radio history' ||
     cmd === 'ls -ra' ||
     pathCommandSource === 'radio'
   ) {

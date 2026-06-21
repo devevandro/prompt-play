@@ -22,3 +22,7 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# md files
+improvements.md
+RELEASE_NOTES*.MD

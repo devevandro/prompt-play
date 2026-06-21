@@ -67,6 +67,19 @@ export interface Radio {
   url: string
 }
 
+export interface RadioMetadata {
+  isMusic: boolean
+  radioId: string
+  title: string
+  subtitle?: string
+}
+
+export interface RadioHistoryEntry extends RadioMetadata {
+  id: string
+  radioName: string
+  updatedAt: number
+}
+
 export interface MusicLibrary {
   id: string
   name: string

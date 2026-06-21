@@ -4,6 +4,10 @@ import type { OpenDialogOptions } from 'electron'
 import { scanMusicFolder } from 'main/audio/music-scanner'
 import { checkStreamUrl } from 'main/radio/check-stream'
 import {
+  startRadioMetadataMonitor,
+  stopRadioMetadataMonitor,
+} from 'main/radio/radio-metadata'
+import {
   clearStoredValues,
   getStoredValue,
   removeStoredValue,
@@ -33,6 +37,17 @@ export function registerPlayerIpc() {
   ipcMain.handle('radio:check-stream', (_event, url: string) =>
     checkStreamUrl(url)
   )
+
+  ipcMain.on(
+    'radio:metadata:start',
+    (event, request: { radioId: string; url: string }) => {
+      startRadioMetadataMonitor(event.sender, request.radioId, request.url)
+    }
+  )
+
+  ipcMain.on('radio:metadata:stop', event => {
+    stopRadioMetadataMonitor(event.sender.id)
+  })
 
   ipcMain.handle('music:scan-folder', (_event, folderPath: string) =>
     scanMusicFolder(folderPath)

@@ -22,6 +22,7 @@ export function HelpTab({ source }: { source: PlayerSource }) {
       'fm',
       'source radio',
       'radio list',
+      'radio history',
       'ls -ra',
       'play',
       'play 1',

@@ -39,9 +39,10 @@ export function StatusFooter({
     'now-playing': currentItem
       ? `${source.itemLabel}: ${isPlaying ? 'playing' : 'paused'}`
       : `${source.itemLabel}: waiting for selection`,
-    visualizer: `${source.label} fft: 48 bands sr: 44.1khz 16bit`,
+    visualizer: `${source.label} ascii: 48 bands sr: 44.1khz 16bit`,
     controls: 'player-controls ready',
     'radio-list': 'radio list open, press :q to close',
+    'radio-history': 'radio history open, press :q to close',
     'music-list': 'music lists open, press :q to close',
     'youtube-list': 'yt playlists open, press :q to close',
     help: 'help open, press :q to close',

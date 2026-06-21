@@ -10,7 +10,15 @@ import {
 } from 'lucide-react'
 
 import { useYouTubeIframePlayer } from 'renderer/hooks/use-youtube-iframe-player'
-import type { PlayerQueueItem, PlayerSource } from '../../../shared/types'
+import {
+  formatRadioMetadata,
+  formatRelativeTime,
+} from 'renderer/lib/radio-metadata'
+import type {
+  PlayerQueueItem,
+  PlayerSource,
+  RadioMetadata,
+} from '../../../shared/types'
 
 interface PlayerControlsProps {
   currentItem: PlayerQueueItem | null
@@ -21,6 +29,9 @@ interface PlayerControlsProps {
   isShuffleEnabled: boolean
   volume: number
   source: PlayerSource
+  radioMetadata: RadioMetadata | null
+  radioMetadataUpdatedAt: number | null
+  relativeTimeNow: number
   onTogglePlay: () => void
   onNext: () => void
   onEnded?: () => void
@@ -53,6 +64,9 @@ export function PlayerControls({
   isShuffleEnabled,
   volume,
   source,
+  radioMetadata,
+  radioMetadataUpdatedAt,
+  relativeTimeNow,
   onTogglePlay,
   onNext,
   onEnded,
@@ -136,6 +150,25 @@ export function PlayerControls({
               ? `${source.creatorLabel}: ${currentItem.artist}`
               : source.emptyHint}
           </div>
+          {source.mode === 'radio' && currentItem && (
+            <div className="mt-2 space-y-1 text-xs">
+              <div className="truncate text-terminal-green">
+                ♫ now playing:{' '}
+                {radioMetadata
+                  ? formatRadioMetadata(
+                      radioMetadata.title,
+                      radioMetadata.subtitle
+                    )
+                  : 'unavailable'}
+              </div>
+              {radioMetadataUpdatedAt && (
+                <div className="text-terminal-yellow">
+                  updated:{' '}
+                  {formatRelativeTime(radioMetadataUpdatedAt, relativeTimeNow)}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-center gap-4">
