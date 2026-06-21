@@ -28,7 +28,7 @@
     "make:release": "tsx ./src/lib/electron-app/release/modules/release.ts",
     "release": "electron-builder --publish always",
     "clean:dev": "rimraf ./node_modules/.dev",
-    "lint": "biome check --no-errors-on-unmatched",
+    "lint": "biome check --formatter-enabled=false --no-errors-on-unmatched",
     "lint:fix": "biome check --write --no-errors-on-unmatched --assist-enabled=true",
     "typecheck": "tsc --noEmit"
   },
