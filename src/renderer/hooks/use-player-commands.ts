@@ -337,7 +337,7 @@ export function usePlayerCommands({
         addToHistory('[OK] Selected cat now_playing.txt tab')
       } else if (cmd === 'open visualizer') {
         setActiveTab('visualizer')
-        addToHistory('[OK] Selected ./visualizer --mode=spectrum tab')
+        addToHistory('[OK] Selected ./visualizer --mode=ascii tab')
       } else if (cmd === 'open controls') {
         setActiveTab('controls')
         addToHistory('[OK] Selected ./player-controls tab')

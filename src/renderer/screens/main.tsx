@@ -53,7 +53,7 @@ function getTabs(
   const tabs = [
     { id: 'tracks', label: source.listCommand, shortcut: '⌘1' },
     { id: 'now-playing', label: 'cat now_playing.txt', shortcut: '⌘2' },
-    { id: 'visualizer', label: './visualizer --mode=spectrum', shortcut: '⌘3' },
+    { id: 'visualizer', label: './visualizer --mode=ascii', shortcut: '⌘3' },
     { id: 'controls', label: './player-controls', shortcut: '⌘4' },
   ]
 
