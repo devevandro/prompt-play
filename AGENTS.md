@@ -30,7 +30,7 @@ source. The current commands are `sources`, `source local`, `source radio`,
 `play [name]`, `resume`, `pause`, `stop`, `list`, `ls`, `ls -la`, `status`,
 `info`, `next`, `n`, `prev`, `p`, `shuffle`, `repeat`, `vol [0-100]`,
 `vol +[number]`, `vol -[number]`, `mute`, `unmute`, `theme list`, `ls -th`,
-`theme use [theme]`, `radio list`, `ls -ra`, `open now-playing`,
+`theme use [theme]`, `radio list`, `radio history`, `ls -ra`, `open now-playing`,
 `open visualizer`, `open controls`, `tab [number]`, `home`, `exit`, `quit`,
 `clear`, `clear playback`, `clear all`, `version`, `help`, `h`, `?`, and
 `:q`.
@@ -49,6 +49,17 @@ folder for `list`, `ls -la`, `play`, and the playback queue; previously saved
 folders remain visible in `music list` but are not merged into the active music
 list. `music clear` and `music reset` remove saved folders and cached music
 lists without clearing YouTube data or theme settings.
+
+Live radio song metadata is read in the main process. FM O Dia, id
+`648261db9770c6cc4d305f46`, uses its dedicated live-information endpoint;
+other stations use ICY metadata when available. Render
+`♫ now playing: unavailable` when no song data is available. The
+`radio history` command opens a temporary `cat radio_history.txt` tab and keeps
+up to 10 valid songs in renderer session memory only. Do not store empty,
+unavailable, or non-song metadata. The history tab scrolls through the terminal
+input with Up/Down and closes with `:q`. In radio mode,
+`cat now_playing.txt` should remain minimal and show station status, state,
+city, current song, and relative update time.
 
 YouTube configuration is stored in Electron Storage under
 `prompt-play-youtube`. `yt auth` opens an interactive `YouTube API Key:` prompt,
@@ -71,6 +82,8 @@ including the API key.
 Player tab changes should be terminal-driven through commands such as
 `tab [number]`, `open now-playing`, `open visualizer`, `open controls`, and
 temporary-tab commands. Do not add mouse-only navigation as the primary path.
+The visualizer uses a terminal-green 48-band ASCII/TUI presentation identified
+as `./visualizer --mode=ascii`.
 
 Local audio files must be played through the privileged `local-audio:` protocol
 registered in `src/main/index.ts`, not directly through `file://`. The protocol
@@ -99,15 +112,15 @@ Current theme font mapping:
 | --- | --- |
 | Default | DM Mono |
 | Tokyo Night | Space Mono |
-| Dark Soul | Datatype |
+| Dark Soul | Cousine |
 | Dark Petroleum Blue | Chivo Mono |
 | Shell Pink | Lekton |
 | Synthwave | Cousine |
 
 Theme font files are loaded from Google Fonts in `src/renderer/index.html`.
-Dark Soul and Shell Pink use larger theme-specific text scale variables in
-`globals.css` because Datatype and Lekton render visually smaller and tighter
-than the other monospace fonts. Theme selection is persisted under
+Shell Pink uses larger theme-specific text scale variables in `globals.css`
+because Lekton renders visually smaller and tighter than the other monospace
+fonts. Theme selection is persisted under
 `prompt-play-theme`; `theme use [theme]` should accept both theme ids and
 human-readable names after normalization.
 

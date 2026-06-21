@@ -42,7 +42,8 @@ Reference for commands accepted by the Prompt Play terminal input.
 
 Source-specific commands only work in their active mode. For example, radio
 commands such as `radio list` and `fm` are rejected while the player is in
-music mode, and music commands such as `music config` and `music list` are
+music mode. This also applies to `radio history`. Music commands such as
+`music config` and `music list` are
 rejected while the player is in radio mode. YouTube commands such as `yt list`
 and `yt add` are rejected outside YouTube mode. Use `source local`,
 `source radio`, or `source yt` to change modes.
@@ -59,6 +60,7 @@ and `yt add` are rejected outside YouTube mode. Use `source local`,
 | `music list` | Opens the temporary `music lists` tab with saved music folders. When no library is configured, it shows suggested `~/Music` and `~/Downloads` paths. |
 | `music clear` or `music reset` | Removes saved music folders and cached music lists without removing YouTube data or the selected theme. |
 | `radio list` or `ls -ra` | Opens a temporary `radio list` tab with every configured radio. |
+| `radio history` | Opens the temporary `cat radio_history.txt` tab with up to 10 valid songs heard during the current app session. |
 | `yt list` | Opens the temporary `yt playlists` tab. |
 | `yt auth` | Starts the interactive YouTube API key prompt. Enter the key at `YouTube API Key:`. |
 | `yt auth clear` | Removes the saved YouTube API key from Electron Storage. |
@@ -75,6 +77,13 @@ listing from `src/shared/data/radios.ts` in a temporary tab. The playback queue
 follows the visible radio context: `next` and `prev` use the recent list on
 `ls -la`, and the full station list while the temporary `radio list` tab is
 open.
+
+Radio stations expose live song metadata when available. Most stations use ICY
+`StreamTitle`; FM O Dia uses its dedicated live-information endpoint. The
+player renders `♫ now playing: unavailable` when the station does not provide
+song data. Only valid songs are added to `radio history`; programs, empty
+metadata, and unavailable values are ignored. History is held only in memory
+for the current session and includes the station name and relative update time.
 
 For local music, scans are persisted in Electron Storage under
 `prompt-play-music-libraries`. Stored libraries are refreshed when the player
@@ -131,13 +140,14 @@ YouTube iframe end event.
 | `yt clean` | Removes all YouTube configuration, including the API key. |
 | `version` | Shows the current project version. |
 | `open now-playing` | Opens the `cat now_playing.txt` tab. |
-| `open visualizer` | Opens the `./visualizer --mode=spectrum` tab. |
+| `open visualizer` | Opens the terminal-green `./visualizer --mode=ascii` TUI. |
 | `open controls` | Opens the `./player-controls` tab. |
 | `tab [number]` | Opens a tab by 1-based position in the current tab strip. |
 | `music list` | Opens the temporary `music lists` tab next to `./player-controls`. |
 | `radio list` or `ls -ra` | Opens the temporary `radio list` tab next to `./player-controls`. |
+| `radio history` | Opens the temporary `cat radio_history.txt` tab next to `./player-controls`. |
 | `yt list` | Opens the temporary `yt playlists` tab next to `./player-controls`. |
-| `:q` | Closes the active temporary tab, such as `Prompt Play Help`, `music lists`, or `radio list`. |
+| `:q` | Closes the active temporary tab, such as `Prompt Play Help`, `music lists`, `radio list`, or `cat radio_history.txt`. |
 
 ## Status Footer
 
@@ -147,10 +157,11 @@ tab and active source:
 | Tab | Footer status |
 | --- | --- |
 | Source list tab | Total source items and total duration, or live streaming status for radio. |
-| `cat now_playing.txt` | Current source item status: playing, paused, or waiting for selection. |
-| `./visualizer --mode=spectrum` | Active source plus FFT status. |
+| `cat now_playing.txt` | Current source item status. In radio mode, shows station, state, city, live song metadata, and relative update time. |
+| `./visualizer --mode=ascii` | Terminal-green 48-band ASCII/TUI spectrum with input, source, peak, average, and playback state. |
 | `./player-controls` tab | `player-controls ready`. |
 | `radio list` | Full radio list status and `:q` close hint. |
+| `cat radio_history.txt` | In-session radio song history and `:q` close hint. |
 | `music lists` | Music library list status and `:q` close hint. |
 | `yt playlists` | YouTube playlist list status and `:q` close hint. |
 | `Prompt Play Help` | Help status and `:q` close hint. |
@@ -209,6 +220,6 @@ the theme name, such as `theme use dark-soul` or `theme use dark soul`.
 | `Tab` | Autocompletes commands or opens suggestions. |
 | `Left`/`Right` | Moves between autocomplete suggestions when visible. |
 | `Up`/`Down` | Navigates command history, or theme picker items when the picker is open. |
-| `Up`/`Down` on list tabs | Scrolls `ls -la`, `radio list`, and `yt playlists`. |
+| `Up`/`Down` on list tabs | Scrolls `ls -la`, `radio list`, `cat radio_history.txt`, and `yt playlists`. |
 | `Esc` | Closes suggestions or the theme picker. |
 | `Cmd/Ctrl + 1..4` | Switches tabs directly. |

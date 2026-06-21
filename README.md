@@ -20,10 +20,12 @@ https://github.com/devevandro/prompt-play
 - MP3 title, artist, album, and duration metadata when available.
 - Local playback through a secure Electron `local-audio:` protocol with range
   requests and CORS support.
-- Online radio mode with a full radio-list tab and recently played radio list.
+- Online radio mode with live song metadata, a full radio-list tab, recently
+  played stations, and an in-session history of up to 10 songs.
 - YouTube playlist mode with API-key setup, playlist caching, embedded video
   playback, volume controls, playlist navigation, and automatic advance.
-- Source-aware player controls, seek handling, status footer, and visualizer.
+- Source-aware player controls, seek handling, status footer, and a
+  terminal-green ASCII/TUI visualizer.
 - Terminal commands for playback, sources, volume, tabs, themes, and app
   navigation.
 - Shuffle, repeat, mute, and unmute controls across supported sources.
@@ -118,6 +120,14 @@ Sources and radio:
 | `source radio` | Switch to radio. |
 | `source yt` | Switch to YouTube playlists. |
 | `radio list` or `ls -ra` | Open the full temporary radio list tab. |
+| `radio history` | Open `cat radio_history.txt` with up to 10 songs heard in the current session. |
+
+Radio playback reads live ICY metadata when the stream provides it. FM O Dia
+uses its dedicated live-information endpoint. The current song appears below
+the connection message, in `cat now_playing.txt`, and in `./player-controls`.
+When no song is available, the player displays
+`♫ now playing: unavailable`. `cat now_playing.txt` also shows the station
+state and city. Only valid song metadata is stored in `radio history`.
 
 YouTube:
 
@@ -138,7 +148,7 @@ Tabs and utility:
 | Command | Action |
 | --- | --- |
 | `open now-playing` | Open `cat now_playing.txt`. |
-| `open visualizer` | Open `./visualizer --mode=spectrum`. |
+| `open visualizer` | Open the terminal-green `./visualizer --mode=ascii` TUI. |
 | `open controls` | Open `./player-controls`. |
 | `tab [number]` | Open a tab by position. |
 | `theme list` or `ls -th` | Open the theme picker. |
@@ -167,13 +177,23 @@ typography tokens and is persisted for the next launch.
 | --- | --- | --- |
 | Default | `default` | DM Mono |
 | Tokyo Night | `tokyo-night` | Space Mono |
-| Dark Soul | `dark-soul` | Datatype |
+| Dark Soul | `dark-soul` | Cousine |
 | Dark Petroleum Blue | `dark-petroleum-blue` | Chivo Mono |
 | Shell Pink | `shell-pink` | Lekton |
 | Synthwave | `synthwave` | Cousine |
 
-Dark Soul and Shell Pink use a slightly larger text scale and line height so
-Datatype and Lekton remain readable in the terminal interface.
+Shell Pink uses a slightly larger text scale and line height so Lekton remains
+readable in the terminal interface.
+
+## Current Release Highlights
+
+- Live radio song metadata with an FM O Dia-specific provider and ICY support
+  for other stations.
+- Session-only `radio history` with up to 10 valid songs and relative update
+  times.
+- Simplified radio output in `cat now_playing.txt`, including state and city.
+- Terminal-green ASCII/TUI spectrum visualizer.
+- Dark Soul typography updated to Cousine for better terminal readability.
 
 ## Project Structure
 
