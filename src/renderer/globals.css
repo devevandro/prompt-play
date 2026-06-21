@@ -122,13 +122,7 @@
 
 [data-theme="dark-soul"] {
   --terminal-font-family:
-    "Datatype", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  --terminal-text-xs: 0.875rem;
-  --terminal-text-xs-line-height: 1.375rem;
-  --terminal-text-sm: 1rem;
-  --terminal-text-sm-line-height: 1.5rem;
-  --terminal-text-base: 1.125rem;
-  --terminal-text-base-line-height: 1.75rem;
+    "Cousine", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   --background: #0b0b0b;
   --card: #121212;
   --muted: #1d1d1d;
