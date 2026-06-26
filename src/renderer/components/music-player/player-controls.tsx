@@ -9,7 +9,6 @@ import {
   VolumeX,
 } from 'lucide-react'
 
-import { useYouTubeIframePlayer } from 'renderer/hooks/use-youtube-iframe-player'
 import {
   formatRadioMetadata,
   formatRelativeTime,
@@ -34,8 +33,6 @@ interface PlayerControlsProps {
   relativeTimeNow: number
   onTogglePlay: () => void
   onNext: () => void
-  onEnded?: () => void
-  onProgress?: (currentTime: number, duration: number) => void
   onPrev: () => void
   onToggleRepeat: () => void
   onToggleShuffle: () => void
@@ -69,8 +66,6 @@ export function PlayerControls({
   relativeTimeNow,
   onTogglePlay,
   onNext,
-  onEnded,
-  onProgress,
   onPrev,
   onToggleRepeat,
   onToggleShuffle,
@@ -81,14 +76,6 @@ export function PlayerControls({
   const canSkip = true
   const canSeek = source.supportsSeek && duration > 0
   const progress = canSeek ? (currentTime / duration) * 100 : 0
-  const { containerRef, hasVideo, seekTo } = useYouTubeIframePlayer({
-    currentItem,
-    isPlaying,
-    onEnded,
-    onProgress,
-    sourceMode: source.mode,
-    volume,
-  })
 
   const handleProgressClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     if (!canSeek) {
@@ -97,10 +84,6 @@ export function PlayerControls({
 
     const rect = event.currentTarget.getBoundingClientRect()
     const percentage = (event.clientX - rect.left) / rect.width
-
-    if (source.mode === 'yt') {
-      seekTo(percentage * duration)
-    }
 
     onSeek(percentage * duration)
   }
@@ -126,21 +109,6 @@ export function PlayerControls({
       </div>
 
       <div className="flex flex-1 flex-col justify-center space-y-6 p-6">
-        {source.mode === 'yt' && (
-          <div className="mx-auto aspect-video w-full max-w-xl overflow-hidden rounded bg-muted">
-            {hasVideo ? (
-              <div
-                className="h-full w-full [&_iframe]:h-full [&_iframe]:w-full"
-                ref={containerRef}
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center font-mono text-terminal-gray text-xs">
-                {source.emptyHint}
-              </div>
-            )}
-          </div>
-        )}
-
         <div className="mx-auto w-full max-w-xl text-center font-mono">
           <div className="truncate text-terminal-cyan text-sm">
             {currentItem?.title ?? source.emptyTitle}
@@ -311,7 +279,7 @@ export function PlayerControls({
           </span>
         ) : (
           <span>
-            <kbd className="text-terminal-cyan">play #</kbd> select video
+            <kbd className="text-terminal-cyan">play #</kbd> select item
           </span>
         )}
       </div>

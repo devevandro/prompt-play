@@ -13,7 +13,6 @@ import type {
   PlayerQueueItem,
   PlayerSource,
   PlayerSourceMode,
-  YouTubeStorage,
 } from 'shared/types'
 import { version } from '../../../package.json'
 
@@ -33,22 +32,17 @@ export function usePlayerCommands({
   activeTheme,
   addToHistory,
   applyTheme,
-  cleanYouTubeConfig,
   clearAllPlayback,
   clearMusicLibraries,
   clearPlayback,
   clearConnectionTimers,
-  clearYouTubeApiKey,
-  clearYouTubePlaylists,
   closeHelpTab,
   closeMusicListTab,
   closeRadioHistoryTab,
   closeRadioListTab,
-  closeYouTubeListTab,
   currentItem,
   getPlayerDiagnostics,
   handleVolumeChange,
-  isAwaitingYouTubeApiKey,
   isConnected,
   isLoading,
   isRepeatEnabled,
@@ -60,29 +54,22 @@ export function usePlayerCommands({
   openMusicListTab,
   openRadioHistoryTab,
   openRadioListTab,
-  openYouTubeListTab,
   playItem,
-  playYouTubePlaylist,
   prevItem,
   queueItems,
   recentRadioItems,
-  removeYouTubePlaylist,
-  saveYouTubePlaylist,
   scanMusicPath,
   selectMusicFolder,
   selectSource,
   setActiveTab,
   setCommandHistory,
-  setIsAwaitingYouTubeApiKey,
   setIsPlaying,
   setIsThemePickerOpen,
   setSelectedThemeIndex,
-  setYouTubeApiKey,
   showHelpTab,
   showMusicListTab,
   showRadioHistoryTab,
   showRadioListTab,
-  showYouTubeListTab,
   simulateLoading,
   tabs,
   toggleRepeat,
@@ -91,7 +78,6 @@ export function usePlayerCommands({
   visibleItems,
   volume,
   volumeRef,
-  youtubeStorage,
 }: {
   activeItems: PlayerQueueItem[]
   activeSource: PlayerSource
@@ -100,22 +86,17 @@ export function usePlayerCommands({
   activeTheme: ThemeId
   addToHistory: AddToHistory
   applyTheme: (themeId: string) => Promise<void>
-  cleanYouTubeConfig: () => Promise<void>
   clearAllPlayback: () => Promise<void>
   clearMusicLibraries: () => Promise<void>
   clearPlayback: () => void
   clearConnectionTimers: () => void
-  clearYouTubeApiKey: () => Promise<void>
-  clearYouTubePlaylists: () => Promise<void>
   closeHelpTab: () => void
   closeMusicListTab: () => void
   closeRadioHistoryTab: () => void
   closeRadioListTab: () => void
-  closeYouTubeListTab: () => void
   currentItem: PlayerQueueItem | null
   getPlayerDiagnostics: () => Promise<string[]>
   handleVolumeChange: (newVolume: number) => void
-  isAwaitingYouTubeApiKey: boolean
   isConnected: boolean
   isLoading: boolean
   isRepeatEnabled: boolean
@@ -127,14 +108,10 @@ export function usePlayerCommands({
   openMusicListTab: () => void
   openRadioHistoryTab: () => void
   openRadioListTab: () => void
-  openYouTubeListTab: () => void
   playItem: (item: PlayerQueueItem) => void
-  playYouTubePlaylist: (playlistId: string) => void
   prevItem: () => void
   queueItems: PlayerQueueItem[]
   recentRadioItems: PlayerQueueItem[]
-  removeYouTubePlaylist: (playlistQuery: string) => Promise<void>
-  saveYouTubePlaylist: (playlistInput: string) => Promise<void>
   scanMusicPath: (folderPath: string) => Promise<void>
   selectMusicFolder: () => Promise<void>
   selectSource: (mode: PlayerSourceMode) => void
@@ -142,16 +119,13 @@ export function usePlayerCommands({
   setCommandHistory: (
     history: string[] | ((prev: string[]) => string[])
   ) => void
-  setIsAwaitingYouTubeApiKey: (isAwaiting: boolean) => void
   setIsPlaying: (isPlaying: boolean) => void
   setIsThemePickerOpen: (isOpen: boolean) => void
   setSelectedThemeIndex: (index: number) => void
-  setYouTubeApiKey: (apiKey: string) => Promise<void>
   showHelpTab: boolean
   showMusicListTab: boolean
   showRadioHistoryTab: boolean
   showRadioListTab: boolean
-  showYouTubeListTab: boolean
   simulateLoading: (
     messages: { text: string; delay: number }[],
     onComplete?: () => void
@@ -163,7 +137,6 @@ export function usePlayerCommands({
   visibleItems: PlayerQueueItem[]
   volume: number
   volumeRef: { current: number }
-  youtubeStorage: YouTubeStorage
 }) {
   return useCallback(
     (command: string) => {
@@ -182,8 +155,6 @@ export function usePlayerCommands({
           closeRadioListTab()
         } else if (activeTab === 'music-list' && showMusicListTab) {
           closeMusicListTab()
-        } else if (activeTab === 'youtube-list' && showYouTubeListTab) {
-          closeYouTubeListTab()
         } else if (showHelpTab) {
           closeHelpTab()
         } else if (showRadioHistoryTab) {
@@ -192,8 +163,6 @@ export function usePlayerCommands({
           closeRadioListTab()
         } else if (showMusicListTab) {
           closeMusicListTab()
-        } else if (showYouTubeListTab) {
-          closeYouTubeListTab()
         } else {
           addToHistory('[INFO] No temporary tab is open')
         }
@@ -203,13 +172,6 @@ export function usePlayerCommands({
       if (isLoading) {
         addToHistory(`$ ${command}`)
         addToHistory('[ERROR] Wait for the current process to finish')
-        return
-      }
-
-      if (isAwaitingYouTubeApiKey) {
-        addToHistory('$ ********')
-        void setYouTubeApiKey(rawCommand)
-        setIsAwaitingYouTubeApiKey(false)
         return
       }
 
@@ -300,28 +262,6 @@ export function usePlayerCommands({
         void clearMusicLibraries()
       } else if (cmd === 'radio' || cmd === 'fm') {
         selectSource('radio')
-      } else if (cmd === 'yt') {
-        selectSource('yt')
-      } else if (cmd === 'yt list') {
-        openYouTubeListTab()
-      } else if (cmd === 'yt auth') {
-        setIsAwaitingYouTubeApiKey(true)
-      } else if (cmd === 'yt clean') {
-        void cleanYouTubeConfig()
-      } else if (cmd === 'yt clear' || cmd === 'yt clear playlists') {
-        if (currentItem?.mode === 'yt') {
-          clearPlayback()
-        }
-        void clearYouTubePlaylists()
-      } else if (cmd === 'yt auth clear') {
-        void clearYouTubeApiKey()
-      } else if (cmd.startsWith('yt remove ')) {
-        if (currentItem?.mode === 'yt') {
-          clearPlayback()
-        }
-        void removeYouTubePlaylist(rawCommand.slice('yt remove '.length))
-      } else if (cmd.startsWith('yt add ')) {
-        void saveYouTubePlaylist(rawCommand.slice('yt add '.length))
       } else if (cmd === 'home' || cmd === 'exit') {
         navigate('/')
       } else if (cmd === 'quit') {
@@ -388,35 +328,6 @@ export function usePlayerCommands({
       } else if (cmd.startsWith('play ')) {
         const query = normalizeCommand(rawCommand.slice(5).replace(/"/g, ''))
         const itemIndex = Number.parseInt(query, 10)
-        const isYouTubePlaylistCommand =
-          activeSourceMode === 'yt' &&
-          activeTab === 'youtube-list' &&
-          showYouTubeListTab
-
-        if (isYouTubePlaylistCommand) {
-          const playlistId =
-            Number.isInteger(itemIndex) &&
-            itemIndex >= 1 &&
-            itemIndex <= youtubeStorage.youtube.playlists.length
-              ? youtubeStorage.youtube.playlists[itemIndex - 1]
-              : youtubeStorage.youtube.playlists.find(playlistId => {
-                  const playlist = youtubeStorage.youtube.playlistDetails.find(
-                    item => item.id === playlistId
-                  )
-
-                  return normalizeCommand(
-                    playlist?.title ?? playlistId
-                  ).includes(query)
-                })
-
-          if (playlistId) {
-            playYouTubePlaylist(playlistId)
-          } else {
-            addToHistory(`[ERROR] YouTube playlist not found: ${query}`)
-          }
-
-          return
-        }
 
         const playableItems =
           activeSourceMode === 'radio' &&
@@ -456,12 +367,6 @@ export function usePlayerCommands({
         if (listedItems.length === 0 && activeSourceMode === 'local') {
           addToHistory('[INFO] no recent musics to listen')
           addToHistory('[HINT] type music -- path pathname to config')
-          return
-        }
-
-        if (listedItems.length === 0 && activeSourceMode === 'yt') {
-          addToHistory('[INFO] no youtube videos selected')
-          addToHistory("[HINT] Use 'yt list' and 'play 1' to select a playlist")
           return
         }
 
@@ -540,22 +445,17 @@ export function usePlayerCommands({
       activeTheme,
       addToHistory,
       applyTheme,
-      cleanYouTubeConfig,
       clearAllPlayback,
       clearMusicLibraries,
       clearPlayback,
       clearConnectionTimers,
-      clearYouTubeApiKey,
-      clearYouTubePlaylists,
       closeHelpTab,
       closeMusicListTab,
       closeRadioHistoryTab,
       closeRadioListTab,
-      closeYouTubeListTab,
       currentItem,
       getPlayerDiagnostics,
       handleVolumeChange,
-      isAwaitingYouTubeApiKey,
       isConnected,
       isLoading,
       isRepeatEnabled,
@@ -567,29 +467,22 @@ export function usePlayerCommands({
       openMusicListTab,
       openRadioHistoryTab,
       openRadioListTab,
-      openYouTubeListTab,
       playItem,
-      playYouTubePlaylist,
       prevItem,
       queueItems,
       recentRadioItems,
-      removeYouTubePlaylist,
-      saveYouTubePlaylist,
       scanMusicPath,
       selectMusicFolder,
       selectSource,
       setActiveTab,
       setCommandHistory,
-      setIsAwaitingYouTubeApiKey,
       setIsPlaying,
       setIsThemePickerOpen,
       setSelectedThemeIndex,
-      setYouTubeApiKey,
       showHelpTab,
       showMusicListTab,
       showRadioHistoryTab,
       showRadioListTab,
-      showYouTubeListTab,
       simulateLoading,
       tabs,
       toggleRepeat,
@@ -598,8 +491,6 @@ export function usePlayerCommands({
       visibleItems,
       volume,
       volumeRef,
-      youtubeStorage.youtube.playlistDetails,
-      youtubeStorage.youtube.playlists,
     ]
   )
 }

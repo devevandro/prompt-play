@@ -32,24 +32,6 @@ export function HelpTab({ source }: { source: PlayerSource }) {
       'shuffle',
       'repeat',
     ],
-    yt: [
-      'yt',
-      'yt auth',
-      'yt auth clear',
-      'yt clean',
-      'yt clear playlists',
-      'yt add playlist-url-or-id',
-      'yt remove playlist-number-or-name',
-      'yt list',
-      'source yt',
-      'play',
-      'play 1',
-      'list',
-      'next',
-      'prev',
-      'shuffle',
-      'repeat',
-    ],
   }
 
   return (

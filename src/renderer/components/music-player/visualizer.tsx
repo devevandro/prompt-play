@@ -68,8 +68,7 @@ export function Visualizer({
 
       const time = visualTime * 5.2 + currentTime * 0.18;
       const normalizedIndex = index / BAR_COUNT;
-      const sourcePulse =
-        source.mode === "radio" ? 0.9 : source.mode === "yt" ? 0.72 : 0.58;
+      const sourcePulse = source.mode === "radio" ? 0.9 : 0.58;
       const bassEnvelope = Math.max(0, 1 - normalizedIndex * 2.5);
       const midEnvelope = Math.sin(normalizedIndex * Math.PI);
       const trebleEnvelope = Math.max(0, normalizedIndex - 0.58);

@@ -94,19 +94,6 @@ export function getSourceCommandMode(
     return 'radio'
   }
 
-  if (
-    cmd === 'yt list' ||
-    cmd === 'yt auth' ||
-    cmd === 'yt clean' ||
-    cmd === 'yt clear' ||
-    cmd === 'yt clear playlists' ||
-    cmd === 'yt auth clear' ||
-    cmd.startsWith('yt remove ') ||
-    cmd.startsWith('yt add ')
-  ) {
-    return 'yt'
-  }
-
   return null
 }
 

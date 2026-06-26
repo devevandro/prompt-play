@@ -13,7 +13,6 @@ import { TerminalPrompt } from 'renderer/components/music-player/terminal-prompt
 import { TerminalTabs } from 'renderer/components/music-player/terminal-tabs'
 import { TrackList } from 'renderer/components/music-player/track-list'
 import { Visualizer } from 'renderer/components/music-player/visualizer'
-import { YouTubeListTab } from 'renderer/components/music-player/youtube-list-tab'
 import {
   useClearStoredValues,
   useSetStoredValue,
@@ -23,7 +22,6 @@ import { useAudioAnalyzer } from 'renderer/hooks/use-audio-analyzer'
 import { useMusicLibrary } from 'renderer/hooks/use-music-library'
 import { usePlayerCommands } from 'renderer/hooks/use-player-commands'
 import { useRadioSource } from 'renderer/hooks/use-radio-source'
-import { useYouTubeLibrary } from 'renderer/hooks/use-youtube-library'
 import { PLAYER_SOURCES } from 'renderer/lib/player-sources'
 import {
   generateProgressBar,
@@ -47,8 +45,7 @@ function getTabs(
   showHelpTab: boolean,
   showRadioListTab: boolean,
   showRadioHistoryTab: boolean,
-  showMusicListTab: boolean,
-  showYouTubeListTab: boolean
+  showMusicListTab: boolean
 ) {
   const tabs = [
     { id: 'tracks', label: source.listCommand, shortcut: '⌘1' },
@@ -73,10 +70,6 @@ function getTabs(
     tabs.push({ id: 'music-list', label: 'music lists', shortcut: ':q' })
   }
 
-  if (showYouTubeListTab) {
-    tabs.push({ id: 'youtube-list', label: 'yt playlists', shortcut: ':q' })
-  }
-
   if (showHelpTab) {
     tabs.push({ id: 'help', label: 'Prompt Play Help', shortcut: ':q' })
   }
@@ -91,7 +84,7 @@ export function MainScreen() {
     () => {
       const source = searchParams.get('source')
 
-      if (source === 'radio' || source === 'yt') {
+      if (source === 'radio') {
         return source
       }
 
@@ -119,7 +112,6 @@ export function MainScreen() {
   const [showRadioListTab, setShowRadioListTab] = useState(false)
   const [showRadioHistoryTab, setShowRadioHistoryTab] = useState(false)
   const [showMusicListTab, setShowMusicListTab] = useState(false)
-  const [showYouTubeListTab, setShowYouTubeListTab] = useState(false)
   const [commandHistory, setCommandHistory] = useState<string[]>([
     `[INFO] prompt play v${version}`,
     "[HINT] Type 'prompt play --init' to start or 'help' for help",
@@ -132,10 +124,8 @@ export function MainScreen() {
   const trackListScrollRef = useRef<HTMLDivElement>(null)
   const radioListScrollRef = useRef<HTMLDivElement>(null)
   const radioHistoryScrollRef = useRef<HTMLDivElement>(null)
-  const youtubeListScrollRef = useRef<HTMLDivElement>(null)
   const volumeRef = useRef(volume)
   const previousVolumeRef = useRef(volume)
-  const didHandleEndedRef = useRef(false)
   const currentRadioIdRef = useRef<string | null>(null)
   const currentRadioNameRef = useRef('')
   const lastRadioMetadataRef = useRef('')
@@ -257,12 +247,6 @@ export function MainScreen() {
     addToHistory('[OK] Music lists tab closed')
   }, [addToHistory])
 
-  const closeYouTubeListTab = useCallback(() => {
-    setShowYouTubeListTab(false)
-    setActiveTab(previousTabRef.current)
-    addToHistory('[OK] YouTube playlists tab closed')
-  }, [addToHistory])
-
   const openHelpTab = useCallback(() => {
     previousTabRef.current =
       activeTab === 'help' ? previousTabRef.current : activeTab
@@ -295,14 +279,6 @@ export function MainScreen() {
     addToHistory('[INFO] Opened music lists')
   }, [activeTab, addToHistory])
 
-  const openYouTubeListTab = useCallback(() => {
-    previousTabRef.current =
-      activeTab === 'youtube-list' ? previousTabRef.current : activeTab
-    setShowYouTubeListTab(true)
-    setActiveTab('youtube-list')
-    addToHistory('[INFO] Opened YouTube playlists')
-  }, [activeTab, addToHistory])
-
   const {
     clearMusicLibraries,
     musicLibraries,
@@ -318,50 +294,16 @@ export function MainScreen() {
   })
   const { radioItems, radioStatuses, recentRadioItems, setRecentRadioIds } =
     useRadioSource({ activeTab, showRadioListTab })
-  const {
-    cleanYouTubeConfig,
-    clearYouTubeApiKey,
-    clearYouTubePlaylists,
-    isAwaitingYouTubeApiKey,
-    removeYouTubePlaylist,
-    saveYouTubePlaylist,
-    selectedYouTubePlaylistId,
-    setIsAwaitingYouTubeApiKey,
-    setSelectedYouTubePlaylistId,
-    setYouTubeApiKey,
-    resetYouTubeStorage,
-    youtubeStorage,
-  } = useYouTubeLibrary({
-    addToHistory,
-    openYouTubeListTab,
-    setIsLoading,
-  })
-
   const localItems = useMemo(
     () => musicLibraries[0]?.items ?? [],
     [musicLibraries]
   )
   const items = useMemo(
-    () => [...localItems, ...radioItems, ...youtubeStorage.youtube.items],
-    [localItems, radioItems, youtubeStorage.youtube.items]
+    () => [...localItems, ...radioItems],
+    [localItems, radioItems]
   )
   const activeSource = useMemo(() => {
     const source = PLAYER_SOURCES[activeSourceMode]
-
-    if (activeSourceMode === 'yt' && !youtubeStorage.youtube.apiKey) {
-      return {
-        ...source,
-        emptyTitle: 'You need to register a YouTube API key',
-        emptyHint: 'yt auth',
-      }
-    }
-
-    if (activeSourceMode === 'yt') {
-      return {
-        ...source,
-        emptyHint: 'yt add https://youtube.com/playlist?list=PL...',
-      }
-    }
 
     if (activeSourceMode !== 'local' || musicLibraries.length === 0) {
       return source
@@ -372,9 +314,8 @@ export function MainScreen() {
       locationLabel: musicLibraries[0].path,
       emptyHint: 'type music -- path pathname to config',
     }
-  }, [activeSourceMode, musicLibraries, youtubeStorage.youtube.apiKey])
-  const canAnalyzeAudio =
-    activeSource.supportsSeek && activeSource.mode !== 'yt'
+  }, [activeSourceMode, musicLibraries])
+  const canAnalyzeAudio = activeSource.supportsSeek
   const { frequencyData, isConnected } = useAudioAnalyzer(
     audioElement,
     isPlaying,
@@ -384,27 +325,14 @@ export function MainScreen() {
     () => items.filter(item => item.mode === activeSourceMode),
     [activeSourceMode, items]
   )
-  const selectedYouTubeItems = useMemo(
-    () =>
-      youtubeStorage.youtube.items.filter(
-        item => item.album === selectedYouTubePlaylistId
-      ),
-    [selectedYouTubePlaylistId, youtubeStorage.youtube.items]
-  )
   const visibleItems =
-    activeSourceMode === 'radio'
-      ? recentRadioItems
-      : activeSourceMode === 'yt' && selectedYouTubePlaylistId
-        ? selectedYouTubeItems
-        : activeItems
+    activeSourceMode === 'radio' ? recentRadioItems : activeItems
   const queueItems =
     activeSourceMode === 'radio'
       ? activeTab === 'radio-list' && showRadioListTab
         ? radioItems
         : recentRadioItems
-      : activeSourceMode === 'yt' && selectedYouTubePlaylistId
-        ? selectedYouTubeItems
-        : activeItems
+      : activeItems
   const tabs = useMemo(
     () =>
       getTabs(
@@ -412,8 +340,7 @@ export function MainScreen() {
         showHelpTab,
         showRadioListTab,
         showRadioHistoryTab,
-        showMusicListTab,
-        showYouTubeListTab
+        showMusicListTab
       ),
     [
       activeSource,
@@ -421,7 +348,6 @@ export function MainScreen() {
       showRadioListTab,
       showRadioHistoryTab,
       showMusicListTab,
-      showYouTubeListTab,
     ]
   )
 
@@ -451,13 +377,6 @@ export function MainScreen() {
 
   const scrollTrackList = useCallback((direction: 'down' | 'up') => {
     trackListScrollRef.current?.scrollBy({
-      top: direction === 'down' ? 48 : -48,
-      behavior: 'smooth',
-    })
-  }, [])
-
-  const scrollYouTubeList = useCallback((direction: 'down' | 'up') => {
-    youtubeListScrollRef.current?.scrollBy({
       top: direction === 'down' ? 48 : -48,
       behavior: 'smooth',
     })
@@ -541,7 +460,6 @@ export function MainScreen() {
 
   const clearPlayback = useCallback(() => {
     clearConnectionTimers()
-    didHandleEndedRef.current = false
 
     if (audioRef.current) {
       audioRef.current.pause()
@@ -556,7 +474,7 @@ export function MainScreen() {
     setCurrentTime(0)
     setDuration(0)
     setIsPlaying(false)
-    addToHistory('[OK] Cleared playback for radio, music, and YouTube')
+    addToHistory('[OK] Cleared playback for radio and music')
   }, [addToHistory, clearConnectionTimers])
 
   const clearAllPlayback = useCallback(async () => {
@@ -567,7 +485,6 @@ export function MainScreen() {
       setActiveTheme('default')
       setSelectedThemeIndex(THEMES.findIndex(item => item.id === 'default'))
       await resetMusicLibraries()
-      await resetYouTubeStorage()
       addToHistory('[OK] Removed saved Electron Storage data')
     } catch (error) {
       addToHistory(
@@ -581,7 +498,6 @@ export function MainScreen() {
     clearPlayback,
     clearStoredValues,
     resetMusicLibraries,
-    resetYouTubeStorage,
   ])
 
   const getPlayerDiagnostics = useCallback(async () => {
@@ -595,11 +511,6 @@ export function MainScreen() {
     addStatus('Renderer', typeof window !== 'undefined' && Boolean(window.App))
     addStatus('Audio Engine', Boolean(audioRef.current))
     addStatus('Radio Streams', radioItems.length > 0)
-    addStatus(
-      'YouTube Embed',
-      typeof document.createElement('iframe').src === 'string'
-    )
-
     try {
       await window.App.getStorageValue('prompt-play-theme')
       addStatus('Storage', true)
@@ -625,7 +536,6 @@ export function MainScreen() {
         setActiveSourceMode(item.mode)
       }
 
-      didHandleEndedRef.current = false
       setCurrentItem(item)
       setRadioMetadata(null)
       setRadioMetadataUpdatedAt(null)
@@ -662,38 +572,6 @@ export function MainScreen() {
       startPlaybackAfterConnected()
     },
     [activeSourceMode, addToHistory, clearConnectionTimers]
-  )
-
-  const playYouTubePlaylist = useCallback(
-    (playlistId: string) => {
-      const playlist = youtubeStorage.youtube.playlistDetails.find(
-        item => item.id === playlistId
-      )
-      const playlistItems = youtubeStorage.youtube.items.filter(
-        item => item.album === playlistId
-      )
-
-      setSelectedYouTubePlaylistId(playlistId)
-
-      if (playlistItems.length === 0) {
-        addToHistory(
-          `[ERROR] No videos cached for ${playlist?.title ?? playlistId}`
-        )
-        addToHistory('[HINT] Run yt add playlist-url-or-id again')
-        return
-      }
-
-      addToHistory(
-        `[INFO] Selected YouTube playlist: ${playlist?.title ?? playlistId}`
-      )
-      playItem(playlistItems[0])
-    },
-    [
-      addToHistory,
-      playItem,
-      youtubeStorage.youtube.items,
-      youtubeStorage.youtube.playlistDetails,
-    ]
   )
 
   const togglePlay = useCallback(() => {
@@ -749,17 +627,12 @@ export function MainScreen() {
 
   const handleSeek = useCallback(
     (time: number) => {
-      if (activeSourceMode === 'yt') {
-        setCurrentTime(time)
-        return
-      }
-
       if (audioRef.current) {
         audioRef.current.currentTime = time
         setCurrentTime(time)
       }
     },
-    [activeSourceMode]
+    []
   )
 
   const handleVolumeChange = useCallback((newVolume: number) => {
@@ -855,22 +728,17 @@ export function MainScreen() {
     activeTheme,
     addToHistory,
     applyTheme,
-    cleanYouTubeConfig,
     clearAllPlayback,
     clearMusicLibraries,
     clearPlayback,
     clearConnectionTimers,
-    clearYouTubeApiKey,
-    clearYouTubePlaylists,
     closeHelpTab,
     closeMusicListTab,
     closeRadioHistoryTab,
     closeRadioListTab,
-    closeYouTubeListTab,
     currentItem,
     getPlayerDiagnostics,
     handleVolumeChange,
-    isAwaitingYouTubeApiKey,
     isConnected,
     isLoading,
     isRepeatEnabled,
@@ -882,29 +750,22 @@ export function MainScreen() {
     openMusicListTab,
     openRadioHistoryTab,
     openRadioListTab,
-    openYouTubeListTab,
     playItem,
-    playYouTubePlaylist,
     prevItem,
     queueItems,
     recentRadioItems,
-    removeYouTubePlaylist,
-    saveYouTubePlaylist,
     scanMusicPath,
     selectMusicFolder,
     selectSource,
     setActiveTab,
     setCommandHistory,
-    setIsAwaitingYouTubeApiKey,
     setIsPlaying,
     setIsThemePickerOpen,
     setSelectedThemeIndex,
-    setYouTubeApiKey,
     showHelpTab,
     showMusicListTab,
     showRadioHistoryTab,
     showRadioListTab,
-    showYouTubeListTab,
     simulateLoading,
     tabs,
     toggleRepeat,
@@ -913,7 +774,6 @@ export function MainScreen() {
     visibleItems,
     volume,
     volumeRef,
-    youtubeStorage,
   })
 
   useEffect(() => {
@@ -927,9 +787,7 @@ export function MainScreen() {
       }
 
       if (
-        (activeTab === 'radio-list' ||
-          activeTab === 'tracks' ||
-          activeTab === 'youtube-list') &&
+        (activeTab === 'radio-list' || activeTab === 'tracks') &&
         !event.altKey &&
         !event.ctrlKey &&
         !event.metaKey &&
@@ -941,11 +799,6 @@ export function MainScreen() {
 
         if (activeTab === 'radio-list' && showRadioListTab) {
           scrollRadioList(direction)
-          return
-        }
-
-        if (activeTab === 'youtube-list' && showYouTubeListTab) {
-          scrollYouTubeList(direction)
           return
         }
 
@@ -987,9 +840,7 @@ export function MainScreen() {
     cycleTab,
     scrollRadioList,
     scrollTrackList,
-    scrollYouTubeList,
     showRadioListTab,
-    showYouTubeListTab,
   ])
 
   useEffect(() => {
@@ -1043,7 +894,7 @@ export function MainScreen() {
   useEffect(() => {
     const audio = audioRef.current
 
-    if (!audio || !currentItem || currentItem.mode === 'yt') {
+    if (!audio || !currentItem) {
       return
     }
 
@@ -1070,7 +921,7 @@ export function MainScreen() {
   useEffect(() => {
     const audio = audioRef.current
 
-    if (!audio || !currentItem || currentItem.mode === 'yt') {
+    if (!audio || !currentItem) {
       return
     }
 
@@ -1093,36 +944,6 @@ export function MainScreen() {
     }
   }, [currentItem, addToHistory, clearConnectionTimers, isPlaying])
 
-  const handlePlayerEnded = useCallback(() => {
-    if (didHandleEndedRef.current) {
-      return
-    }
-
-    didHandleEndedRef.current = true
-    addToHistory('[INFO] Item ended')
-
-    if (isRepeatEnabled && currentItem) {
-      addToHistory('[INFO] Repeating current item')
-      playItem(currentItem)
-      return
-    }
-
-    nextItem()
-  }, [addToHistory, currentItem, isRepeatEnabled, nextItem, playItem])
-
-  const handleYouTubeProgress = useCallback(
-    (nextCurrentTime: number, nextDuration: number) => {
-      if (Number.isFinite(nextCurrentTime)) {
-        setCurrentTime(Math.max(0, nextCurrentTime))
-      }
-
-      if (Number.isFinite(nextDuration) && nextDuration > 0) {
-        setDuration(Math.round(nextDuration))
-      }
-    },
-    []
-  )
-
   const renderPlayerControls = () => (
     <PlayerControls
       currentItem={currentItem}
@@ -1131,10 +952,8 @@ export function MainScreen() {
       isPlaying={isPlaying}
       isRepeatEnabled={isRepeatEnabled}
       isShuffleEnabled={isShuffleEnabled}
-      onEnded={handlePlayerEnded}
       onNext={nextItem}
       onPrev={prevItem}
-      onProgress={handleYouTubeProgress}
       onSeek={handleSeek}
       onToggleMute={volume > 0 ? muteVolume : unmuteVolume}
       onTogglePlay={togglePlay}
@@ -1205,15 +1024,6 @@ export function MainScreen() {
         )
       case 'music-list':
         return <MusicListTab libraries={musicLibraries} />
-      case 'youtube-list':
-        return (
-          <YouTubeListTab
-            currentPlaylistId={selectedYouTubePlaylistId}
-            onSelectPlaylist={playYouTubePlaylist}
-            scrollContainerRef={youtubeListScrollRef}
-            youtube={youtubeStorage.youtube}
-          />
-        )
       case 'help':
         return <HelpTab source={activeSource} />
       default:
@@ -1238,22 +1048,7 @@ export function MainScreen() {
                 activeTab === 'controls' ? '' : 'pointer-events-none'
               }`}
             >
-              {activeSourceMode === 'yt' ? (
-                <>
-                  <div
-                    className={
-                      activeTab === 'controls'
-                        ? 'h-full'
-                        : 'pointer-events-none absolute h-px w-px overflow-hidden opacity-0'
-                    }
-                  >
-                    {renderPlayerControls()}
-                  </div>
-                  {activeTab === 'controls' ? null : renderTabContent()}
-                </>
-              ) : (
-                renderTabContent()
-              )}
+              {renderTabContent()}
             </div>
             <TerminalPrompt
               history={commandHistory}
@@ -1268,9 +1063,6 @@ export function MainScreen() {
               onCycleTab={cycleTab}
               promptContext={
                 activeSourceMode === 'local' ? 'music' : activeSourceMode
-              }
-              promptLabel={
-                isAwaitingYouTubeApiKey ? 'YouTube API Key:' : undefined
               }
               themePicker={
                 isThemePickerOpen
