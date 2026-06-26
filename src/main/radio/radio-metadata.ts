@@ -10,10 +10,15 @@ const FM_O_DIA_POLL_INTERVAL = 15_000
 const ICY_RECONNECT_INTERVAL = 5_000
 
 interface FmODiaResponse {
-  infos?: {
-    EventType?: string
-    Subtitle?: string
-    Title?: string
+  infos?:
+    | false
+    | {
+        EventType?: string
+        Subtitle?: string
+        Title?: string
+      }
+  prom?: {
+    title?: string
   }
 }
 
@@ -64,14 +69,17 @@ async function monitorFmODia(
       }
 
       const data = (await response.json()) as FmODiaResponse
-      const title = cleanMetadataValue(data.infos?.Title)
-      const subtitle = cleanMetadataValue(data.infos?.Subtitle)
+      const infos = data.infos || null
+      const title = cleanMetadataValue(
+        infos ? infos.Title : data.prom?.title
+      )
+      const subtitle = infos ? cleanMetadataValue(infos.Subtitle) : ''
       const metadataKey = `${title}\u0000${subtitle}`
 
       if (title && metadataKey !== previousMetadata) {
         previousMetadata = metadataKey
         sendMetadata(webContents, {
-          isMusic: data.infos?.EventType === 'Song',
+          isMusic: infos?.EventType === 'Song',
           radioId,
           title,
           ...(subtitle ? { subtitle } : {}),
