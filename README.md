@@ -126,11 +126,14 @@ Sources and radio:
 | `radio clear` | Remove all saved stations. |
 | `radio history` | Open `cat radio_history.txt` with up to 10 songs heard in the current session. |
 | `radio search music 1` | Open a YouTube search for a radio-history song. |
+| `settings radio.static on` | Enable the optional tuning sound while radio buffering takes longer than 1 second. |
+| `settings radio.static off` | Disable the optional radio tuning sound. |
 
 Radio playback reads live ICY metadata when the stream provides it. FM O Dia
-uses its dedicated live-information endpoint. The current song appears below
-the connection message, in `cat now_playing.txt`, and in `./player-controls`.
-When no song is available, the player displays
+uses its dedicated live-information endpoint when the station name is
+`FM O DIA 100.5`. The current song appears below the connection message, in
+`cat now_playing.txt`, and in `./player-controls`. When no song is available,
+the player displays
 `♫ now playing: unavailable`. Only valid song metadata is stored in
 `radio history`.
 
@@ -146,6 +149,7 @@ Tabs and utility:
 | `theme use [theme]` | Apply a theme. |
 | `vol 70`, `vol +10`, `vol -10` | Set or adjust volume. |
 | `mute` or `unmute` | Mute playback or restore the previous volume. |
+| `settings radio.static on/off` | Enable or disable the optional radio tuning sound. |
 | `status` or `info` | Show current playback status. |
 | `:q` | Close a temporary tab. |
 | `clear` | Clear terminal history. |
@@ -191,6 +195,8 @@ simple by exposing only `visualizer ascii`.
 - Search-result mode in the radio list with `radio add 1` save hints.
 - `radio search music [number]` for opening a YouTube search from radio
   history.
+- Optional radio tuning sound while stream buffering lasts longer than 1
+  second.
 - Terminal-green ASCII/TUI spectrum visualizer as the single visualizer mode.
 
 ## Project Structure
@@ -224,12 +230,17 @@ The `Frequency` field is optional and defaults to `stream`. `radio edit` keeps
 the saved station id while replacing the station details, and `radio remove`
 also removes the station from the recent-radio list.
 
+The radio static setting lives under `prompt-play-settings`. When enabled, the
+player waits 1 second before playing `src/shared/sounds/tuning-in.mp3` during
+radio buffering. Fast connections stay silent; slow connections keep the effect
+running until the stream reports that audio is ready.
+
 ## Storage Notes
 
 Prompt Play persists app data through Electron Storage under the app user-data
 directory. Saved music folders live under `prompt-play-music-libraries`, saved
-radios live under `prompt-play-radios`, and the active theme lives under
-`prompt-play-theme`.
+radios live under `prompt-play-radios`, app settings live under
+`prompt-play-settings`, and the active theme lives under `prompt-play-theme`.
 
 In local music mode, the last folder selected with `music -- path [path]` or
 `music config` is the active folder for `list`, `ls -la`, `play`, and the

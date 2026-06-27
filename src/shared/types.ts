@@ -93,6 +93,11 @@ export type AppStorageKey =
   | 'prompt-play-theme'
   | 'prompt-play-music-libraries'
   | 'prompt-play-radios'
+  | 'prompt-play-settings'
+
+export interface AppSettings {
+  radioStaticEnabled: boolean
+}
 
 export interface AppStorageRequest<T = unknown> {
   key: AppStorageKey

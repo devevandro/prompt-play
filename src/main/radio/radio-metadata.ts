@@ -3,7 +3,7 @@ import type { WebContents } from 'electron'
 
 import type { RadioMetadata } from 'shared/types'
 
-const FM_O_DIA_ID = '648261db9770c6cc4d305f46'
+const FM_O_DIA_NAME = 'FM O DIA 100.5'
 const FM_O_DIA_METADATA_URL =
   'https://www.fmodia.com.br/wp-admin/admin-ajax.php?action=get_live_infos'
 const FM_O_DIA_POLL_INTERVAL = 15_000
@@ -27,6 +27,10 @@ const observedWebContents = new Set<number>()
 
 function cleanMetadataValue(value: string | undefined) {
   return value?.replace(/\s+/g, ' ').trim() ?? ''
+}
+
+function isFmODiaRadioName(name: string) {
+  return cleanMetadataValue(name).toUpperCase() === FM_O_DIA_NAME
 }
 
 function sendMetadata(webContents: WebContents, metadata: RadioMetadata) {
@@ -70,9 +74,7 @@ async function monitorFmODia(
 
       const data = (await response.json()) as FmODiaResponse
       const infos = data.infos || null
-      const title = cleanMetadataValue(
-        infos ? infos.Title : data.prom?.title
-      )
+      const title = cleanMetadataValue(infos ? infos.Title : data.prom?.title)
       const subtitle = infos ? cleanMetadataValue(infos.Subtitle) : ''
       const metadataKey = `${title}\u0000${subtitle}`
 
@@ -169,7 +171,8 @@ export function stopRadioMetadataMonitor(webContentsId: number) {
 export function startRadioMetadataMonitor(
   webContents: WebContents,
   radioId: string,
-  url: string
+  url: string,
+  radioName: string
 ) {
   stopRadioMetadataMonitor(webContents.id)
 
@@ -184,10 +187,9 @@ export function startRadioMetadataMonitor(
     })
   }
 
-  const monitor =
-    radioId === FM_O_DIA_ID
-      ? monitorFmODia(webContents, radioId, controller.signal)
-      : monitorIcyStream(webContents, radioId, url, controller.signal)
+  const monitor = isFmODiaRadioName(radioName)
+    ? monitorFmODia(webContents, radioId, controller.signal)
+    : monitorIcyStream(webContents, radioId, url, controller.signal)
 
   void monitor.finally(() => {
     if (activeMonitors.get(webContents.id) === controller) {

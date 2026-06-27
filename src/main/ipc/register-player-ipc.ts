@@ -49,8 +49,16 @@ export function registerPlayerIpc() {
 
   ipcMain.on(
     'radio:metadata:start',
-    (event, request: { radioId: string; url: string }) => {
-      startRadioMetadataMonitor(event.sender, request.radioId, request.url)
+    (
+      event,
+      request: { radioId: string; radioName: string; url: string }
+    ) => {
+      startRadioMetadataMonitor(
+        event.sender,
+        request.radioId,
+        request.url,
+        request.radioName
+      )
     }
   )
 

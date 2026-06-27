@@ -76,7 +76,13 @@ export function HelpTab({ source }: { source: PlayerSource }) {
 
         <section className="space-y-2">
           <h2 className="text-terminal-yellow text-xs">Theme Commands</h2>
-          {['theme list', 'ls -th', 'theme use [name]'].map(command => (
+          {[
+            'theme list',
+            'ls -th',
+            'theme use [name]',
+            'settings radio.static on',
+            'settings radio.static off',
+          ].map(command => (
             <div className="text-terminal-white" key={command}>
               {command}
             </div>

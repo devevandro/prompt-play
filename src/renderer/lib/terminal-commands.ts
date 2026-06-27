@@ -58,6 +58,8 @@ export const TERMINAL_COMMANDS = [
   'theme use synthwave',
   'theme use dark-petroleum-blue',
   'theme use shell-pink',
+  'settings radio.static on',
+  'settings radio.static off',
   'zsh-player --init',
   'init',
 ]
