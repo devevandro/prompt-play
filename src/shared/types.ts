@@ -16,7 +16,7 @@ export interface WindowCreationByIPC {
   callback?: (window: BrowserWindow, event: IpcMainInvokeEvent) => void
 }
 
-export type PlayerSourceMode = 'local' | 'radio' | 'yt'
+export type PlayerSourceMode = 'local' | 'radio'
 
 export interface PlayerSource {
   mode: PlayerSourceMode
@@ -42,7 +42,6 @@ export interface PlayerQueueItem {
   album?: string
   duration: number | null
   src: string
-  videoId?: string
   sourceDetail?: string
   details?: {
     label: string
@@ -59,12 +58,14 @@ export interface Track extends PlayerQueueItem {
 export interface Radio {
   id: string
   name: string
-  img: string
+  img?: string
   state: string
-  region: string
+  region?: string
   city: string
   frequency: string
   url: string
+  tags?: string
+  homepage?: string
 }
 
 export interface RadioMetadata {
@@ -88,25 +89,10 @@ export interface MusicLibrary {
   items: PlayerQueueItem[]
 }
 
-export interface YouTubePlaylistSummary {
-  id: string
-  title: string
-  videoCount: number
-}
-
-export interface YouTubeStorage {
-  youtube: {
-    apiKey: string
-    playlists: string[]
-    playlistDetails: YouTubePlaylistSummary[]
-    items: PlayerQueueItem[]
-  }
-}
-
 export type AppStorageKey =
   | 'prompt-play-theme'
   | 'prompt-play-music-libraries'
-  | 'prompt-play-youtube'
+  | 'prompt-play-radios'
 
 export interface AppStorageRequest<T = unknown> {
   key: AppStorageKey

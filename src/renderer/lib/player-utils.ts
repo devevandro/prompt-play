@@ -88,23 +88,15 @@ export function getSourceCommandMode(
     cmd === 'fm' ||
     cmd === 'radio list' ||
     cmd === 'radio history' ||
+    cmd === 'radio clear' ||
+    cmd.startsWith('radio add') ||
+    cmd.startsWith('radio edit ') ||
+    cmd.startsWith('radio remove ') ||
+    cmd.startsWith('radio search ') ||
     cmd === 'ls -ra' ||
     pathCommandSource === 'radio'
   ) {
     return 'radio'
-  }
-
-  if (
-    cmd === 'yt list' ||
-    cmd === 'yt auth' ||
-    cmd === 'yt clean' ||
-    cmd === 'yt clear' ||
-    cmd === 'yt clear playlists' ||
-    cmd === 'yt auth clear' ||
-    cmd.startsWith('yt remove ') ||
-    cmd.startsWith('yt add ')
-  ) {
-    return 'yt'
   }
 
   return null

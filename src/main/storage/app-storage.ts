@@ -6,7 +6,7 @@ const STORAGE_ROOT = 'prompt-play'
 const APP_STORAGE_KEYS = new Set<AppStorageKey>([
   'prompt-play-theme',
   'prompt-play-music-libraries',
-  'prompt-play-youtube',
+  'prompt-play-radios',
 ])
 
 function assertStorageKey(key: AppStorageKey): asserts key is AppStorageKey {

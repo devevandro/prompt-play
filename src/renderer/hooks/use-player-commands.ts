@@ -13,7 +13,8 @@ import type {
   PlayerQueueItem,
   PlayerSource,
   PlayerSourceMode,
-  YouTubeStorage,
+  Radio,
+  RadioHistoryEntry,
 } from 'shared/types'
 import { version } from '../../../package.json'
 
@@ -24,6 +25,7 @@ interface PlayerTab {
 }
 
 type AddToHistory = (command: string) => void
+type VisualizerMode = 'ascii'
 
 export function usePlayerCommands({
   activeItems,
@@ -32,23 +34,23 @@ export function usePlayerCommands({
   activeTab,
   activeTheme,
   addToHistory,
+  addManualRadio,
+  addSearchResult,
   applyTheme,
-  cleanYouTubeConfig,
   clearAllPlayback,
   clearMusicLibraries,
   clearPlayback,
+  clearRadios,
   clearConnectionTimers,
-  clearYouTubeApiKey,
-  clearYouTubePlaylists,
   closeHelpTab,
   closeMusicListTab,
   closeRadioHistoryTab,
   closeRadioListTab,
-  closeYouTubeListTab,
   currentItem,
+  createManualRadioFromParts,
+  editRadio,
   getPlayerDiagnostics,
   handleVolumeChange,
-  isAwaitingYouTubeApiKey,
   isConnected,
   isLoading,
   isRepeatEnabled,
@@ -59,39 +61,37 @@ export function usePlayerCommands({
   openHelpTab,
   openMusicListTab,
   openRadioHistoryTab,
+  openRadioHistorySearch,
   openRadioListTab,
-  openYouTubeListTab,
   playItem,
-  playYouTubePlaylist,
   prevItem,
   queueItems,
   recentRadioItems,
-  removeYouTubePlaylist,
-  saveYouTubePlaylist,
+  radioHistory,
+  removeRadio,
   scanMusicPath,
+  searchRadios,
   selectMusicFolder,
   selectSource,
   setActiveTab,
   setCommandHistory,
-  setIsAwaitingYouTubeApiKey,
   setIsPlaying,
   setIsThemePickerOpen,
   setSelectedThemeIndex,
-  setYouTubeApiKey,
+  setVisualizerMode,
   showHelpTab,
   showMusicListTab,
   showRadioHistoryTab,
   showRadioListTab,
-  showYouTubeListTab,
   simulateLoading,
   tabs,
   toggleRepeat,
   toggleShuffle,
   unmuteVolume,
   visibleItems,
+  visualizerMode,
   volume,
   volumeRef,
-  youtubeStorage,
 }: {
   activeItems: PlayerQueueItem[]
   activeSource: PlayerSource
@@ -99,23 +99,23 @@ export function usePlayerCommands({
   activeTab: string
   activeTheme: ThemeId
   addToHistory: AddToHistory
+  addManualRadio: (radio: Radio) => Promise<PlayerQueueItem>
+  addSearchResult: (index: number) => Promise<PlayerQueueItem | null>
   applyTheme: (themeId: string) => Promise<void>
-  cleanYouTubeConfig: () => Promise<void>
   clearAllPlayback: () => Promise<void>
   clearMusicLibraries: () => Promise<void>
   clearPlayback: () => void
+  clearRadios: () => Promise<void>
   clearConnectionTimers: () => void
-  clearYouTubeApiKey: () => Promise<void>
-  clearYouTubePlaylists: () => Promise<void>
   closeHelpTab: () => void
   closeMusicListTab: () => void
   closeRadioHistoryTab: () => void
   closeRadioListTab: () => void
-  closeYouTubeListTab: () => void
   currentItem: PlayerQueueItem | null
+  createManualRadioFromParts: (parts: string[]) => Radio | null
+  editRadio: (index: number, radio: Radio) => Promise<PlayerQueueItem | null>
   getPlayerDiagnostics: () => Promise<string[]>
   handleVolumeChange: (newVolume: number) => void
-  isAwaitingYouTubeApiKey: boolean
   isConnected: boolean
   isLoading: boolean
   isRepeatEnabled: boolean
@@ -126,32 +126,30 @@ export function usePlayerCommands({
   openHelpTab: () => void
   openMusicListTab: () => void
   openRadioHistoryTab: () => void
+  openRadioHistorySearch: (index: number) => Promise<void>
   openRadioListTab: () => void
-  openYouTubeListTab: () => void
   playItem: (item: PlayerQueueItem) => void
-  playYouTubePlaylist: (playlistId: string) => void
   prevItem: () => void
   queueItems: PlayerQueueItem[]
   recentRadioItems: PlayerQueueItem[]
-  removeYouTubePlaylist: (playlistQuery: string) => Promise<void>
-  saveYouTubePlaylist: (playlistInput: string) => Promise<void>
+  radioHistory: RadioHistoryEntry[]
+  removeRadio: (index: number) => Promise<PlayerQueueItem | null>
   scanMusicPath: (folderPath: string) => Promise<void>
+  searchRadios: (term: string) => Promise<number>
   selectMusicFolder: () => Promise<void>
   selectSource: (mode: PlayerSourceMode) => void
   setActiveTab: (tab: string) => void
   setCommandHistory: (
     history: string[] | ((prev: string[]) => string[])
   ) => void
-  setIsAwaitingYouTubeApiKey: (isAwaiting: boolean) => void
   setIsPlaying: (isPlaying: boolean) => void
   setIsThemePickerOpen: (isOpen: boolean) => void
   setSelectedThemeIndex: (index: number) => void
-  setYouTubeApiKey: (apiKey: string) => Promise<void>
+  setVisualizerMode: (mode: VisualizerMode) => void
   showHelpTab: boolean
   showMusicListTab: boolean
   showRadioHistoryTab: boolean
   showRadioListTab: boolean
-  showYouTubeListTab: boolean
   simulateLoading: (
     messages: { text: string; delay: number }[],
     onComplete?: () => void
@@ -161,9 +159,9 @@ export function usePlayerCommands({
   toggleShuffle: () => void
   unmuteVolume: () => void
   visibleItems: PlayerQueueItem[]
+  visualizerMode: VisualizerMode
   volume: number
   volumeRef: { current: number }
-  youtubeStorage: YouTubeStorage
 }) {
   return useCallback(
     (command: string) => {
@@ -182,8 +180,6 @@ export function usePlayerCommands({
           closeRadioListTab()
         } else if (activeTab === 'music-list' && showMusicListTab) {
           closeMusicListTab()
-        } else if (activeTab === 'youtube-list' && showYouTubeListTab) {
-          closeYouTubeListTab()
         } else if (showHelpTab) {
           closeHelpTab()
         } else if (showRadioHistoryTab) {
@@ -192,8 +188,6 @@ export function usePlayerCommands({
           closeRadioListTab()
         } else if (showMusicListTab) {
           closeMusicListTab()
-        } else if (showYouTubeListTab) {
-          closeYouTubeListTab()
         } else {
           addToHistory('[INFO] No temporary tab is open')
         }
@@ -203,13 +197,6 @@ export function usePlayerCommands({
       if (isLoading) {
         addToHistory(`$ ${command}`)
         addToHistory('[ERROR] Wait for the current process to finish')
-        return
-      }
-
-      if (isAwaitingYouTubeApiKey) {
-        addToHistory('$ ********')
-        void setYouTubeApiKey(rawCommand)
-        setIsAwaitingYouTubeApiKey(false)
         return
       }
 
@@ -286,7 +273,7 @@ export function usePlayerCommands({
         void scanMusicPath(pathCommandMatch[2])
       } else if (pathCommandMatch?.[1].toLowerCase() === 'radio') {
         addToHistory('[ERROR] Radio path configuration is not available')
-        addToHistory("[HINT] Use 'radio list' or 'ls -ra' to see all radios")
+        addToHistory("[HINT] Use 'radio add' or 'radio search \"CBN\"'")
       } else if (cmd === 'music config') {
         selectSource('local')
         void selectMusicFolder()
@@ -300,28 +287,6 @@ export function usePlayerCommands({
         void clearMusicLibraries()
       } else if (cmd === 'radio' || cmd === 'fm') {
         selectSource('radio')
-      } else if (cmd === 'yt') {
-        selectSource('yt')
-      } else if (cmd === 'yt list') {
-        openYouTubeListTab()
-      } else if (cmd === 'yt auth') {
-        setIsAwaitingYouTubeApiKey(true)
-      } else if (cmd === 'yt clean') {
-        void cleanYouTubeConfig()
-      } else if (cmd === 'yt clear' || cmd === 'yt clear playlists') {
-        if (currentItem?.mode === 'yt') {
-          clearPlayback()
-        }
-        void clearYouTubePlaylists()
-      } else if (cmd === 'yt auth clear') {
-        void clearYouTubeApiKey()
-      } else if (cmd.startsWith('yt remove ')) {
-        if (currentItem?.mode === 'yt') {
-          clearPlayback()
-        }
-        void removeYouTubePlaylist(rawCommand.slice('yt remove '.length))
-      } else if (cmd.startsWith('yt add ')) {
-        void saveYouTubePlaylist(rawCommand.slice('yt add '.length))
       } else if (cmd === 'home' || cmd === 'exit') {
         navigate('/')
       } else if (cmd === 'quit') {
@@ -337,15 +302,140 @@ export function usePlayerCommands({
         addToHistory('[OK] Selected cat now_playing.txt tab')
       } else if (cmd === 'open visualizer') {
         setActiveTab('visualizer')
-        addToHistory('[OK] Selected ./visualizer --mode=ascii tab')
+        addToHistory(`[OK] Selected ./visualizer --mode=${visualizerMode} tab`)
       } else if (cmd === 'open controls') {
         setActiveTab('controls')
         addToHistory('[OK] Selected ./player-controls tab')
       } else if (cmd === 'radio list' || cmd === 'ls -ra') {
         selectSource('radio')
         openRadioListTab()
+      } else if (cmd.startsWith('radio search music ')) {
+        const itemIndex = Number.parseInt(cmd.slice(19).trim(), 10)
+
+        if (
+          Number.isInteger(itemIndex) &&
+          itemIndex >= 1 &&
+          itemIndex <= radioHistory.length
+        ) {
+          void openRadioHistorySearch(itemIndex - 1)
+        } else {
+          addToHistory('[ERROR] Use radio search music <history-number>')
+        }
+      } else if (cmd.startsWith('radio search ')) {
+        const term = rawCommand.slice(13).trim().replace(/^"|"$/g, '')
+
+        if (!term) {
+          addToHistory('[ERROR] Use radio search "station, city, state or tag"')
+          return
+        }
+
+        selectSource('radio')
+        openRadioListTab()
+        addToHistory(`[INFO] Searching Radio Browser for Brazil: ${term}`)
+        void searchRadios(term)
+          .then(count => {
+            addToHistory(`[OK] Found ${count} radios`)
+            addToHistory("[HINT] Use 'radio add 1' to save a result")
+          })
+          .catch(error => {
+            addToHistory(
+              `[ERROR] Radio Browser search failed: ${
+                error instanceof Error ? error.message : 'unknown error'
+              }`
+            )
+          })
+      } else if (cmd.startsWith('radio add')) {
+        const input = rawCommand.slice(9).trim()
+        const itemIndex = Number.parseInt(input, 10)
+
+        if (Number.isInteger(itemIndex) && input === String(itemIndex)) {
+          void addSearchResult(itemIndex - 1).then(item => {
+            if (item) {
+              addToHistory(`[OK] Saved radio: ${item.title}`)
+            } else {
+              addToHistory('[ERROR] Search result not found')
+            }
+          })
+          return
+        }
+
+        const parts = input.split('|')
+        const radio = createManualRadioFromParts(parts)
+
+        if (!radio) {
+          addToHistory(
+            '[ERROR] Use radio add <search-number> or radio add Name | City | State | URL | Frequency'
+          )
+          return
+        }
+
+        void addManualRadio(radio).then(item => {
+          addToHistory(`[OK] Saved radio: ${item.title}`)
+        })
+      } else if (cmd.startsWith('radio edit ')) {
+        const input = rawCommand.slice(11).trim()
+        const match = /^(\d+)\s+(.+)$/.exec(input)
+
+        if (!match) {
+          addToHistory(
+            '[ERROR] Use radio edit <number> Name | City | State | URL | Frequency'
+          )
+          return
+        }
+
+        const itemIndex = Number.parseInt(match[1], 10)
+        const radio = createManualRadioFromParts(match[2].split('|'))
+
+        if (!radio) {
+          addToHistory(
+            '[ERROR] Use radio edit <number> Name | City | State | URL | Frequency'
+          )
+          return
+        }
+
+        void editRadio(itemIndex - 1, radio).then(item => {
+          if (item) {
+            addToHistory(`[OK] Edited radio: ${item.title}`)
+          } else {
+            addToHistory('[ERROR] Radio not found')
+          }
+        })
+      } else if (cmd.startsWith('radio remove ')) {
+        const itemIndex = Number.parseInt(cmd.slice(13).trim(), 10)
+
+        if (!Number.isInteger(itemIndex) || itemIndex < 1) {
+          addToHistory('[ERROR] Use radio remove <number>')
+          return
+        }
+
+        void removeRadio(itemIndex - 1).then(item => {
+          if (item) {
+            addToHistory(`[OK] Removed radio: ${item.title}`)
+          } else {
+            addToHistory('[ERROR] Radio not found')
+          }
+        })
+      } else if (cmd === 'radio clear') {
+        if (currentItem?.mode === 'radio') {
+          clearPlayback()
+        }
+        void clearRadios().then(() => {
+          addToHistory('[OK] Cleared saved radios')
+        })
       } else if (cmd === 'radio history') {
         openRadioHistoryTab()
+      } else if (cmd.startsWith('visualizer ')) {
+        const mode = cmd.slice(11).trim() as VisualizerMode
+
+        if (mode === 'ascii') {
+          setVisualizerMode(mode)
+          setActiveTab('visualizer')
+          addToHistory(`[OK] Visualizer set to ${mode}`)
+        } else {
+          addToHistory(
+            '[ERROR] Use visualizer ascii'
+          )
+        }
       } else if (cmd === 'ls -la') {
         setActiveTab('tracks')
         addToHistory('[OK] Selected ls -la tab')
@@ -388,41 +478,12 @@ export function usePlayerCommands({
       } else if (cmd.startsWith('play ')) {
         const query = normalizeCommand(rawCommand.slice(5).replace(/"/g, ''))
         const itemIndex = Number.parseInt(query, 10)
-        const isYouTubePlaylistCommand =
-          activeSourceMode === 'yt' &&
-          activeTab === 'youtube-list' &&
-          showYouTubeListTab
-
-        if (isYouTubePlaylistCommand) {
-          const playlistId =
-            Number.isInteger(itemIndex) &&
-            itemIndex >= 1 &&
-            itemIndex <= youtubeStorage.youtube.playlists.length
-              ? youtubeStorage.youtube.playlists[itemIndex - 1]
-              : youtubeStorage.youtube.playlists.find(playlistId => {
-                  const playlist = youtubeStorage.youtube.playlistDetails.find(
-                    item => item.id === playlistId
-                  )
-
-                  return normalizeCommand(
-                    playlist?.title ?? playlistId
-                  ).includes(query)
-                })
-
-          if (playlistId) {
-            playYouTubePlaylist(playlistId)
-          } else {
-            addToHistory(`[ERROR] YouTube playlist not found: ${query}`)
-          }
-
-          return
-        }
 
         const playableItems =
           activeSourceMode === 'radio' &&
           activeTab === 'radio-list' &&
           showRadioListTab
-            ? activeItems
+            ? queueItems
             : visibleItems
         const found =
           Number.isInteger(itemIndex) &&
@@ -449,19 +510,13 @@ export function usePlayerCommands({
 
         if (listedItems.length === 0 && activeSourceMode === 'radio') {
           addToHistory('[INFO] No recently played radios yet')
-          addToHistory("[HINT] Use 'radio list' or 'ls -ra' to see all radios")
+          addToHistory("[HINT] Use 'radio list' or 'radio search \"CBN\"'")
           return
         }
 
         if (listedItems.length === 0 && activeSourceMode === 'local') {
           addToHistory('[INFO] no recent musics to listen')
           addToHistory('[HINT] type music -- path pathname to config')
-          return
-        }
-
-        if (listedItems.length === 0 && activeSourceMode === 'yt') {
-          addToHistory('[INFO] no youtube videos selected')
-          addToHistory("[HINT] Use 'yt list' and 'play 1' to select a playlist")
           return
         }
 
@@ -539,23 +594,23 @@ export function usePlayerCommands({
       activeTab,
       activeTheme,
       addToHistory,
+      addManualRadio,
+      addSearchResult,
       applyTheme,
-      cleanYouTubeConfig,
       clearAllPlayback,
       clearMusicLibraries,
       clearPlayback,
+      clearRadios,
       clearConnectionTimers,
-      clearYouTubeApiKey,
-      clearYouTubePlaylists,
       closeHelpTab,
       closeMusicListTab,
       closeRadioHistoryTab,
       closeRadioListTab,
-      closeYouTubeListTab,
       currentItem,
+      createManualRadioFromParts,
+      editRadio,
       getPlayerDiagnostics,
       handleVolumeChange,
-      isAwaitingYouTubeApiKey,
       isConnected,
       isLoading,
       isRepeatEnabled,
@@ -566,40 +621,37 @@ export function usePlayerCommands({
       openHelpTab,
       openMusicListTab,
       openRadioHistoryTab,
+      openRadioHistorySearch,
       openRadioListTab,
-      openYouTubeListTab,
       playItem,
-      playYouTubePlaylist,
       prevItem,
       queueItems,
       recentRadioItems,
-      removeYouTubePlaylist,
-      saveYouTubePlaylist,
+      radioHistory.length,
+      removeRadio,
       scanMusicPath,
+      searchRadios,
       selectMusicFolder,
       selectSource,
       setActiveTab,
       setCommandHistory,
-      setIsAwaitingYouTubeApiKey,
       setIsPlaying,
       setIsThemePickerOpen,
       setSelectedThemeIndex,
-      setYouTubeApiKey,
+      setVisualizerMode,
       showHelpTab,
       showMusicListTab,
       showRadioHistoryTab,
       showRadioListTab,
-      showYouTubeListTab,
       simulateLoading,
       tabs,
       toggleRepeat,
       toggleShuffle,
       unmuteVolume,
       visibleItems,
+      visualizerMode,
       volume,
       volumeRef,
-      youtubeStorage.youtube.playlistDetails,
-      youtubeStorage.youtube.playlists,
     ]
   )
 }

@@ -1,8 +1,9 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import type { OpenDialogOptions } from 'electron'
 
 import { scanMusicFolder } from 'main/audio/music-scanner'
 import { checkStreamUrl } from 'main/radio/check-stream'
+import { searchBrazilianRadios } from 'main/radio/radio-browser'
 import {
   startRadioMetadataMonitor,
   stopRadioMetadataMonitor,
@@ -36,6 +37,14 @@ export function registerPlayerIpc() {
 
   ipcMain.handle('radio:check-stream', (_event, url: string) =>
     checkStreamUrl(url)
+  )
+
+  ipcMain.handle('radio:search', (_event, term: string) =>
+    searchBrazilianRadios(term)
+  )
+
+  ipcMain.handle('browser:open-external', (_event, url: string) =>
+    shell.openExternal(url)
   )
 
   ipcMain.on(

@@ -37,11 +37,6 @@ export function HomeScreen() {
       return
     }
 
-    if (command === 'yt') {
-      navigate('/player?source=yt')
-      return
-    }
-
     if (command === 'exit') {
       setMessage('You are already on the first access screen.')
       setInput('')
@@ -55,7 +50,7 @@ export function HomeScreen() {
     }
 
     if (command === 'help') {
-      setMessage("Type 'music', 'radio', or 'yt' to choose a source.")
+      setMessage("Type 'music' or 'radio' to choose a source.")
       setInput('')
       requestAnimationFrame(focusInput)
       return
@@ -93,10 +88,6 @@ export function HomeScreen() {
                     <span className="text-terminal-cyan">radio</span>
                     <span>Listen to FM and web radios</span>
                   </p>
-                  <p className="grid grid-cols-[4rem_1fr] gap-3">
-                    <span className="text-terminal-cyan">yt</span>
-                    <span>Listen to YouTube playlists</span>
-                  </p>
                 </div>
               </div>
             </div>
@@ -119,7 +110,7 @@ export function HomeScreen() {
                   className="min-w-0 flex-1 bg-transparent text-terminal-white caret-terminal-green outline-none placeholder:text-terminal-gray"
                   onChange={event => setInput(event.target.value)}
                   onPointerDown={focusInput}
-                  placeholder="music | radio | yt"
+                  placeholder="music | radio"
                   ref={inputRef}
                   spellCheck={false}
                   value={input}
