@@ -48,8 +48,8 @@ const API = {
     ipcRenderer.invoke('radio:search', term) as Promise<Radio[]>,
   openExternal: (url: string) =>
     ipcRenderer.invoke('browser:open-external', url) as Promise<void>,
-  startRadioMetadata: (radioId: string, url: string) => {
-    ipcRenderer.send('radio:metadata:start', { radioId, url })
+  startRadioMetadata: (radioId: string, url: string, radioName: string) => {
+    ipcRenderer.send('radio:metadata:start', { radioId, radioName, url })
   },
   stopRadioMetadata: () => {
     ipcRenderer.send('radio:metadata:stop')

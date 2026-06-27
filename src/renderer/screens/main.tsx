@@ -13,6 +13,7 @@ import { TerminalPrompt } from 'renderer/components/music-player/terminal-prompt
 import { TerminalTabs } from 'renderer/components/music-player/terminal-tabs'
 import { TrackList } from 'renderer/components/music-player/track-list'
 import { Visualizer } from 'renderer/components/music-player/visualizer'
+import tuningInSoundUrl from 'shared/sounds/tuning-in.mp3'
 import {
   useClearStoredValues,
   useSetStoredValue,
@@ -35,6 +36,7 @@ import {
 } from 'renderer/lib/player-utils'
 import { getThemeById, THEMES, type ThemeId } from 'renderer/lib/themes'
 import type {
+  AppSettings,
   PlayerQueueItem,
   PlayerSource,
   PlayerSourceMode,
@@ -122,8 +124,12 @@ export function MainScreen() {
     '$ ',
   ])
   const [isLoading, setIsLoading] = useState(false)
+  const [radioStaticEnabled, setRadioStaticEnabled] = useState(true)
   const audioRef = useRef<HTMLAudioElement>(null)
+  const radioStaticAudioRef = useRef<HTMLAudioElement>(null)
   const connectionTimersRef = useRef<number[]>([])
+  const radioStaticTimerRef = useRef<number | null>(null)
+  const connectedRadioItemIdRef = useRef<string | null>(null)
   const previousTabRef = useRef('tracks')
   const trackListScrollRef = useRef<HTMLDivElement>(null)
   const radioListScrollRef = useRef<HTMLDivElement>(null)
@@ -138,11 +144,28 @@ export function MainScreen() {
   )
   const { data: storedTheme, isFetched: hasFetchedStoredTheme } =
     useStoredValue<ThemeId>('prompt-play-theme')
+  const { data: storedSettings, isFetched: hasFetchedStoredSettings } =
+    useStoredValue<AppSettings>('prompt-play-settings')
   const persistTheme = useSetStoredValue<ThemeId>('prompt-play-theme')
+  const persistSettings = useSetStoredValue<AppSettings>('prompt-play-settings')
   const { mutateAsync: clearStoredValues } = useClearStoredValues()
 
   const addToHistory = useCallback((command: string) => {
     setCommandHistory(prev => [...prev.slice(-30), command])
+  }, [])
+
+  const stopRadioStatic = useCallback(() => {
+    if (radioStaticTimerRef.current !== null) {
+      window.clearTimeout(radioStaticTimerRef.current)
+      radioStaticTimerRef.current = null
+    }
+
+    const staticAudio = radioStaticAudioRef.current
+
+    if (staticAudio) {
+      staticAudio.pause()
+      staticAudio.currentTime = 0
+    }
   }, [])
 
   const clearConnectionTimers = useCallback(() => {
@@ -150,7 +173,8 @@ export function MainScreen() {
       window.clearTimeout(timerId)
     })
     connectionTimersRef.current = []
-  }, [])
+    stopRadioStatic()
+  }, [stopRadioStatic])
 
   useEffect(() => {
     return () => clearConnectionTimers()
@@ -220,7 +244,11 @@ export function MainScreen() {
       return
     }
 
-    window.App.startRadioMetadata(currentItem.id, currentItem.src)
+    window.App.startRadioMetadata(
+      currentItem.id,
+      currentItem.src,
+      currentItem.title
+    )
 
     return () => {
       window.App.stopRadioMetadata()
@@ -424,6 +452,14 @@ export function MainScreen() {
   }, [hasFetchedStoredTheme, storedTheme])
 
   useEffect(() => {
+    if (!hasFetchedStoredSettings) {
+      return
+    }
+
+    setRadioStaticEnabled(storedSettings?.radioStaticEnabled ?? true)
+  }, [hasFetchedStoredSettings, storedSettings])
+
+  useEffect(() => {
     document.documentElement.dataset.theme = activeTheme
   }, [activeTheme])
 
@@ -474,6 +510,7 @@ export function MainScreen() {
       setCurrentTime(0)
       setDuration(0)
       setIsPlaying(false)
+      connectedRadioItemIdRef.current = null
       addToHistory(`[INFO] Active source: ${nextSource.label}`)
       addToHistory(`[INFO] ${nextSource.description}`)
     },
@@ -496,6 +533,7 @@ export function MainScreen() {
     setCurrentTime(0)
     setDuration(0)
     setIsPlaying(false)
+    connectedRadioItemIdRef.current = null
     addToHistory('[OK] Cleared playback for radio and music')
   }, [addToHistory, clearConnectionTimers])
 
@@ -505,6 +543,7 @@ export function MainScreen() {
     try {
       await clearStoredValues()
       setActiveTheme('default')
+      setRadioStaticEnabled(true)
       setSelectedThemeIndex(THEMES.findIndex(item => item.id === 'default'))
       await resetMusicLibraries()
       addToHistory('[OK] Removed saved Electron Storage data')
@@ -521,6 +560,31 @@ export function MainScreen() {
     clearStoredValues,
     resetMusicLibraries,
   ])
+
+  const applyRadioStaticSetting = useCallback(
+    async (enabled: boolean) => {
+      const nextSettings = {
+        ...(storedSettings ?? {}),
+        radioStaticEnabled: enabled,
+      }
+
+      try {
+        await persistSettings(nextSettings)
+        setRadioStaticEnabled(enabled)
+        if (!enabled) {
+          stopRadioStatic()
+        }
+        addToHistory(`[OK] Radio static ${enabled ? 'enabled' : 'disabled'}`)
+      } catch (error) {
+        addToHistory(
+          `[ERROR] Could not save radio static setting: ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`
+        )
+      }
+    },
+    [addToHistory, persistSettings, stopRadioStatic, storedSettings]
+  )
 
   const getPlayerDiagnostics = useCallback(async () => {
     const lines = ['Prompt Play Diagnostic', '']
@@ -582,6 +646,7 @@ export function MainScreen() {
       setRadioMetadata(null)
       setRadioMetadataUpdatedAt(null)
       lastRadioMetadataRef.current = ''
+      connectedRadioItemIdRef.current = null
       setCurrentTime(0)
       setDuration(item.duration ?? 0)
       setIsPlaying(false)
@@ -605,15 +670,17 @@ export function MainScreen() {
         connectionTimersRef.current = [
           window.setTimeout(() => {
             addToHistory('[LOADING] Buffering...')
-          }, 1800),
-          window.setTimeout(startPlaybackAfterConnected, 4000),
+          }, 1000),
         ]
+        window.requestAnimationFrame(() => {
+          setIsPlaying(true)
+        })
         return
       }
 
       startPlaybackAfterConnected()
     },
-    [activeSourceMode, addToHistory, clearConnectionTimers]
+    [activeSourceMode, addToHistory, clearConnectionTimers, setRecentRadioIds]
   )
 
   const togglePlay = useCallback(() => {
@@ -770,6 +837,7 @@ export function MainScreen() {
     activeTheme,
     addToHistory,
     applyTheme,
+    applyRadioStaticSetting,
     addManualRadio,
     addSearchResult,
     clearAllPlayback,
@@ -802,6 +870,7 @@ export function MainScreen() {
     prevItem,
     queueItems,
     recentRadioItems,
+    radioStaticEnabled,
     radioHistory,
     removeRadio,
     scanMusicPath,
@@ -904,6 +973,51 @@ export function MainScreen() {
     }
 
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime)
+    const startRadioStaticAfterDelay = () => {
+      if (currentItem?.mode !== 'radio' || !radioStaticEnabled) {
+        return
+      }
+
+      if (radioStaticTimerRef.current !== null) {
+        return
+      }
+
+      radioStaticTimerRef.current = window.setTimeout(() => {
+        radioStaticTimerRef.current = null
+
+        if (currentItem?.mode !== 'radio' || !radioStaticEnabled) {
+          return
+        }
+
+        const staticAudio = radioStaticAudioRef.current
+
+        if (!staticAudio) {
+          return
+        }
+
+        staticAudio.volume = Math.min(volumeRef.current, 1) * 0.45
+        staticAudio.currentTime = 0
+        staticAudio.play().catch(() => {
+          // The effect is optional; autoplay policy or decode failures should
+          // never block the radio stream.
+        })
+      }, 1000)
+    }
+    const handleRadioReady = () => {
+      if (currentItem?.mode !== 'radio') {
+        return
+      }
+
+      clearConnectionTimers()
+
+      if (connectedRadioItemIdRef.current === currentItem.id) {
+        return
+      }
+
+      connectedRadioItemIdRef.current = currentItem.id
+      addToHistory(`[PLAYING] Connected to ${currentItem.title}`)
+      addToHistory('  ♫ now playing: unavailable')
+    }
     const handleLoadedMetadata = () => {
       const nextDuration = Number.isFinite(audio.duration)
         ? Math.round(audio.duration)
@@ -927,11 +1041,23 @@ export function MainScreen() {
     }
 
     audio.addEventListener('timeupdate', handleTimeUpdate)
+    audio.addEventListener('loadstart', startRadioStaticAfterDelay)
+    audio.addEventListener('waiting', startRadioStaticAfterDelay)
+    audio.addEventListener('stalled', startRadioStaticAfterDelay)
+    audio.addEventListener('loadeddata', handleRadioReady)
+    audio.addEventListener('canplay', handleRadioReady)
+    audio.addEventListener('playing', handleRadioReady)
     audio.addEventListener('loadedmetadata', handleLoadedMetadata)
     audio.addEventListener('ended', handleEnded)
 
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate)
+      audio.removeEventListener('loadstart', startRadioStaticAfterDelay)
+      audio.removeEventListener('waiting', startRadioStaticAfterDelay)
+      audio.removeEventListener('stalled', startRadioStaticAfterDelay)
+      audio.removeEventListener('loadeddata', handleRadioReady)
+      audio.removeEventListener('canplay', handleRadioReady)
+      audio.removeEventListener('playing', handleRadioReady)
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
       audio.removeEventListener('ended', handleEnded)
     }
@@ -941,6 +1067,8 @@ export function MainScreen() {
     nextItem,
     playItem,
     addToHistory,
+    clearConnectionTimers,
+    radioStaticEnabled,
     updateLocalItemDuration,
   ])
 
@@ -968,6 +1096,9 @@ export function MainScreen() {
     }
 
     audio.volume = volume
+    if (radioStaticAudioRef.current) {
+      radioStaticAudioRef.current.volume = Math.min(volume, 1) * 0.45
+    }
     volumeRef.current = volume
   }, [volume])
 
@@ -1146,8 +1277,16 @@ export function MainScreen() {
           <audio
             crossOrigin="anonymous"
             key={activeSourceMode}
-            preload="metadata"
+            preload="auto"
             ref={audioRef}
+          >
+            <track kind="captions" />
+          </audio>
+          <audio
+            loop
+            preload="auto"
+            ref={radioStaticAudioRef}
+            src={tuningInSoundUrl}
           >
             <track kind="captions" />
           </audio>

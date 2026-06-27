@@ -37,6 +37,7 @@ export function usePlayerCommands({
   addManualRadio,
   addSearchResult,
   applyTheme,
+  applyRadioStaticSetting,
   clearAllPlayback,
   clearMusicLibraries,
   clearPlayback,
@@ -68,6 +69,7 @@ export function usePlayerCommands({
   queueItems,
   recentRadioItems,
   radioHistory,
+  radioStaticEnabled,
   removeRadio,
   scanMusicPath,
   searchRadios,
@@ -102,6 +104,7 @@ export function usePlayerCommands({
   addManualRadio: (radio: Radio) => Promise<PlayerQueueItem>
   addSearchResult: (index: number) => Promise<PlayerQueueItem | null>
   applyTheme: (themeId: string) => Promise<void>
+  applyRadioStaticSetting: (enabled: boolean) => Promise<void>
   clearAllPlayback: () => Promise<void>
   clearMusicLibraries: () => Promise<void>
   clearPlayback: () => void
@@ -133,6 +136,7 @@ export function usePlayerCommands({
   queueItems: PlayerQueueItem[]
   recentRadioItems: PlayerQueueItem[]
   radioHistory: RadioHistoryEntry[]
+  radioStaticEnabled: boolean
   removeRadio: (index: number) => Promise<PlayerQueueItem | null>
   scanMusicPath: (folderPath: string) => Promise<void>
   searchRadios: (term: string) => Promise<number>
@@ -266,6 +270,10 @@ export function usePlayerCommands({
         setIsThemePickerOpen(true)
       } else if (cmd.startsWith('theme use ')) {
         void applyTheme(cmd.slice(10).trim())
+      } else if (cmd === 'settings radio.static on') {
+        void applyRadioStaticSetting(true)
+      } else if (cmd === 'settings radio.static off') {
+        void applyRadioStaticSetting(false)
       } else if (cmd === 'music') {
         selectSource('local')
       } else if (pathCommandMatch?.[1].toLowerCase() === 'music') {
@@ -541,6 +549,9 @@ export function usePlayerCommands({
           addToHistory(`[STATUS] Shuffle: ${isShuffleEnabled ? 'on' : 'off'}`)
           addToHistory(`[STATUS] Repeat: ${isRepeatEnabled ? 'on' : 'off'}`)
           addToHistory(
+            `[STATUS] Radio static: ${radioStaticEnabled ? 'on' : 'off'}`
+          )
+          addToHistory(
             `[STATUS] Audio API: ${isConnected ? 'Connected' : 'Procedural'}`
           )
         } else {
@@ -597,6 +608,7 @@ export function usePlayerCommands({
       addManualRadio,
       addSearchResult,
       applyTheme,
+      applyRadioStaticSetting,
       clearAllPlayback,
       clearMusicLibraries,
       clearPlayback,
@@ -628,6 +640,7 @@ export function usePlayerCommands({
       queueItems,
       recentRadioItems,
       radioHistory.length,
+      radioStaticEnabled,
       removeRadio,
       scanMusicPath,
       searchRadios,
