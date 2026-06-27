@@ -32,7 +32,8 @@ source. The current commands are `sources`, `source local`, `source radio`,
 `resume`, `pause`, `stop`, `list`, `ls`, `ls -la`, `ls -ra`, `status`, `info`,
 `next`, `n`, `prev`, `p`, `shuffle`, `repeat`, `vol [0-100]`, `vol +[number]`,
 `vol -[number]`, `mute`, `unmute`, `theme list`, `ls -th`,
-`theme use [theme]`, `open now-playing`, `open visualizer`,
+`theme use [theme]`, `settings radio.static on`,
+`settings radio.static off`, `open now-playing`, `open visualizer`,
 `visualizer ascii`, `open controls`, `tab [number]`, `home`, `exit`, `quit`,
 `clear`, `clear playback`, `clear all`, `version`, `help`, `h`, `?`, and
 `:q`.
@@ -48,7 +49,11 @@ pipe-separated `radio add` and `radio edit` forms manage manual stations.
 Saved stations are persisted under `prompt-play-radios`. Radio `next` and
 `prev` must use the visible radio context: recent radios on `ls -la`, and the
 visible saved/search list while the temporary `radio list` tab is active.
-`radio clear` removes saved radios and recent-radio state.
+`radio clear` removes saved radios and recent-radio state. The optional radio
+tuning effect uses `src/shared/sounds/tuning-in.mp3` and is controlled by
+`settings radio.static on` and `settings radio.static off`. Keep the effect
+delayed by 1 second so fast radio connections remain silent, and stop it as
+soon as the stream reports playable audio.
 
 Local music folders are configured with `music -- path [path]` or
 `music config`; `music list` opens a temporary `music lists` tab and shows
@@ -59,9 +64,9 @@ visible in `music list` but are not merged into the active music list.
 `music clear` and `music reset` remove saved folders and cached music lists
 without clearing saved radios or theme settings.
 
-Live radio song metadata is read in the main process. FM O Dia, id
-`648261db9770c6cc4d305f46`, uses its dedicated live-information endpoint;
-other stations use ICY metadata when available. Render
+Live radio song metadata is read in the main process. The station named
+`FM O DIA 100.5` uses its dedicated live-information endpoint; other stations
+use ICY metadata when available. Render
 `♫ now playing: unavailable` when no song data is available. The
 `radio history` command opens a temporary `cat radio_history.txt` tab and keeps
 up to 10 valid songs in renderer session memory only. Do not store empty,

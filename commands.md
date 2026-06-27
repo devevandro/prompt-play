@@ -63,6 +63,8 @@ or `source radio` to change modes.
 | `radio clear` | Removes all saved radios and clears recent-radio state. |
 | `radio history` | Opens the temporary `cat radio_history.txt` tab with up to 10 valid songs heard during the current app session. |
 | `radio search music [number]` | Opens a YouTube search in the browser for a radio-history song. |
+| `settings radio.static on` | Enables the optional tuning sound while radio buffering takes longer than 1 second. |
+| `settings radio.static off` | Disables the optional tuning sound. |
 | `status` or `info` | Shows active source, current item, creator/city, volume, random/repeat state, and audio API status. |
 
 For radio sources, `list`, `ls`, and the `ls -la` tab show only the 5 most
@@ -71,11 +73,12 @@ radios in a temporary tab. Running `radio search [term]` switches that tab into
 search mode; use `radio add [number]` to save a result locally.
 
 Radio stations expose live song metadata when available. Most stations use ICY
-`StreamTitle`; FM O Dia uses its dedicated live-information endpoint. The
-player renders `♫ now playing: unavailable` when the station does not provide
-song data. Only valid songs are added to `radio history`; programs, empty
-metadata, and unavailable values are ignored. History is held only in memory for
-the current session and includes the station name and relative update time.
+`StreamTitle`; the station named `FM O DIA 100.5` uses its dedicated
+live-information endpoint. The player renders `♫ now playing: unavailable`
+when the station does not provide song data. Only valid songs are added to
+`radio history`; programs, empty metadata, and unavailable values are ignored.
+History is held only in memory for the current session and includes the station
+name and relative update time.
 
 For local music, scans are persisted in Electron Storage under
 `prompt-play-music-libraries`. Stored libraries are refreshed when the player
@@ -94,7 +97,8 @@ radio add Name | City | State | URL | Frequency
 radio edit 1 Name | City | State | URL | Frequency
 ```
 
-`Frequency` can be omitted when the stream has no FM label or codec detail.
+`Frequency` can be omitted when the stream has no FM label or codec detail. The
+optional radio tuning sound setting is persisted under `prompt-play-settings`.
 
 ## Volume
 
@@ -119,6 +123,8 @@ radio edit 1 Name | City | State | URL | Frequency
 | `clear all` | Stops and clears the current playback state, then removes saved Electron Storage data. |
 | `music clear` or `music reset` | Removes saved music folders and cached music lists. |
 | `radio clear` | Removes saved radios. |
+| `settings radio.static on` | Enables the radio tuning sound during slow buffering. |
+| `settings radio.static off` | Disables the radio tuning sound. |
 | `version` | Shows the current project version. |
 | `open now-playing` | Opens the `cat now_playing.txt` tab. |
 | `open visualizer` | Opens the terminal-green `./visualizer --mode=ascii` TUI. |
