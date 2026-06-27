@@ -88,6 +88,11 @@ export function getSourceCommandMode(
     cmd === 'fm' ||
     cmd === 'radio list' ||
     cmd === 'radio history' ||
+    cmd === 'radio clear' ||
+    cmd.startsWith('radio add') ||
+    cmd.startsWith('radio edit ') ||
+    cmd.startsWith('radio remove ') ||
+    cmd.startsWith('radio search ') ||
     cmd === 'ls -ra' ||
     pathCommandSource === 'radio'
   ) {

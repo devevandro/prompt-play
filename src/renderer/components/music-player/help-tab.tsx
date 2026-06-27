@@ -22,7 +22,14 @@ export function HelpTab({ source }: { source: PlayerSource }) {
       'fm',
       'source radio',
       'radio list',
+      'radio search "CBN"',
+      'radio add 1',
+      'radio add Name | City | State | URL | Frequency',
+      'radio edit 1 Name | City | State | URL | Frequency',
+      'radio remove 1',
+      'radio clear',
       'radio history',
+      'radio search music 1',
       'ls -ra',
       'play',
       'play 1',
@@ -74,6 +81,17 @@ export function HelpTab({ source }: { source: PlayerSource }) {
               {command}
             </div>
           ))}
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="text-terminal-yellow text-xs">Visualizer Commands</h2>
+          {['visualizer ascii'].map(
+            command => (
+              <div className="text-terminal-white" key={command}>
+                {command}
+              </div>
+            )
+          )}
         </section>
 
         <section className="space-y-2">

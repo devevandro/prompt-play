@@ -8,15 +8,19 @@ export function RadioListTab({
   currentItem,
   isPlaying,
   items,
+  mode,
   onSelectItem,
   radioStatuses,
+  searchTerm,
   scrollContainerRef,
 }: {
   currentItem: PlayerQueueItem | null
   isPlaying: boolean
   items: PlayerQueueItem[]
+  mode: 'saved' | 'search'
   onSelectItem: (item: PlayerQueueItem) => void
   radioStatuses: Record<string, RadioStreamStatus>
+  searchTerm: string
   scrollContainerRef: RefObject<HTMLDivElement | null>
 }) {
   useEffect(() => {
@@ -40,7 +44,9 @@ export function RadioListTab({
         <div className="font-mono text-sm">
           <span className="text-terminal-green">➜</span>{' '}
           <span className="text-terminal-cyan">~/radio</span>{' '}
-          <span className="text-terminal-white">radio list</span>
+          <span className="text-terminal-white">
+            {mode === 'search' ? `radio search "${searchTerm}"` : 'radio list'}
+          </span>
         </div>
       </div>
 
@@ -56,6 +62,19 @@ export function RadioListTab({
         className="custom-scrollbar flex-1 overflow-y-auto"
         ref={scrollContainerRef}
       >
+        {items.length === 0 && (
+          <div className="space-y-2 px-4 py-6 font-mono text-xs">
+            <div className="text-terminal-yellow">
+              {mode === 'search' ? 'no radios found' : 'no saved radios'}
+            </div>
+            <div className="text-terminal-gray">
+              {mode === 'search'
+                ? 'try radio search "RJ", radio search "rock", or radio search "CBN"'
+                : 'use radio search "CBN" or radio add Name | City | State | URL | Frequency'}
+            </div>
+          </div>
+        )}
+
         {items.map((item, index) => {
           const isActive = currentItem?.id === item.id
           const isCurrentlyPlaying = isActive && isPlaying
@@ -110,6 +129,13 @@ export function RadioListTab({
           )
         })}
       </div>
+
+      {mode === 'search' && items.length > 0 && (
+        <div className="bg-muted/30 px-4 py-2 text-center font-mono text-[10px] text-terminal-gray">
+          <span className="text-terminal-cyan">radio add 1</span> saves a
+          result locally
+        </div>
+      )}
     </div>
   )
 }
