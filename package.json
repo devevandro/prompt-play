@@ -40,6 +40,7 @@
     "electron-router-dom": "^2.1.0",
     "electron-storage": "^1.0.7",
     "lucide-react": "^0.556.0",
+    "radio-browser": "^2.2.3",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-router-dom": "^7.10.1",
