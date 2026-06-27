@@ -1,14 +1,15 @@
 # Prompt Play
 
 Prompt Play is an Electron desktop music player with a terminal-style
-interface. It supports local music files, online radio streams, and YouTube
-playlist sources from one shared player UI.
+interface. It supports local music folders and online radio streams from one
+shared player UI.
 
 ## Security Notice
 
 Prompt Play is open source.
 
-Because the application is not currently code signed, Windows SmartScreen and macOS Gatekeeper may display security warnings during installation.
+Because the application is not currently code signed, Windows SmartScreen and
+macOS Gatekeeper may display security warnings during installation.
 
 The source code is available for inspection:
 
@@ -20,14 +21,13 @@ https://github.com/devevandro/prompt-play
 - MP3 title, artist, album, and duration metadata when available.
 - Local playback through a secure Electron `local-audio:` protocol with range
   requests and CORS support.
-- Online radio mode with live song metadata, a full radio-list tab, recently
-  played stations, and an in-session history of up to 10 songs.
-- YouTube playlist mode with API-key setup, playlist caching, embedded video
-  playback, volume controls, playlist navigation, and automatic advance.
-- Source-aware player controls, seek handling, status footer, and a
-  terminal-green ASCII/TUI visualizer.
-- Terminal commands for playback, sources, volume, tabs, themes, and app
-  navigation.
+- Online radio mode with saved stations, Radio Browser search for Brazilian
+  stations, manual station management, stream status checks, live song
+  metadata, and in-session song history.
+- Source-aware player controls, seek handling for local files, status footer,
+  and a terminal-green ASCII/TUI visualizer.
+- Terminal commands for playback, sources, volume, tabs, themes, radio
+  management, and app navigation.
 - Shuffle, repeat, mute, and unmute controls across supported sources.
 - Theme picker with terminal-inspired themes, each with its own monospace font.
 
@@ -82,8 +82,7 @@ First access:
 | Command | Action |
 | --- | --- |
 | `music` | Open local music mode. |
-| `radio` | Open radio mode. |
-| `yt` | Open YouTube playlist mode. |
+| `radio` or `fm` | Open radio mode. |
 | `help` | Show the first access hint. |
 | `quit` | Close the app. |
 
@@ -93,7 +92,7 @@ Playback:
 | --- | --- |
 | `play` | Play the selected item or first item in the active source. |
 | `play 1` | Play an item by list position. |
-| `play [name]` | Play the first item matching title or artist/city/channel. |
+| `play [name]` | Play the first item matching title, artist, station, or city. |
 | `pause` or `stop` | Pause playback. |
 | `resume` | Resume playback. |
 | `next` or `n` | Play the next item. |
@@ -108,7 +107,7 @@ Local music:
 | `music -- path [path]` | Scan and store a music folder, then make it active. |
 | `music config` | Select a music folder with the native folder picker and make it active. |
 | `music list` | Open the temporary saved-folder list tab. |
-| `music clear` | Remove saved music folders and cached music lists. |
+| `music clear` or `music reset` | Remove saved music folders and cached music lists. |
 | `ls -la` | Open the active source list tab. |
 
 Sources and radio:
@@ -118,37 +117,29 @@ Sources and radio:
 | `sources` | Show available sources. |
 | `source local` | Switch to local files. |
 | `source radio` | Switch to radio. |
-| `source yt` | Switch to YouTube playlists. |
-| `radio list` or `ls -ra` | Open the full temporary radio list tab. |
+| `radio list` or `ls -ra` | Open saved radios. |
+| `radio search "CBN"` | Search Brazilian stations through Radio Browser. |
+| `radio add 1` | Save a radio from the current search results. |
+| `radio add Name \| City \| State \| URL \| Frequency` | Save a manual radio station. |
+| `radio edit 1 Name \| City \| State \| URL \| Frequency` | Edit a saved station. |
+| `radio remove 1` | Remove a saved station. |
+| `radio clear` | Remove all saved stations. |
 | `radio history` | Open `cat radio_history.txt` with up to 10 songs heard in the current session. |
+| `radio search music 1` | Open a YouTube search for a radio-history song. |
 
 Radio playback reads live ICY metadata when the stream provides it. FM O Dia
 uses its dedicated live-information endpoint. The current song appears below
 the connection message, in `cat now_playing.txt`, and in `./player-controls`.
 When no song is available, the player displays
-`♫ now playing: unavailable`. `cat now_playing.txt` also shows the station
-state and city. Only valid song metadata is stored in `radio history`.
-
-YouTube:
-
-| Command | Action |
-| --- | --- |
-| `yt` | Switch to YouTube mode. |
-| `yt auth` | Start the interactive YouTube API key prompt. |
-| `yt auth clear` | Remove the saved YouTube API key. |
-| `yt add [playlist-url-or-id]` | Fetch and cache a YouTube playlist. |
-| `yt remove [number-or-name]` | Remove one saved YouTube playlist and cached videos. |
-| `yt clear playlists` | Remove playlists and cached videos while keeping the API key. |
-| `yt clean` | Remove all YouTube configuration, including the API key. |
-| `yt list` | Open the temporary saved-playlist list tab. |
-| `play [number]` in `yt playlists` | Select and start a saved playlist. |
+`♫ now playing: unavailable`. Only valid song metadata is stored in
+`radio history`.
 
 Tabs and utility:
 
 | Command | Action |
 | --- | --- |
 | `open now-playing` | Open `cat now_playing.txt`. |
-| `open visualizer` | Open the terminal-green `./visualizer --mode=ascii` TUI. |
+| `open visualizer` or `visualizer ascii` | Open the terminal-green `./visualizer --mode=ascii` TUI. |
 | `open controls` | Open `./player-controls`. |
 | `tab [number]` | Open a tab by position. |
 | `theme list` or `ls -th` | Open the theme picker. |
@@ -160,8 +151,6 @@ Tabs and utility:
 | `clear` | Clear terminal history. |
 | `clear playback` | Stop playback without removing saved data. |
 | `clear all` | Stop playback and remove saved Electron Storage data. |
-| `music clear` | Remove saved music folders and cached music lists. |
-| `yt clear playlists` | Remove YouTube playlists while keeping the API key. |
 | `home` or `exit` | Return to first access. |
 
 See [commands.md](commands.md) for the full command reference.
@@ -185,24 +174,33 @@ typography tokens and is persisted for the next launch.
 Shell Pink uses a slightly larger text scale and line height so Lekton remains
 readable in the terminal interface.
 
+## Suggested Release
+
+Suggested next version: `1.3.0`.
+
+This should be a minor release because it adds a new radio management workflow:
+Radio Browser search, saved station storage, manual add/edit/remove commands,
+and a search action from radio history. It also keeps the visualizer surface
+simple by exposing only `visualizer ascii`.
+
 ## Current Release Highlights
 
-- Live radio song metadata with an FM O Dia-specific provider and ICY support
-  for other stations.
-- Session-only `radio history` with up to 10 valid songs and relative update
-  times.
-- Simplified radio output in `cat now_playing.txt`, including state and city.
-- Terminal-green ASCII/TUI spectrum visualizer.
-- Dark Soul typography updated to Cousine for better terminal readability.
+- Brazilian station search through Radio Browser with deduplicated results.
+- Saved radios persisted in Electron Storage under `prompt-play-radios`.
+- Manual radio add, edit, remove, and clear commands.
+- Search-result mode in the radio list with `radio add 1` save hints.
+- `radio search music [number]` for opening a YouTube search from radio
+  history.
+- Terminal-green ASCII/TUI spectrum visualizer as the single visualizer mode.
 
 ## Project Structure
 
-- `src/main`: Electron main process, IPC handlers, radio stream checks, local
-  music scanning, and the `local-audio:` protocol.
+- `src/main`: Electron main process, IPC handlers, radio stream checks, Radio
+  Browser integration, local music scanning, and the `local-audio:` protocol.
 - `src/preload`: Safe renderer bridge exposed as `window.App`.
 - `src/renderer`: React UI, screens, hooks, terminal flow, and player
   components.
-- `src/shared`: Shared types, constants, utilities, and radio data.
+- `src/shared`: Shared types, constants, and utilities.
 - `src/lib/electron-app`: Electron setup helpers, factories, release scripts,
   and bundled dev tooling.
 
@@ -213,31 +211,38 @@ them through `local-audio:` so Chromium can stream them with byte ranges and the
 renderer can use the Web Audio API for visualization. The renderer CSP in
 `src/renderer/index.html` must explicitly allow `local-audio:` in `media-src`.
 
-## YouTube Notes
+## Radio Notes
 
-`yt auth` prompts for the API key, and `yt add [playlist-url-or-id]` accepts
-either a full playlist URL or a plain playlist id. Playlist loading follows
-YouTube pagination, stores total video counts, caches title/channel/video id and
-duration metadata, and renders the selected playlist in `ls -la`. The embedded
-YouTube player stays mounted while moving between YouTube tabs so playback can
-continue and advance automatically. Use `next` and `prev` to navigate the
-selected playlist, `yt remove [number-or-name]` to remove one playlist, and
-`yt clear playlists` to remove playlist data while keeping the API key.
+Saved radios live under `prompt-play-radios` in Electron Storage. The radio
+list opens in saved mode by default, while `radio search [term]` switches the
+same tab into search mode and queries Radio Browser for Brazilian stations by
+name, state, and tag.
+
+Use `radio add [number]` to save a search result, or use
+`radio add Name | City | State | URL | Frequency` to create a station manually.
+The `Frequency` field is optional and defaults to `stream`. `radio edit` keeps
+the saved station id while replacing the station details, and `radio remove`
+also removes the station from the recent-radio list.
 
 ## Storage Notes
 
 Prompt Play persists app data through Electron Storage under the app user-data
-directory. Saved music folders live under `prompt-play-music-libraries`, and
-YouTube settings live under `prompt-play-youtube`. In local music mode, the
-last folder selected with `music -- path [path]` or `music config` is the active
-folder for `list`, `ls -la`, `play`, and the playback queue; older saved
-folders remain available in `music list` but are not merged into the active
-music list. `clear playback` stops playback without removing saved data, while
-`clear all` stops playback and removes saved Electron Storage data. Use
-`music clear` to reset saved music folders only, or `yt clear playlists` to
-reset YouTube playlists without removing the API key.
+directory. Saved music folders live under `prompt-play-music-libraries`, saved
+radios live under `prompt-play-radios`, and the active theme lives under
+`prompt-play-theme`.
+
+In local music mode, the last folder selected with `music -- path [path]` or
+`music config` is the active folder for `list`, `ls -la`, `play`, and the
+playback queue; older saved folders remain available in `music list` but are
+not merged into the active music list. `clear playback` stops playback without
+removing saved data, while `clear all` stops playback and removes saved
+Electron Storage data. Use `music clear` to reset saved music folders only, or
+`radio clear` to reset saved radios only.
 
 ## Documentation
 
 - [commands.md](commands.md): terminal command reference.
-- [AGENTS.md](AGENTS.md): repository guidelines for future coding agents.
+- [AGENTS.md](AGENTS.md): repository guidance for maintainers and coding
+  agents.
+- [RELEASE_NOTES_1.3.0.md](RELEASE_NOTES_1.3.0.md): suggested release notes
+  for the next version.

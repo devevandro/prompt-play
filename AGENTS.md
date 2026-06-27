@@ -13,8 +13,8 @@ release scripts, and factories are in `src/lib/electron-app`.
 
 ## Music Player Architecture
 
-The music player supports three listening modes: local computer files, online
-radio streams, and YouTube playlists. Keep renderer components in
+The music player supports two listening modes: local computer files and online
+radio streams. Keep renderer components in
 `src/renderer/components/music-player` source-agnostic: they should receive
 `PlayerSource` and `PlayerQueueItem` values from `src/shared/types` instead of
 hard-coding music-file labels such as track, artist, album, or duration.
@@ -22,33 +22,42 @@ hard-coding music-file labels such as track, artist, album, or duration.
 When adding player behavior, update the source configuration in
 `src/renderer/screens/main.tsx` and keep commands working against the active
 source. The current commands are `sources`, `source local`, `source radio`,
-`source yt`, `music`, `radio`, `fm`, `yt`, `yt list`, `yt auth`,
-`yt auth clear`, `yt add [playlist-url-or-id]`,
-`yt remove [playlist-number-or-name]`, `yt clear`, `yt clear playlists`,
-`yt clean`, `music -- path [path]`, `radio -- path [path]`, `music config`,
-`music list`, `music clear`, `music reset`, `play`, `play [number]`,
-`play [name]`, `resume`, `pause`, `stop`, `list`, `ls`, `ls -la`, `status`,
-`info`, `next`, `n`, `prev`, `p`, `shuffle`, `repeat`, `vol [0-100]`,
-`vol +[number]`, `vol -[number]`, `mute`, `unmute`, `theme list`, `ls -th`,
-`theme use [theme]`, `radio list`, `radio history`, `ls -ra`, `open now-playing`,
-`open visualizer`, `open controls`, `tab [number]`, `home`, `exit`, `quit`,
+`music`, `radio`, `fm`, `music -- path [path]`, `radio -- path [path]`,
+`music config`, `music list`, `music clear`, `music reset`, `radio list`,
+`radio search [term]`, `radio add [number]`,
+`radio add Name | City | State | URL | Frequency`,
+`radio edit [number] Name | City | State | URL | Frequency`,
+`radio remove [number]`, `radio clear`, `radio history`,
+`radio search music [number]`, `play`, `play [number]`, `play [name]`,
+`resume`, `pause`, `stop`, `list`, `ls`, `ls -la`, `ls -ra`, `status`, `info`,
+`next`, `n`, `prev`, `p`, `shuffle`, `repeat`, `vol [0-100]`, `vol +[number]`,
+`vol -[number]`, `mute`, `unmute`, `theme list`, `ls -th`,
+`theme use [theme]`, `open now-playing`, `open visualizer`,
+`visualizer ascii`, `open controls`, `tab [number]`, `home`, `exit`, `quit`,
 `clear`, `clear playback`, `clear all`, `version`, `help`, `h`, `?`, and
 `:q`.
 
-Radio is live streaming and should not expose seek controls; local files and
-YouTube playlists can expose duration and seeking. The radio `ls -la` source
-tab shows the 5 most recently played radios, while `radio list` and `ls -ra`
-open a temporary full radio-list tab next to `./player-controls`, following the
-same temporary-tab pattern as help. Radio `next` and `prev` must use the
-visible radio context: recent radios on `ls -la`, and all radios while the
-temporary `radio list` tab is active. Local music folders are configured with
-`music -- path [path]` or `music config`; `music list` opens a temporary
-`music lists` tab and shows suggested `~/Music` and `~/Downloads` paths when no
-library has been stored. The last configured music folder is the active music
-folder for `list`, `ls -la`, `play`, and the playback queue; previously saved
-folders remain visible in `music list` but are not merged into the active music
-list. `music clear` and `music reset` remove saved folders and cached music
-lists without clearing YouTube data or theme settings.
+Radio is live streaming and should not expose seek controls; local files can
+expose duration and seeking. The radio `ls -la` source tab shows the 5 most
+recently played saved radios, while `radio list` and `ls -ra` open a temporary
+radio-list tab next to `./player-controls`, following the same temporary-tab
+pattern as help. `radio search [term]` uses Radio Browser in the main process
+to search Brazilian stations by name, state, and tag; it switches the radio
+list into search mode. `radio add [number]` saves a search result, while the
+pipe-separated `radio add` and `radio edit` forms manage manual stations.
+Saved stations are persisted under `prompt-play-radios`. Radio `next` and
+`prev` must use the visible radio context: recent radios on `ls -la`, and the
+visible saved/search list while the temporary `radio list` tab is active.
+`radio clear` removes saved radios and recent-radio state.
+
+Local music folders are configured with `music -- path [path]` or
+`music config`; `music list` opens a temporary `music lists` tab and shows
+suggested `~/Music` and `~/Downloads` paths when no library has been stored.
+The last configured music folder is the active music folder for `list`,
+`ls -la`, `play`, and the playback queue; previously saved folders remain
+visible in `music list` but are not merged into the active music list.
+`music clear` and `music reset` remove saved folders and cached music lists
+without clearing saved radios or theme settings.
 
 Live radio song metadata is read in the main process. FM O Dia, id
 `648261db9770c6cc4d305f46`, uses its dedicated live-information endpoint;
@@ -56,48 +65,29 @@ other stations use ICY metadata when available. Render
 `♫ now playing: unavailable` when no song data is available. The
 `radio history` command opens a temporary `cat radio_history.txt` tab and keeps
 up to 10 valid songs in renderer session memory only. Do not store empty,
-unavailable, or non-song metadata. The history tab scrolls through the terminal
-input with Up/Down and closes with `:q`. In radio mode,
-`cat now_playing.txt` should remain minimal and show station status, state,
-city, current song, and relative update time.
-
-YouTube configuration is stored in Electron Storage under
-`prompt-play-youtube`. `yt auth` opens an interactive `YouTube API Key:` prompt,
-`yt auth clear` removes the stored key, and `yt add [playlist-url-or-id]`
-accepts either a full playlist URL or a plain playlist id. YouTube playlist
-loading must follow `nextPageToken` pagination, store playlist summaries with
-the total video count from the YouTube `playlists` API, cache video title,
-channel/artist, video id, and duration metadata, and render only the selected
-playlist in the source list. `yt list` opens the temporary `yt playlists` tab;
-from that tab, `play [number]` selects and starts the playlist. YouTube playback
-uses an embedded player in `./player-controls`, keeps playback mounted while
-navigating between YouTube tabs, supports volume/mute commands through the
-iframe API, supports `next` and `prev` within the selected playlist queue, and
-advances automatically when the current video ends. `yt remove [number-or-name]`
-removes one saved playlist and its cached videos, while `yt clear` and
-`yt clear playlists` remove playlists and cached videos without removing the
-API key. `yt clean` remains the command for removing all YouTube configuration,
-including the API key.
+unavailable, or non-song metadata. `radio search music [number]` opens an
+external YouTube search for the selected history item.
 
 Player tab changes should be terminal-driven through commands such as
-`tab [number]`, `open now-playing`, `open visualizer`, `open controls`, and
-temporary-tab commands. Do not add mouse-only navigation as the primary path.
-The visualizer uses a terminal-green 48-band ASCII/TUI presentation identified
-as `./visualizer --mode=ascii`.
+`tab [number]`, `open now-playing`, `open visualizer`, `visualizer ascii`,
+`open controls`, and temporary-tab commands. Do not add mouse-only navigation
+as the primary path. The visualizer uses a terminal-green 48-band ASCII/TUI
+presentation identified as `./visualizer --mode=ascii`; do not add extra
+visualizer modes unless the command set and docs are updated together.
 
 Local audio files must be played through the privileged `local-audio:` protocol
 registered in `src/main/index.ts`, not directly through `file://`. The protocol
-supports range requests, CORS headers, and CSP `media-src` access for the native
-audio element and Web Audio visualizer. Keep CSP changes in
+supports range requests, CORS headers, and CSP `media-src` access for the
+native audio element and Web Audio visualizer. Keep CSP changes in
 `src/renderer/index.html` aligned with any custom media schemes. Local music
-metadata is populated during folder scans in the main process: MP3 files may use
-ID3 title, artist, album, and estimated duration; the renderer also updates
+metadata is populated during folder scans in the main process: MP3 files may
+use ID3 title, artist, album, and estimated duration; the renderer also updates
 duration from browser `loadedmetadata` when available. Stored libraries live in
-Electron Storage under `prompt-play-music-libraries` and are refreshed on player
-startup. The `clear playback` command stops playback without removing saved
-data, while `clear all` stops playback and removes saved Electron Storage data.
-Prefer source-specific cleanup commands such as `music clear` and
-`yt clear playlists` when only one library source should be reset.
+Electron Storage under `prompt-play-music-libraries` and are refreshed on
+player startup. The `clear playback` command stops playback without removing
+saved data, while `clear all` stops playback and removes saved Electron Storage
+data. Prefer source-specific cleanup commands such as `music clear` and
+`radio clear` when only one source should be reset.
 
 ## Theme Typography
 
@@ -120,9 +110,9 @@ Current theme font mapping:
 Theme font files are loaded from Google Fonts in `src/renderer/index.html`.
 Shell Pink uses larger theme-specific text scale variables in `globals.css`
 because Lekton renders visually smaller and tighter than the other monospace
-fonts. Theme selection is persisted under
-`prompt-play-theme`; `theme use [theme]` should accept both theme ids and
-human-readable names after normalization.
+fonts. Theme selection is persisted under `prompt-play-theme`;
+`theme use [theme]` should accept both theme ids and human-readable names after
+normalization.
 
 ## Build, Test, and Development Commands
 
@@ -160,13 +150,13 @@ Use short, imperative messages with a type prefix such as `feat:`, `fix:`,
 `refactor:`, or `chore:`.
 
 Pull requests should include a brief description, the reason for the change,
-manual verification steps, and screenshots or recordings for visible UI changes.
-Link related issues when available. Confirm `yarn lint` and `yarn typecheck`
-pass before requesting review.
+manual verification steps, and screenshots or recordings for visible UI
+changes. Link related issues when available. Confirm `yarn lint` and
+`yarn typecheck` pass before requesting review.
 
 ## Security & Configuration Tips
 
 Do not commit secrets, local credentials, generated packages, or platform build
 artifacts. Keep release changes aligned with `electron-builder.ts` and the tag
-release workflow in `.github/workflows/release.yml`, which publishes builds from
-version tags such as `v1.0.0`.
+release workflow in `.github/workflows/release.yml`, which publishes builds
+from version tags such as `v1.0.0`.

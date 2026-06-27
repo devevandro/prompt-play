@@ -7,8 +7,7 @@ Reference for commands accepted by the Prompt Play terminal input.
 | Command | Description |
 | --- | --- |
 | `music` | Opens the player on the local music library. |
-| `radio` | Opens the player on FM and web radio streams. |
-| `yt` | Opens the player on YouTube playlists. |
+| `radio` or `fm` | Opens the player on FM and web radio streams. |
 | `exit` | Keeps the app on the first access screen. |
 | `quit` | Closes the application. |
 | `help` | Shows the first access hint. |
@@ -19,12 +18,12 @@ Reference for commands accepted by the Prompt Play terminal input.
 | --- | --- |
 | `play` | Starts playback. If no item is selected, plays the first item from the active source. |
 | `play [number]` | Plays the item by its 1-based position in the active source list. Example: `play 1`. |
-| `play [name]` | Plays the first item from the active source matching title or artist/channel/city. Example: `play midnight` or `play FM o Dia`. |
+| `play [name]` | Plays the first item from the active source matching title, artist, station, or city. |
 | `resume` | Resumes the current item. |
 | `pause` | Pauses playback. |
 | `stop` | Pauses playback. |
-| `next` or `n` | Plays the next item from the active queue. In radio mode, this follows the recent list on `ls -la` and the full station list on `radio list` or `ls -ra`. |
-| `prev` or `p` | Plays the previous item from the active queue. In radio mode, this follows the recent list on `ls -la` and the full station list on `radio list` or `ls -ra`. |
+| `next` or `n` | Plays the next item from the active queue. In radio mode, this follows the recent list on `ls -la` and the visible saved/search list on `radio list` or `ls -ra`. |
+| `prev` or `p` | Plays the previous item from the active queue. In radio mode, this follows the recent list on `ls -la` and the visible saved/search list on `radio list` or `ls -ra`. |
 | `shuffle` | Toggles random playback order for the active source. |
 | `repeat` | Toggles repeat for the current item. |
 
@@ -35,55 +34,48 @@ Reference for commands accepted by the Prompt Play terminal input.
 | `sources` | Lists available player sources and highlights the active one. |
 | `source local` | Uses music files available on the computer. |
 | `source radio` | Uses FM and web radio streams. |
-| `source yt` | Uses YouTube playlists. |
 | `music` | Switches the player to local music mode. |
 | `radio` or `fm` | Switches the player to radio mode. |
-| `yt` | Switches the player to YouTube mode. |
 
 Source-specific commands only work in their active mode. For example, radio
-commands such as `radio list` and `fm` are rejected while the player is in
-music mode. This also applies to `radio history`. Music commands such as
-`music config` and `music list` are
-rejected while the player is in radio mode. YouTube commands such as `yt list`
-and `yt add` are rejected outside YouTube mode. Use `source local`,
-`source radio`, or `source yt` to change modes.
+commands such as `radio list`, `radio search`, and `radio history` are rejected
+while the player is in music mode. Music commands such as `music config` and
+`music list` are rejected while the player is in radio mode. Use `source local`
+or `source radio` to change modes.
 
 ## Library
 
 | Command | Description |
 | --- | --- |
 | `list` or `ls` | Lists items from the active source. |
-| `ls -la` | Opens the active source list tab. For radio, this tab shows the 5 most recently played radios. |
+| `ls -la` | Opens the active source list tab. For radio, this tab shows the 5 most recently played saved radios. |
 | `music -- path [path]` | Scans and stores a local music folder. Relative paths are resolved from the app, home, `~/Music`, and `~/Downloads`. The scanned folder becomes the active music folder. |
-| `radio -- path [path]` | Not supported. Radio stations are configured in `src/shared/data/radios.ts`; use `radio list` or `ls -ra` to view them. |
+| `radio -- path [path]` | Not supported. Use `radio add` or `radio search` to configure radio stations. |
 | `music config` | Opens the native folder picker, stores the selected music folder, and makes it the active music folder. |
 | `music list` | Opens the temporary `music lists` tab with saved music folders. When no library is configured, it shows suggested `~/Music` and `~/Downloads` paths. |
-| `music clear` or `music reset` | Removes saved music folders and cached music lists without removing YouTube data or the selected theme. |
-| `radio list` or `ls -ra` | Opens a temporary `radio list` tab with every configured radio. |
+| `music clear` or `music reset` | Removes saved music folders and cached music lists without removing saved radios or the selected theme. |
+| `radio list` or `ls -ra` | Opens a temporary `radio list` tab with saved radios. |
+| `radio search [term]` | Searches Radio Browser for Brazilian stations by name, state, and tag. Example: `radio search "CBN"`. |
+| `radio add [number]` | Saves a station from the current search results. Example: `radio add 1`. |
+| `radio add Name \| City \| State \| URL \| Frequency` | Adds a station manually. `Frequency` is optional and defaults to `stream`. |
+| `radio edit [number] Name \| City \| State \| URL \| Frequency` | Replaces the details for a saved station while keeping its saved id. |
+| `radio remove [number]` | Removes one saved radio and clears it from recent-radio state. |
+| `radio clear` | Removes all saved radios and clears recent-radio state. |
 | `radio history` | Opens the temporary `cat radio_history.txt` tab with up to 10 valid songs heard during the current app session. |
-| `yt list` | Opens the temporary `yt playlists` tab. |
-| `yt auth` | Starts the interactive YouTube API key prompt. Enter the key at `YouTube API Key:`. |
-| `yt auth clear` | Removes the saved YouTube API key from Electron Storage. |
-| `yt add [playlist-url-or-id]` | Fetches a YouTube playlist from a full playlist URL or playlist id, saves the playlist id, total video count, and cached video metadata in Electron Storage. |
-| `yt remove [number-or-name]` | Removes one saved YouTube playlist and its cached videos by playlist position, id, or title match. |
-| `yt clear` or `yt clear playlists` | Removes saved YouTube playlists and cached videos while keeping the saved API key. |
-| `yt clean` | Removes the saved YouTube API key, playlists, and cached videos. |
-| `play [number]` in `yt playlists` | Selects and starts the playlist by its 1-based position. Example: `play 1`. |
-| `status` or `info` | Shows active source, current item, creator/city/channel, volume, random/repeat state, and audio API status. |
+| `radio search music [number]` | Opens a YouTube search in the browser for a radio-history song. |
+| `status` or `info` | Shows active source, current item, creator/city, volume, random/repeat state, and audio API status. |
 
 For radio sources, `list`, `ls`, and the `ls -la` tab show only the 5 most
-recently played radios. Use `radio list` or `ls -ra` to verify the full radio
-listing from `src/shared/data/radios.ts` in a temporary tab. The playback queue
-follows the visible radio context: `next` and `prev` use the recent list on
-`ls -la`, and the full station list while the temporary `radio list` tab is
-open.
+recently played saved radios. Use `radio list` or `ls -ra` to view saved
+radios in a temporary tab. Running `radio search [term]` switches that tab into
+search mode; use `radio add [number]` to save a result locally.
 
 Radio stations expose live song metadata when available. Most stations use ICY
 `StreamTitle`; FM O Dia uses its dedicated live-information endpoint. The
 player renders `♫ now playing: unavailable` when the station does not provide
 song data. Only valid songs are added to `radio history`; programs, empty
-metadata, and unavailable values are ignored. History is held only in memory
-for the current session and includes the station name and relative update time.
+metadata, and unavailable values are ignored. History is held only in memory for
+the current session and includes the station name and relative update time.
 
 For local music, scans are persisted in Electron Storage under
 `prompt-play-music-libraries`. Stored libraries are refreshed when the player
@@ -94,25 +86,15 @@ selected with `music -- path [path]` or `music config`; `list`, `ls`, `ls -la`,
 remain available in `music list`, but they are not merged into the active music
 list.
 
-For YouTube, configuration is persisted in Electron Storage under
-`prompt-play-youtube` using a JSON shape with a `youtube.apiKey` and
-`youtube.playlists` array. The `yt add` command uses the YouTube
-`playlists` API for the title and total video count, then uses the
-`playlistItems` API for titles and video ids, following `nextPageToken` until
-all playlist pages are loaded. It then calls the YouTube `videos` API in batches
-for durations because `playlistItems` does not include duration metadata.
-The `ls -la` tab renders video title, artist/channel when available, and total
-video duration for the selected playlist only. The `yt playlists` tab lists
-saved playlists; run `play [number]` there to choose which playlist feeds
-`ls -la`. In YouTube mode, use `play [number]` from the selected playlist list
-to move to a specific video, or `next`, `n`, `prev`, and `p` to move through
-the selected playlist queue.
-The `./player-controls` tab renders the current YouTube video as an autoplaying
-embedded player and stays mounted while navigating between YouTube tabs so
-playback can continue. Volume commands and the volume control send YouTube
-iframe API commands too. When a YouTube video ends while playback is active,
-the player advances to the next selected playlist item automatically from the
-YouTube iframe end event.
+Saved radios are persisted in Electron Storage under `prompt-play-radios`.
+Manual station commands use pipe-separated fields:
+
+```text
+radio add Name | City | State | URL | Frequency
+radio edit 1 Name | City | State | URL | Frequency
+```
+
+`Frequency` can be omitted when the stream has no FM label or codec detail.
 
 ## Volume
 
@@ -133,20 +115,19 @@ YouTube iframe end event.
 | `home` or `exit` | Returns from the player to the first access screen. |
 | `quit` | Closes the application. |
 | `clear` | Clears terminal history. |
-| `clear playback` | Stops and clears the current playback state for radio, music, and YouTube without removing saved data. |
-| `clear all` | Stops and clears the current playback state for radio, music, and YouTube, then removes saved Electron Storage data. |
+| `clear playback` | Stops and clears the current playback state without removing saved data. |
+| `clear all` | Stops and clears the current playback state, then removes saved Electron Storage data. |
 | `music clear` or `music reset` | Removes saved music folders and cached music lists. |
-| `yt clear` or `yt clear playlists` | Removes YouTube playlists and cached videos while keeping the saved API key. |
-| `yt clean` | Removes all YouTube configuration, including the API key. |
+| `radio clear` | Removes saved radios. |
 | `version` | Shows the current project version. |
 | `open now-playing` | Opens the `cat now_playing.txt` tab. |
 | `open visualizer` | Opens the terminal-green `./visualizer --mode=ascii` TUI. |
+| `visualizer ascii` | Opens the visualizer and keeps the visualizer mode as ASCII. |
 | `open controls` | Opens the `./player-controls` tab. |
 | `tab [number]` | Opens a tab by 1-based position in the current tab strip. |
 | `music list` | Opens the temporary `music lists` tab next to `./player-controls`. |
 | `radio list` or `ls -ra` | Opens the temporary `radio list` tab next to `./player-controls`. |
 | `radio history` | Opens the temporary `cat radio_history.txt` tab next to `./player-controls`. |
-| `yt list` | Opens the temporary `yt playlists` tab next to `./player-controls`. |
 | `:q` | Closes the active temporary tab, such as `Prompt Play Help`, `music lists`, `radio list`, or `cat radio_history.txt`. |
 
 ## Status Footer
@@ -160,10 +141,9 @@ tab and active source:
 | `cat now_playing.txt` | Current source item status. In radio mode, shows station, state, city, live song metadata, and relative update time. |
 | `./visualizer --mode=ascii` | Terminal-green 48-band ASCII/TUI spectrum with input, source, peak, average, and playback state. |
 | `./player-controls` tab | `player-controls ready`. |
-| `radio list` | Full radio list status and `:q` close hint. |
+| `radio list` | Saved/search radio list status and `:q` close hint. |
 | `cat radio_history.txt` | In-session radio song history and `:q` close hint. |
 | `music lists` | Music library list status and `:q` close hint. |
-| `yt playlists` | YouTube playlist list status and `:q` close hint. |
 | `Prompt Play Help` | Help status and `:q` close hint. |
 
 ## Source Behavior
@@ -172,14 +152,13 @@ tab and active source:
 | --- | --- | --- | --- |
 | `local` | `ls -la audio/aac *.mp3 *.aac *.wav *.flac *.ogg` | Enabled | Track duration from ID3/browser metadata when available. |
 | `radio` | `ls -la audio/aac *.mp3 *.aac *.m3u *.pls stream` | Disabled | `live`. |
-| `yt` | `yt playlists` | Enabled | YouTube video duration from the `videos` API when available. |
 
 Local files are served through the privileged `local-audio:` Electron protocol
 with range requests, CORS headers, and CSP `media-src` support. This allows the
 native audio element and the Web Audio visualizer to read local files without
-using unsafe `file://` URLs. Radio playback uses the native audio element without
-Web Audio analysis because many live streams do not allow CORS access for
-`MediaElementAudioSource`.
+using unsafe `file://` URLs. Radio playback uses the native audio element
+without Web Audio analysis because many live streams do not allow CORS access
+for `MediaElementAudioSource`.
 
 ## Themes
 
@@ -203,15 +182,14 @@ the theme name, such as `theme use dark-soul` or `theme use dark soul`.
 | Command | Description |
 | --- | --- |
 | `zsh-player --init` or `init` | Simulates player initialization. |
-| `version` | Shows project, audio engine, and visualizer version info. |
+| `version` | Shows project and audio engine version info. |
 | `help`, `h`, or `?` | Opens the temporary help tab. |
 | `:q` | Closes the active temporary tab. |
 | `clear` | Clears terminal history. |
-| `clear playback` | Stops and clears playback for radio, music, and YouTube without removing saved data. |
-| `clear all` | Stops and clears playback for radio, music, and YouTube, then removes saved Electron Storage data. |
+| `clear playback` | Stops and clears playback without removing saved data. |
+| `clear all` | Stops and clears playback, then removes saved Electron Storage data. |
 | `music clear` or `music reset` | Removes saved music folders and cached music lists. |
-| `yt clear` or `yt clear playlists` | Removes YouTube playlists and cached videos while keeping the saved API key. |
-| `yt clean` | Removes all YouTube configuration, including the API key. |
+| `radio clear` | Removes saved radios. |
 
 ## Input Shortcuts
 
@@ -220,6 +198,6 @@ the theme name, such as `theme use dark-soul` or `theme use dark soul`.
 | `Tab` | Autocompletes commands or opens suggestions. |
 | `Left`/`Right` | Moves between autocomplete suggestions when visible. |
 | `Up`/`Down` | Navigates command history, or theme picker items when the picker is open. |
-| `Up`/`Down` on list tabs | Scrolls `ls -la`, `radio list`, `cat radio_history.txt`, and `yt playlists`. |
+| `Up`/`Down` on list tabs | Scrolls `ls -la`, `radio list`, `cat radio_history.txt`, and `music lists`. |
 | `Esc` | Closes suggestions or the theme picker. |
 | `Cmd/Ctrl + 1..4` | Switches tabs directly. |
