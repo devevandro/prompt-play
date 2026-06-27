@@ -58,12 +58,14 @@ export interface Track extends PlayerQueueItem {
 export interface Radio {
   id: string
   name: string
-  img: string
+  img?: string
   state: string
-  region: string
+  region?: string
   city: string
   frequency: string
   url: string
+  tags?: string
+  homepage?: string
 }
 
 export interface RadioMetadata {
@@ -90,6 +92,7 @@ export interface MusicLibrary {
 export type AppStorageKey =
   | 'prompt-play-theme'
   | 'prompt-play-music-libraries'
+  | 'prompt-play-radios'
 
 export interface AppStorageRequest<T = unknown> {
   key: AppStorageKey

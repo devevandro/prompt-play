@@ -21,7 +21,10 @@ import {
 import { useAudioAnalyzer } from 'renderer/hooks/use-audio-analyzer'
 import { useMusicLibrary } from 'renderer/hooks/use-music-library'
 import { usePlayerCommands } from 'renderer/hooks/use-player-commands'
-import { useRadioSource } from 'renderer/hooks/use-radio-source'
+import {
+  createManualRadioFromParts,
+  useRadioSource,
+} from 'renderer/hooks/use-radio-source'
 import { PLAYER_SOURCES } from 'renderer/lib/player-sources'
 import {
   generateProgressBar,
@@ -101,6 +104,7 @@ export function MainScreen() {
   const [volume, setVolume] = useState(0.7)
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false)
   const [isRepeatEnabled, setIsRepeatEnabled] = useState(false)
+  const [visualizerMode, setVisualizerMode] = useState<'ascii'>('ascii')
   const [radioMetadata, setRadioMetadata] = useState<RadioMetadata | null>(null)
   const [radioMetadataUpdatedAt, setRadioMetadataUpdatedAt] = useState<
     number | null
@@ -292,8 +296,26 @@ export function MainScreen() {
     setCurrentItem,
     setIsLoading,
   })
-  const { radioItems, radioStatuses, recentRadioItems, setRecentRadioIds } =
-    useRadioSource({ activeTab, showRadioListTab })
+  const {
+    addManualRadio,
+    addSearchResult,
+    clearRadios,
+    editRadio,
+    radioItems,
+    radioListItems,
+    radioListMode,
+    radioSearchTerm,
+    radioStatuses,
+    recentRadioItems,
+    removeRadio,
+    searchRadios,
+    setRecentRadioIds,
+    showSavedRadios,
+  } = useRadioSource({ activeTab, showRadioListTab })
+  const openSavedRadioListTab = useCallback(() => {
+    showSavedRadios()
+    openRadioListTab()
+  }, [openRadioListTab, showSavedRadios])
   const localItems = useMemo(
     () => musicLibraries[0]?.items ?? [],
     [musicLibraries]
@@ -330,7 +352,7 @@ export function MainScreen() {
   const queueItems =
     activeSourceMode === 'radio'
       ? activeTab === 'radio-list' && showRadioListTab
-        ? radioItems
+        ? radioListItems
         : recentRadioItems
       : activeItems
   const tabs = useMemo(
@@ -527,6 +549,26 @@ export function MainScreen() {
 
     return lines
   }, [radioItems.length])
+
+  const openRadioHistorySearch = useCallback(
+    async (index: number) => {
+      const entry = radioHistory[index]
+
+      if (!entry) {
+        addToHistory(`[ERROR] Radio history item not found: ${index + 1}`)
+        return
+      }
+
+      const query = [entry.subtitle, entry.title].filter(Boolean).join(' ')
+      const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(
+        query
+      )}`
+
+      await window.App.openExternal(url)
+      addToHistory(`[OK] Opened YouTube search for ${query}`)
+    },
+    [addToHistory, radioHistory]
+  )
 
   const playItem = useCallback(
     (item: PlayerQueueItem) => {
@@ -728,15 +770,20 @@ export function MainScreen() {
     activeTheme,
     addToHistory,
     applyTheme,
+    addManualRadio,
+    addSearchResult,
     clearAllPlayback,
     clearMusicLibraries,
     clearPlayback,
+    clearRadios,
     clearConnectionTimers,
     closeHelpTab,
     closeMusicListTab,
     closeRadioHistoryTab,
     closeRadioListTab,
     currentItem,
+    createManualRadioFromParts,
+    editRadio,
     getPlayerDiagnostics,
     handleVolumeChange,
     isConnected,
@@ -749,12 +796,16 @@ export function MainScreen() {
     openHelpTab,
     openMusicListTab,
     openRadioHistoryTab,
-    openRadioListTab,
+    openRadioHistorySearch,
+    openRadioListTab: openSavedRadioListTab,
     playItem,
     prevItem,
     queueItems,
     recentRadioItems,
+    radioHistory,
+    removeRadio,
     scanMusicPath,
+    searchRadios,
     selectMusicFolder,
     selectSource,
     setActiveTab,
@@ -762,6 +813,7 @@ export function MainScreen() {
     setIsPlaying,
     setIsThemePickerOpen,
     setSelectedThemeIndex,
+    setVisualizerMode,
     showHelpTab,
     showMusicListTab,
     showRadioHistoryTab,
@@ -772,6 +824,7 @@ export function MainScreen() {
     toggleShuffle,
     unmuteVolume,
     visibleItems,
+    visualizerMode,
     volume,
     volumeRef,
   })
@@ -999,6 +1052,7 @@ export function MainScreen() {
             frequencyData={frequencyData}
             isAudioConnected={isConnected}
             isPlaying={isPlaying}
+            mode={visualizerMode}
             source={activeSource}
           />
         )
@@ -1009,10 +1063,12 @@ export function MainScreen() {
           <RadioListTab
             currentItem={currentItem}
             isPlaying={isPlaying}
-            items={radioItems}
+            items={radioListItems}
+            mode={radioListMode}
             onSelectItem={playItem}
             radioStatuses={radioStatuses}
             scrollContainerRef={radioListScrollRef}
+            searchTerm={radioSearchTerm}
           />
         )
       case 'radio-history':

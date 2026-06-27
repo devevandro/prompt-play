@@ -13,6 +13,8 @@ import type {
   PlayerQueueItem,
   PlayerSource,
   PlayerSourceMode,
+  Radio,
+  RadioHistoryEntry,
 } from 'shared/types'
 import { version } from '../../../package.json'
 
@@ -23,6 +25,7 @@ interface PlayerTab {
 }
 
 type AddToHistory = (command: string) => void
+type VisualizerMode = 'ascii'
 
 export function usePlayerCommands({
   activeItems,
@@ -31,16 +34,21 @@ export function usePlayerCommands({
   activeTab,
   activeTheme,
   addToHistory,
+  addManualRadio,
+  addSearchResult,
   applyTheme,
   clearAllPlayback,
   clearMusicLibraries,
   clearPlayback,
+  clearRadios,
   clearConnectionTimers,
   closeHelpTab,
   closeMusicListTab,
   closeRadioHistoryTab,
   closeRadioListTab,
   currentItem,
+  createManualRadioFromParts,
+  editRadio,
   getPlayerDiagnostics,
   handleVolumeChange,
   isConnected,
@@ -53,12 +61,16 @@ export function usePlayerCommands({
   openHelpTab,
   openMusicListTab,
   openRadioHistoryTab,
+  openRadioHistorySearch,
   openRadioListTab,
   playItem,
   prevItem,
   queueItems,
   recentRadioItems,
+  radioHistory,
+  removeRadio,
   scanMusicPath,
+  searchRadios,
   selectMusicFolder,
   selectSource,
   setActiveTab,
@@ -66,6 +78,7 @@ export function usePlayerCommands({
   setIsPlaying,
   setIsThemePickerOpen,
   setSelectedThemeIndex,
+  setVisualizerMode,
   showHelpTab,
   showMusicListTab,
   showRadioHistoryTab,
@@ -76,6 +89,7 @@ export function usePlayerCommands({
   toggleShuffle,
   unmuteVolume,
   visibleItems,
+  visualizerMode,
   volume,
   volumeRef,
 }: {
@@ -85,16 +99,21 @@ export function usePlayerCommands({
   activeTab: string
   activeTheme: ThemeId
   addToHistory: AddToHistory
+  addManualRadio: (radio: Radio) => Promise<PlayerQueueItem>
+  addSearchResult: (index: number) => Promise<PlayerQueueItem | null>
   applyTheme: (themeId: string) => Promise<void>
   clearAllPlayback: () => Promise<void>
   clearMusicLibraries: () => Promise<void>
   clearPlayback: () => void
+  clearRadios: () => Promise<void>
   clearConnectionTimers: () => void
   closeHelpTab: () => void
   closeMusicListTab: () => void
   closeRadioHistoryTab: () => void
   closeRadioListTab: () => void
   currentItem: PlayerQueueItem | null
+  createManualRadioFromParts: (parts: string[]) => Radio | null
+  editRadio: (index: number, radio: Radio) => Promise<PlayerQueueItem | null>
   getPlayerDiagnostics: () => Promise<string[]>
   handleVolumeChange: (newVolume: number) => void
   isConnected: boolean
@@ -107,12 +126,16 @@ export function usePlayerCommands({
   openHelpTab: () => void
   openMusicListTab: () => void
   openRadioHistoryTab: () => void
+  openRadioHistorySearch: (index: number) => Promise<void>
   openRadioListTab: () => void
   playItem: (item: PlayerQueueItem) => void
   prevItem: () => void
   queueItems: PlayerQueueItem[]
   recentRadioItems: PlayerQueueItem[]
+  radioHistory: RadioHistoryEntry[]
+  removeRadio: (index: number) => Promise<PlayerQueueItem | null>
   scanMusicPath: (folderPath: string) => Promise<void>
+  searchRadios: (term: string) => Promise<number>
   selectMusicFolder: () => Promise<void>
   selectSource: (mode: PlayerSourceMode) => void
   setActiveTab: (tab: string) => void
@@ -122,6 +145,7 @@ export function usePlayerCommands({
   setIsPlaying: (isPlaying: boolean) => void
   setIsThemePickerOpen: (isOpen: boolean) => void
   setSelectedThemeIndex: (index: number) => void
+  setVisualizerMode: (mode: VisualizerMode) => void
   showHelpTab: boolean
   showMusicListTab: boolean
   showRadioHistoryTab: boolean
@@ -135,6 +159,7 @@ export function usePlayerCommands({
   toggleShuffle: () => void
   unmuteVolume: () => void
   visibleItems: PlayerQueueItem[]
+  visualizerMode: VisualizerMode
   volume: number
   volumeRef: { current: number }
 }) {
@@ -248,7 +273,7 @@ export function usePlayerCommands({
         void scanMusicPath(pathCommandMatch[2])
       } else if (pathCommandMatch?.[1].toLowerCase() === 'radio') {
         addToHistory('[ERROR] Radio path configuration is not available')
-        addToHistory("[HINT] Use 'radio list' or 'ls -ra' to see all radios")
+        addToHistory("[HINT] Use 'radio add' or 'radio search \"CBN\"'")
       } else if (cmd === 'music config') {
         selectSource('local')
         void selectMusicFolder()
@@ -277,15 +302,140 @@ export function usePlayerCommands({
         addToHistory('[OK] Selected cat now_playing.txt tab')
       } else if (cmd === 'open visualizer') {
         setActiveTab('visualizer')
-        addToHistory('[OK] Selected ./visualizer --mode=ascii tab')
+        addToHistory(`[OK] Selected ./visualizer --mode=${visualizerMode} tab`)
       } else if (cmd === 'open controls') {
         setActiveTab('controls')
         addToHistory('[OK] Selected ./player-controls tab')
       } else if (cmd === 'radio list' || cmd === 'ls -ra') {
         selectSource('radio')
         openRadioListTab()
+      } else if (cmd.startsWith('radio search music ')) {
+        const itemIndex = Number.parseInt(cmd.slice(19).trim(), 10)
+
+        if (
+          Number.isInteger(itemIndex) &&
+          itemIndex >= 1 &&
+          itemIndex <= radioHistory.length
+        ) {
+          void openRadioHistorySearch(itemIndex - 1)
+        } else {
+          addToHistory('[ERROR] Use radio search music <history-number>')
+        }
+      } else if (cmd.startsWith('radio search ')) {
+        const term = rawCommand.slice(13).trim().replace(/^"|"$/g, '')
+
+        if (!term) {
+          addToHistory('[ERROR] Use radio search "station, city, state or tag"')
+          return
+        }
+
+        selectSource('radio')
+        openRadioListTab()
+        addToHistory(`[INFO] Searching Radio Browser for Brazil: ${term}`)
+        void searchRadios(term)
+          .then(count => {
+            addToHistory(`[OK] Found ${count} radios`)
+            addToHistory("[HINT] Use 'radio add 1' to save a result")
+          })
+          .catch(error => {
+            addToHistory(
+              `[ERROR] Radio Browser search failed: ${
+                error instanceof Error ? error.message : 'unknown error'
+              }`
+            )
+          })
+      } else if (cmd.startsWith('radio add')) {
+        const input = rawCommand.slice(9).trim()
+        const itemIndex = Number.parseInt(input, 10)
+
+        if (Number.isInteger(itemIndex) && input === String(itemIndex)) {
+          void addSearchResult(itemIndex - 1).then(item => {
+            if (item) {
+              addToHistory(`[OK] Saved radio: ${item.title}`)
+            } else {
+              addToHistory('[ERROR] Search result not found')
+            }
+          })
+          return
+        }
+
+        const parts = input.split('|')
+        const radio = createManualRadioFromParts(parts)
+
+        if (!radio) {
+          addToHistory(
+            '[ERROR] Use radio add <search-number> or radio add Name | City | State | URL | Frequency'
+          )
+          return
+        }
+
+        void addManualRadio(radio).then(item => {
+          addToHistory(`[OK] Saved radio: ${item.title}`)
+        })
+      } else if (cmd.startsWith('radio edit ')) {
+        const input = rawCommand.slice(11).trim()
+        const match = /^(\d+)\s+(.+)$/.exec(input)
+
+        if (!match) {
+          addToHistory(
+            '[ERROR] Use radio edit <number> Name | City | State | URL | Frequency'
+          )
+          return
+        }
+
+        const itemIndex = Number.parseInt(match[1], 10)
+        const radio = createManualRadioFromParts(match[2].split('|'))
+
+        if (!radio) {
+          addToHistory(
+            '[ERROR] Use radio edit <number> Name | City | State | URL | Frequency'
+          )
+          return
+        }
+
+        void editRadio(itemIndex - 1, radio).then(item => {
+          if (item) {
+            addToHistory(`[OK] Edited radio: ${item.title}`)
+          } else {
+            addToHistory('[ERROR] Radio not found')
+          }
+        })
+      } else if (cmd.startsWith('radio remove ')) {
+        const itemIndex = Number.parseInt(cmd.slice(13).trim(), 10)
+
+        if (!Number.isInteger(itemIndex) || itemIndex < 1) {
+          addToHistory('[ERROR] Use radio remove <number>')
+          return
+        }
+
+        void removeRadio(itemIndex - 1).then(item => {
+          if (item) {
+            addToHistory(`[OK] Removed radio: ${item.title}`)
+          } else {
+            addToHistory('[ERROR] Radio not found')
+          }
+        })
+      } else if (cmd === 'radio clear') {
+        if (currentItem?.mode === 'radio') {
+          clearPlayback()
+        }
+        void clearRadios().then(() => {
+          addToHistory('[OK] Cleared saved radios')
+        })
       } else if (cmd === 'radio history') {
         openRadioHistoryTab()
+      } else if (cmd.startsWith('visualizer ')) {
+        const mode = cmd.slice(11).trim() as VisualizerMode
+
+        if (mode === 'ascii') {
+          setVisualizerMode(mode)
+          setActiveTab('visualizer')
+          addToHistory(`[OK] Visualizer set to ${mode}`)
+        } else {
+          addToHistory(
+            '[ERROR] Use visualizer ascii'
+          )
+        }
       } else if (cmd === 'ls -la') {
         setActiveTab('tracks')
         addToHistory('[OK] Selected ls -la tab')
@@ -333,7 +483,7 @@ export function usePlayerCommands({
           activeSourceMode === 'radio' &&
           activeTab === 'radio-list' &&
           showRadioListTab
-            ? activeItems
+            ? queueItems
             : visibleItems
         const found =
           Number.isInteger(itemIndex) &&
@@ -360,7 +510,7 @@ export function usePlayerCommands({
 
         if (listedItems.length === 0 && activeSourceMode === 'radio') {
           addToHistory('[INFO] No recently played radios yet')
-          addToHistory("[HINT] Use 'radio list' or 'ls -ra' to see all radios")
+          addToHistory("[HINT] Use 'radio list' or 'radio search \"CBN\"'")
           return
         }
 
@@ -444,16 +594,21 @@ export function usePlayerCommands({
       activeTab,
       activeTheme,
       addToHistory,
+      addManualRadio,
+      addSearchResult,
       applyTheme,
       clearAllPlayback,
       clearMusicLibraries,
       clearPlayback,
+      clearRadios,
       clearConnectionTimers,
       closeHelpTab,
       closeMusicListTab,
       closeRadioHistoryTab,
       closeRadioListTab,
       currentItem,
+      createManualRadioFromParts,
+      editRadio,
       getPlayerDiagnostics,
       handleVolumeChange,
       isConnected,
@@ -466,12 +621,16 @@ export function usePlayerCommands({
       openHelpTab,
       openMusicListTab,
       openRadioHistoryTab,
+      openRadioHistorySearch,
       openRadioListTab,
       playItem,
       prevItem,
       queueItems,
       recentRadioItems,
+      radioHistory.length,
+      removeRadio,
       scanMusicPath,
+      searchRadios,
       selectMusicFolder,
       selectSource,
       setActiveTab,
@@ -479,6 +638,7 @@ export function usePlayerCommands({
       setIsPlaying,
       setIsThemePickerOpen,
       setSelectedThemeIndex,
+      setVisualizerMode,
       showHelpTab,
       showMusicListTab,
       showRadioHistoryTab,
@@ -489,6 +649,7 @@ export function usePlayerCommands({
       toggleShuffle,
       unmuteVolume,
       visibleItems,
+      visualizerMode,
       volume,
       volumeRef,
     ]
