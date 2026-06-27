@@ -5,6 +5,7 @@ import type {
   AppStorageKey,
   AppStorageRequest,
   MusicLibrary,
+  Radio,
   RadioMetadata,
 } from 'shared/types'
 
@@ -43,6 +44,10 @@ function getHomePath() {
 const API = {
   checkRadioStream: (url: string) =>
     ipcRenderer.invoke('radio:check-stream', url) as Promise<boolean>,
+  searchRadios: (term: string) =>
+    ipcRenderer.invoke('radio:search', term) as Promise<Radio[]>,
+  openExternal: (url: string) =>
+    ipcRenderer.invoke('browser:open-external', url) as Promise<void>,
   startRadioMetadata: (radioId: string, url: string) => {
     ipcRenderer.send('radio:metadata:start', { radioId, url })
   },
