@@ -93,6 +93,7 @@ export type AppStorageKey =
   | 'prompt-play-theme'
   | 'prompt-play-music-libraries'
   | 'prompt-play-radios'
+  | 'prompt-play-radio-pins'
   | 'prompt-play-settings'
 
 export interface AppSettings {

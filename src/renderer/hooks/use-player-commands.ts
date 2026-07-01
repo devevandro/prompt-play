@@ -28,7 +28,6 @@ type AddToHistory = (command: string) => void
 type VisualizerMode = 'ascii'
 
 export function usePlayerCommands({
-  activeItems,
   activeSource,
   activeSourceMode,
   activeTab,
@@ -47,11 +46,14 @@ export function usePlayerCommands({
   closeMusicListTab,
   closeRadioHistoryTab,
   closeRadioListTab,
+  copyLastError,
   currentItem,
   createManualRadioFromParts,
   editRadio,
+  exportRadios,
   getPlayerDiagnostics,
   handleVolumeChange,
+  importRadios,
   isConnected,
   isLoading,
   isRepeatEnabled,
@@ -64,6 +66,8 @@ export function usePlayerCommands({
   openRadioHistoryTab,
   openRadioHistorySearch,
   openRadioListTab,
+  pinRadio,
+  pinnedRadioItems,
   playItem,
   prevItem,
   queueItems,
@@ -85,17 +89,16 @@ export function usePlayerCommands({
   showMusicListTab,
   showRadioHistoryTab,
   showRadioListTab,
-  simulateLoading,
   tabs,
   toggleRepeat,
   toggleShuffle,
   unmuteVolume,
+  unpinRadio,
   visibleItems,
   visualizerMode,
   volume,
   volumeRef,
 }: {
-  activeItems: PlayerQueueItem[]
   activeSource: PlayerSource
   activeSourceMode: PlayerSourceMode
   activeTab: string
@@ -114,11 +117,14 @@ export function usePlayerCommands({
   closeMusicListTab: () => void
   closeRadioHistoryTab: () => void
   closeRadioListTab: () => void
+  copyLastError: () => Promise<void>
   currentItem: PlayerQueueItem | null
   createManualRadioFromParts: (parts: string[]) => Radio | null
   editRadio: (index: number, radio: Radio) => Promise<PlayerQueueItem | null>
+  exportRadios: () => Promise<string | null>
   getPlayerDiagnostics: () => Promise<string[]>
   handleVolumeChange: (newVolume: number) => void
+  importRadios: () => Promise<number>
   isConnected: boolean
   isLoading: boolean
   isRepeatEnabled: boolean
@@ -131,6 +137,8 @@ export function usePlayerCommands({
   openRadioHistoryTab: () => void
   openRadioHistorySearch: (index: number) => Promise<void>
   openRadioListTab: () => void
+  pinRadio: (index: number) => Promise<PlayerQueueItem | null>
+  pinnedRadioItems: PlayerQueueItem[]
   playItem: (item: PlayerQueueItem) => void
   prevItem: () => void
   queueItems: PlayerQueueItem[]
@@ -154,14 +162,11 @@ export function usePlayerCommands({
   showMusicListTab: boolean
   showRadioHistoryTab: boolean
   showRadioListTab: boolean
-  simulateLoading: (
-    messages: { text: string; delay: number }[],
-    onComplete?: () => void
-  ) => Promise<void>
   tabs: PlayerTab[]
   toggleRepeat: () => void
   toggleShuffle: () => void
   unmuteVolume: () => void
+  unpinRadio: (index: number) => Promise<PlayerQueueItem | null>
   visibleItems: PlayerQueueItem[]
   visualizerMode: VisualizerMode
   volume: number
@@ -226,26 +231,6 @@ export function usePlayerCommands({
         return
       }
 
-      if (cmd === 'zsh-player --init' || cmd === 'init') {
-        void simulateLoading(
-          [
-            { text: '[INFO] Starting zsh-player...', delay: 200 },
-            { text: '[INFO] Loading audio modules...', delay: 300 },
-            { text: '[INFO] Connecting Web Audio API...', delay: 250 },
-            { text: '[INFO] Scanning music library...', delay: 200 },
-          ],
-          () => {
-            addToHistory('[OK] Player initialized successfully')
-            addToHistory(`[INFO] Active source: ${activeSource.label}`)
-            addToHistory(`[INFO] ${activeItems.length} items available`)
-            addToHistory(
-              "[HINT] Use 'sources' to see modes or 'list' to see items"
-            )
-          }
-        )
-        return
-      }
-
       if (cmd === 'version') {
         addToHistory(`[INFO] Prompt Play v${version}`)
         return
@@ -257,6 +242,11 @@ export function usePlayerCommands({
             addToHistory(line)
           }
         })
+        return
+      }
+
+      if (cmd === 'copy error') {
+        void copyLastError()
         return
       }
 
@@ -317,6 +307,81 @@ export function usePlayerCommands({
       } else if (cmd === 'radio list' || cmd === 'ls -ra') {
         selectSource('radio')
         openRadioListTab()
+      } else if (cmd === 'radio export') {
+        void exportRadios()
+          .then(filePath => {
+            if (filePath) {
+              addToHistory('[OK] Exported saved radios')
+              addToHistory(`[INFO] ${filePath}`)
+            } else {
+              addToHistory('[INFO] Radio export canceled')
+            }
+          })
+          .catch(error => {
+            addToHistory(
+              `[ERROR] Could not export radios: ${
+                error instanceof Error ? error.message : 'unknown error'
+              }`
+            )
+          })
+      } else if (cmd === 'radio import' || cmd === 'radio import external') {
+        void importRadios()
+          .then(count => {
+            if (count > 0) {
+              addToHistory(`[OK] Imported ${count} radios`)
+              openRadioListTab()
+            } else {
+              addToHistory('[INFO] No radios imported')
+            }
+          })
+          .catch(error => {
+            addToHistory(
+              `[ERROR] Could not import radios: ${
+                error instanceof Error ? error.message : 'unknown error'
+              }`
+            )
+          })
+      } else if (cmd === 'radio pins') {
+        if (pinnedRadioItems.length === 0) {
+          addToHistory('[INFO] No pinned radios for ls -la')
+          addToHistory("[HINT] Use 'radio pin 1' from saved radios")
+          return
+        }
+
+        pinnedRadioItems.forEach((item, index) => {
+          const prefix = currentItem?.id === item.id ? '▶' : ' '
+          addToHistory(`[INFO] ${prefix} ${index + 1}. ${item.title}`)
+        })
+      } else if (cmd.startsWith('radio pin ')) {
+        const itemIndex = Number.parseInt(cmd.slice(10).trim(), 10)
+
+        if (!Number.isInteger(itemIndex) || itemIndex < 1) {
+          addToHistory('[ERROR] Use radio pin <saved-radio-number>')
+          return
+        }
+
+        void pinRadio(itemIndex - 1).then(item => {
+          if (item) {
+            addToHistory(`[OK] Pinned radio for ls -la: ${item.title}`)
+          } else {
+            addToHistory('[ERROR] Saved radio not found')
+          }
+        })
+      } else if (cmd.startsWith('radio unpin ')) {
+        const itemIndex = Number.parseInt(cmd.slice(12).trim(), 10)
+
+        if (!Number.isInteger(itemIndex) || itemIndex < 1) {
+          addToHistory('[ERROR] Use radio unpin <pinned-radio-number>')
+          return
+        }
+
+        void unpinRadio(itemIndex - 1).then(item => {
+          if (item) {
+            addToHistory(`[OK] Unpinned radio from ls -la: ${item.title}`)
+          } else {
+            addToHistory('[ERROR] Pinned radio not found')
+          }
+        })
       } else if (cmd.startsWith('radio search music ')) {
         const itemIndex = Number.parseInt(cmd.slice(19).trim(), 10)
 
@@ -565,6 +630,17 @@ export function usePlayerCommands({
         addToHistory(
           `[OK] Volume restored to ${Math.round(volumeRef.current * 100)}%`
         )
+      } else if (cmd === '+' || cmd === '=' || cmd === '-') {
+        const nextVolume = Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round(volumeRef.current * 100) + (cmd === '-' ? -5 : 5)
+          )
+        )
+
+        handleVolumeChange(nextVolume / 100)
+        addToHistory(`[OK] Volume set to ${nextVolume}%`)
       } else if (cmd.startsWith('vol ')) {
         const volumeInput = cmd.slice(4).trim()
         const relativeMatch = /^([+-])\s*(\d+)$/.exec(volumeInput)
@@ -599,7 +675,6 @@ export function usePlayerCommands({
       }
     },
     [
-      activeItems,
       activeSource,
       activeSourceMode,
       activeTab,
@@ -618,11 +693,14 @@ export function usePlayerCommands({
       closeMusicListTab,
       closeRadioHistoryTab,
       closeRadioListTab,
+      copyLastError,
       currentItem,
       createManualRadioFromParts,
       editRadio,
+      exportRadios,
       getPlayerDiagnostics,
       handleVolumeChange,
+      importRadios,
       isConnected,
       isLoading,
       isRepeatEnabled,
@@ -635,6 +713,8 @@ export function usePlayerCommands({
       openRadioHistoryTab,
       openRadioHistorySearch,
       openRadioListTab,
+      pinRadio,
+      pinnedRadioItems,
       playItem,
       prevItem,
       queueItems,
@@ -656,11 +736,11 @@ export function usePlayerCommands({
       showMusicListTab,
       showRadioHistoryTab,
       showRadioListTab,
-      simulateLoading,
       tabs,
       toggleRepeat,
       toggleShuffle,
       unmuteVolume,
+      unpinRadio,
       visibleItems,
       visualizerMode,
       volume,

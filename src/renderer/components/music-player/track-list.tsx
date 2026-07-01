@@ -65,6 +65,11 @@ export function TrackList({
           <span className="text-terminal-yellow">{source.label}</span>{' '}
           <span className="text-terminal-white">{source.listCommand}</span>
         </div>
+        {source.mode === 'radio' && currentItem && (
+          <div className="mt-2 font-mono text-terminal-green text-xs">
+            on air: {currentItem.title}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-12 gap-2 bg-muted/30 px-4 py-2 font-mono text-terminal-gray text-xs">
