@@ -1,114 +1,142 @@
-import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Header } from 'renderer/components/Header'
-import { version } from '../../../package.json'
-import { Prompt } from 'renderer/components/prompt'
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Header } from "renderer/components/Header";
+import { version } from "../../../package.json";
+import { Prompt } from "renderer/components/prompt";
+
+interface HomeHistoryLine {
+  id: string;
+  text: string;
+}
 
 export function HomeScreen() {
-  const navigate = useNavigate()
-  const [input, setInput] = useState('')
-  const [message, setMessage] = useState("Type 'help' to get started.")
-  const inputRef = useRef<HTMLInputElement>(null)
+  const navigate = useNavigate();
+  const [input, setInput] = useState("");
+  const [history, setHistory] = useState<HomeHistoryLine[]>([
+    { id: "boot-version", text: `[INFO] v${version}` },
+    {
+      id: "boot-ready",
+      text: "[INFO] Operate your audio like a UNIX terminal",
+    },
+    { id: "boot-ready", text: "[READY] prompt play initialized" },
+    {
+      id: "boot-hint",
+      text: "[HINT] Type 'music', 'radio', 'help', or 'quit'",
+    },
+  ]);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const focusInput = () => {
-    inputRef.current?.focus()
-  }
+    inputRef.current?.focus();
+  };
+
+  const addToHistory = useCallback((line: string) => {
+    setHistory((prev) => [
+      ...prev.slice(-20),
+      {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        text: line,
+      },
+    ]);
+  }, []);
 
   useEffect(() => {
-    focusInput()
-  }, [])
+    focusInput();
+  }, []);
 
   const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault()
+    event.preventDefault();
 
-    const command = input.trim().toLowerCase()
+    const command = input.trim().toLowerCase();
 
     if (!command) {
-      return
+      return;
     }
 
-    if (command === 'music') {
-      navigate('/player?source=local')
-      return
+    if (command === "music") {
+      addToHistory("$ music");
+      setInput("");
+      navigate("/player?source=local");
+      return;
     }
 
-    if (command === 'radio') {
-      navigate('/player?source=radio')
-      return
+    if (command === "radio" || command === "fm") {
+      addToHistory(`$ ${command}`);
+      setInput("");
+      navigate("/player?source=radio");
+      return;
     }
 
-    if (command === 'exit') {
-      setMessage('You are already on the first access screen.')
-      setInput('')
-      requestAnimationFrame(focusInput)
-      return
+    if (command === "exit") {
+      addToHistory("$ exit");
+      addToHistory("[INFO] Already on first access");
+      setInput("");
+      requestAnimationFrame(focusInput);
+      return;
     }
 
-    if (command === 'quit') {
-      window.App.quit()
-      return
+    if (command === "quit") {
+      window.App.quit();
+      return;
     }
 
-    if (command === 'help') {
-      setMessage("Type 'music' or 'radio' to choose a source.")
-      setInput('')
-      requestAnimationFrame(focusInput)
-      return
+    if (command === "help") {
+      addToHistory("$ help");
+      addToHistory("[HELP] Type 'music' for local files");
+      addToHistory("[HELP] Type 'radio' or 'fm' for streams");
+      addToHistory("[HELP] Use '+' or '-' for volume inside the player");
+      setInput("");
+      requestAnimationFrame(focusInput);
+      return;
     }
 
-    setMessage(`[ERROR] Unknown command: ${input.trim()}`)
-    setInput('')
-    requestAnimationFrame(focusInput)
-  }
+    addToHistory(`$ ${input.trim()}`);
+    addToHistory(`[ERROR] Unknown command: ${input.trim()}`);
+    setInput("");
+    requestAnimationFrame(focusInput);
+  };
 
   return (
     <>
-      <Header />
+      <Header title="prompt-play:/home" />
       <main
-        className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-background px-6"
+        className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-background px-4"
         onPointerDown={focusInput}
       >
         <section className="w-full max-w-3xl font-mono">
-          <div className="space-y-8">
-            <div className="space-y-3">
-              <h1 className="font-semibold text-2xl text-terminal-white">
-                Prompt Play v{version}
-              </h1>
-              <p className="text-terminal-gray">
-                A terminal-first media platform.
-              </p>
-              <div className="space-y-2 text-terminal-white/80 mt-5">
-                <p>Available sources</p>
-                <div className="grid gap-1">
-                  <p className="grid grid-cols-[4rem_1fr] gap-3">
-                    <span className="text-terminal-cyan">music</span>
-                    <span>Listen to your local library</span>
-                  </p>
-                  <p className="grid grid-cols-[4rem_1fr] gap-3">
-                    <span className="text-terminal-cyan">radio</span>
-                    <span>Listen to FM and web radios</span>
-                  </p>
-                </div>
-              </div>
+          <div className="border border-terminal-green/30 bg-background shadow-2xl">
+            <div className="border-terminal-green/20 border-b px-4 py-2 text-terminal-gray text-xs">
+              prompt-play:/home
             </div>
-
-            <div className="space-y-4">
-              <p
-                className={
-                  message.startsWith('[ERROR]')
-                    ? 'text-terminal-red'
-                    : 'text-terminal-cyan'
-                }
-              >
-                {message}
-              </p>
+            <div className="min-h-96 space-y-2 px-4 py-4 text-sm">
+              <div className="home-computer-title pb-4 text-terminal-cyan text-xl sm:text-4xl uppercase">
+                Prompt Play
+              </div>
+              {history.map((line) => (
+                <p
+                  className={
+                    line.text.startsWith("[ERROR]")
+                      ? "text-terminal-red"
+                      : line.text.startsWith("[HINT]") ||
+                          line.text.startsWith("[HELP]")
+                        ? "text-terminal-cyan"
+                        : line.text.startsWith("[OK]")
+                          ? "text-terminal-green"
+                          : "text-terminal-white"
+                  }
+                  key={line.id}
+                >
+                  {line.text}
+                </p>
+              ))}
 
               <form className="flex items-center gap-2" onSubmit={handleSubmit}>
+                <Prompt text="home" />
                 <Prompt text=">" />
                 <input
                   autoComplete="off"
                   className="min-w-0 flex-1 bg-transparent text-terminal-white caret-terminal-green outline-none placeholder:text-terminal-gray"
-                  onChange={event => setInput(event.target.value)}
+                  onChange={(event) => setInput(event.target.value)}
                   onPointerDown={focusInput}
                   placeholder="music | radio"
                   ref={inputRef}
@@ -121,5 +149,5 @@ export function HomeScreen() {
         </section>
       </main>
     </>
-  )
+  );
 }

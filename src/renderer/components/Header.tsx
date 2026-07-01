@@ -3,7 +3,7 @@
 import { Terminal } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-export function Header() {
+export function Header({ title = 'prompt play' }: { title?: string }) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -23,8 +23,8 @@ export function Header() {
           <span className="text-terminal-green">
             <Terminal className="inline h-3 w-3" />
           </span>
-          <span className="truncate font-mono font-semibold text-xs text-terminal-gray">
-            prompt play
+          <span className="truncate whitespace-pre font-mono font-semibold text-xs text-terminal-gray">
+            {title}
           </span>
         </div>
       </div>

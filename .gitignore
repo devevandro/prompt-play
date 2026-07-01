@@ -26,3 +26,4 @@ yarn-error.log*
 # md files
 improvements.md
 RELEASE_NOTES*.MD
+RELEASE_NOTES_*.md

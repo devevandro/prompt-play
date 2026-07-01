@@ -4,6 +4,23 @@ Prompt Play is an Electron desktop music player with a terminal-style
 interface. It supports local music folders and online radio streams from one
 shared player UI.
 
+## Why Prompt Play exists
+
+I enjoy listening to FM radio every day, but I never found a desktop player
+that felt right.
+
+Most applications rely on large interfaces, mouse navigation, and endless lists
+of stations.
+
+Prompt Play explores a different idea:
+
+What if listening to radio and music felt like using a terminal?
+
+Instead of menus, everything happens through commands.
+
+The terminal isn't the theme.
+It's the interface.
+
 ## Security Notice
 
 Prompt Play is open source.
@@ -124,6 +141,12 @@ Sources and radio:
 | `radio edit 1 Name \| City \| State \| URL \| Frequency` | Edit a saved station. |
 | `radio remove 1` | Remove a saved station. |
 | `radio clear` | Remove all saved stations. |
+| `radio export` | Export saved radios as JSON in Downloads. |
+| `radio import` | Import saved radios from JSON. |
+| `radio import external` | Import externally prepared radio JSON. |
+| `radio pin 1` | Pin a saved station into the radio `ls -la` list. |
+| `radio pins` | Show pinned stations for radio `ls -la`. |
+| `radio unpin 1` | Remove a station from the pinned `ls -la` list. |
 | `radio history` | Open `cat radio_history.txt` with up to 10 songs heard in the current session. |
 | `radio search music 1` | Open a YouTube search for a radio-history song. |
 | `settings radio.static on` | Enable the optional tuning sound while radio buffering takes longer than 1 second. |
@@ -148,7 +171,9 @@ Tabs and utility:
 | `theme list` or `ls -th` | Open the theme picker. |
 | `theme use [theme]` | Apply a theme. |
 | `vol 70`, `vol +10`, `vol -10` | Set or adjust volume. |
+| `+`, `=`, `-` | Adjust volume from an empty terminal prompt. |
 | `mute` or `unmute` | Mute playback or restore the previous volume. |
+| `copy error` | Copy the latest playback error details. |
 | `settings radio.static on/off` | Enable or disable the optional radio tuning sound. |
 | `status` or `info` | Show current playback status. |
 | `:q` | Close a temporary tab. |
@@ -180,19 +205,25 @@ readable in the terminal interface.
 
 ## Suggested Release
 
-Suggested next version: `1.3.0`.
+Suggested next version: `1.3.1`.
 
-This should be a minor release because it adds a new radio management workflow:
-Radio Browser search, saved station storage, manual add/edit/remove commands,
-and a search action from radio history. It also keeps the visualizer surface
-simple by exposing only `visualizer ascii`.
+This can be a patch release because it refines the existing `1.3.0` radio
+release rather than adding a new playback source. It improves radio export and
+import, saved-radio control for `ls -la`, terminal shortcuts, first-access
+presentation, and error handling.
 
 ## Current Release Highlights
 
-- Brazilian station search through Radio Browser with deduplicated results.
-- Saved radios persisted in Electron Storage under `prompt-play-radios`.
-- Manual radio add, edit, remove, and clear commands.
-- Search-result mode in the radio list with `radio add 1` save hints.
+- `radio export` writes timestamped JSON files directly to Downloads.
+- `radio import` and `radio import external` merge saved radio JSON.
+- `radio pin`, `radio pins`, and `radio unpin` control which saved radios
+  appear in radio `ls -la`.
+- Radio Browser search now returns a larger deduplicated result set.
+- Header text now reflects the active terminal session.
+- Home uses a terminal-style presentation with the Bitcount Prop Double title
+  font.
+- `+`, `=`, and `-` adjust volume from an empty terminal prompt.
+- `copy error` copies the most recent playback error details.
 - `radio search music [number]` for opening a YouTube search from radio
   history.
 - Optional radio tuning sound while stream buffering lasts longer than 1
@@ -255,5 +286,5 @@ Electron Storage data. Use `music clear` to reset saved music folders only, or
 - [commands.md](commands.md): terminal command reference.
 - [AGENTS.md](AGENTS.md): repository guidance for maintainers and coding
   agents.
-- [RELEASE_NOTES_1.3.0.md](RELEASE_NOTES_1.3.0.md): suggested release notes
+- [RELEASE_NOTES_1.3.1.md](RELEASE_NOTES_1.3.1.md): suggested release notes
   for the next version.

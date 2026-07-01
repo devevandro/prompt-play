@@ -66,6 +66,54 @@ function makeManualRadio(
   }
 }
 
+function isRadio(value: unknown): value is Radio {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const radio = value as Partial<Radio>
+
+  return (
+    typeof radio.name === 'string' &&
+    typeof radio.city === 'string' &&
+    typeof radio.state === 'string' &&
+    typeof radio.url === 'string'
+  )
+}
+
+function normalizeImportedRadio(radio: Radio, index: number): Radio {
+  const id = cleanValue(radio.id) || `imported-${Date.now()}-${index}`
+  const state = cleanValue(radio.state)
+
+  return {
+    ...radio,
+    id,
+    name: cleanValue(radio.name),
+    city: cleanValue(radio.city),
+    state,
+    region: cleanValue(radio.region) || state,
+    frequency: cleanValue(radio.frequency) || 'stream',
+    url: cleanValue(radio.url),
+  }
+}
+
+function normalizeImportedRadios(value: unknown): Radio[] {
+  const radios = Array.isArray(value)
+    ? value
+    : isRadio(value)
+      ? [value]
+    : value &&
+        typeof value === 'object' &&
+        Array.isArray((value as { radios?: unknown }).radios)
+      ? (value as { radios: unknown[] }).radios
+      : []
+
+  return radios
+    .filter(isRadio)
+    .map(normalizeImportedRadio)
+    .filter(radio => radio.name && radio.city && radio.state && radio.url)
+}
+
 export function createManualRadioFromParts(parts: string[]) {
   const [name, city, state, url, frequency] = parts.map(cleanValue)
 
@@ -93,14 +141,31 @@ export function useRadioSource({
   )
   const [radioSearchTerm, setRadioSearchTerm] = useState('')
   const { data: storedRadios } = useStoredValue<Radio[]>('prompt-play-radios')
+  const { data: storedRadioPins } = useStoredValue<string[]>(
+    'prompt-play-radio-pins'
+  )
   const persistRadios = useSetStoredValue<Radio[]>('prompt-play-radios')
+  const persistRadioPins = useSetStoredValue<string[]>(
+    'prompt-play-radio-pins'
+  )
 
   const savedRadios = useMemo(() => storedRadios ?? [], [storedRadios])
+  const pinnedRadioIds = useMemo(
+    () => storedRadioPins ?? [],
+    [storedRadioPins]
+  )
   const radioItems = useMemo(
     () => savedRadios.map(radioToItem),
     [savedRadios]
   )
   const radioListItems = radioListMode === 'search' ? searchItems : radioItems
+  const pinnedRadioItems = useMemo(
+    () =>
+      pinnedRadioIds
+        .map(id => radioItems.find(item => item.id === id))
+        .filter((item): item is PlayerQueueItem => Boolean(item)),
+    [pinnedRadioIds, radioItems]
+  )
 
   const recentRadioItems = useMemo(
     () =>
@@ -198,20 +263,84 @@ export function useRadioSource({
       await persistRadios(
         savedRadios.filter((_radio, radioIndex) => radioIndex !== index)
       )
+      await persistRadioPins(
+        pinnedRadioIds.filter(radioId => radioId !== removedRadio.id)
+      )
       setRecentRadioIds(prev =>
         prev.filter(radioId => radioId !== removedRadio.id)
       )
 
       return radioToItem(removedRadio)
     },
-    [persistRadios, savedRadios]
+    [persistRadioPins, persistRadios, pinnedRadioIds, savedRadios]
   )
 
   const clearRadios = useCallback(async () => {
     await persistRadios([])
+    await persistRadioPins([])
     setRecentRadioIds([])
     showSavedRadios()
-  }, [persistRadios, showSavedRadios])
+  }, [persistRadioPins, persistRadios, showSavedRadios])
+
+  const exportRadios = useCallback(async () => {
+    return window.App.exportRadios(savedRadios)
+  }, [savedRadios])
+
+  const importRadios = useCallback(async () => {
+    const importedRadios = normalizeImportedRadios(
+      await window.App.importRadios()
+    )
+
+    if (importedRadios.length === 0) {
+      return 0
+    }
+
+    const importedIds = new Set(importedRadios.map(radio => radio.id))
+    const nextRadios = [
+      ...importedRadios,
+      ...savedRadios.filter(radio => !importedIds.has(radio.id)),
+    ]
+
+    await persistRadios(nextRadios)
+    showSavedRadios()
+
+    return importedRadios.length
+  }, [persistRadios, savedRadios, showSavedRadios])
+
+  const pinRadio = useCallback(
+    async (index: number) => {
+      const radio = savedRadios[index]
+
+      if (!radio) {
+        return null
+      }
+
+      await persistRadioPins([
+        radio.id,
+        ...pinnedRadioIds.filter(radioId => radioId !== radio.id),
+      ])
+
+      return radioToItem(radio)
+    },
+    [persistRadioPins, pinnedRadioIds, savedRadios]
+  )
+
+  const unpinRadio = useCallback(
+    async (index: number) => {
+      const item = pinnedRadioItems[index]
+
+      if (!item) {
+        return null
+      }
+
+      await persistRadioPins(
+        pinnedRadioIds.filter(radioId => radioId !== item.id)
+      )
+
+      return item
+    },
+    [persistRadioPins, pinnedRadioIds, pinnedRadioItems]
+  )
 
   useEffect(() => {
     if (activeTab !== 'radio-list' || !showRadioListTab) {
@@ -259,6 +388,10 @@ export function useRadioSource({
     addSearchResult,
     clearRadios,
     editRadio,
+    exportRadios,
+    importRadios,
+    pinRadio,
+    pinnedRadioItems,
     radioItems,
     radioListItems,
     radioListMode,
@@ -270,5 +403,6 @@ export function useRadioSource({
     searchRadios,
     setRecentRadioIds,
     showSavedRadios,
+    unpinRadio,
   }
 }
