@@ -299,6 +299,13 @@
   -webkit-app-region: drag;
 }
 
+.home-computer-title {
+  font-family:
+    "Bitcount Prop Double", "DM Mono", "SFMono-Regular", Consolas,
+    "Liberation Mono", Menlo, monospace;
+  letter-spacing: 0;
+}
+
 @keyframes blink {
   0%,
   50% {
