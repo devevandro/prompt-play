@@ -48,6 +48,44 @@ https://github.com/devevandro/prompt-play
 - Shuffle, repeat, mute, and unmute controls across supported sources.
 - Theme picker with terminal-inspired themes, each with its own monospace font.
 
+## Screenshots
+
+### Home
+
+![Prompt Play home screen](screenshots/home.png)
+
+### Radio Playback
+
+![Prompt Play radio playback screen](screenshots/play-radio.png)
+
+### Local Music Playback
+
+![Prompt Play local music playback screen](screenshots/play-music.png)
+
+### Player Controls
+
+![Prompt Play player controls screen](screenshots/palyer-controls.png)
+
+### Now Playing
+
+![Prompt Play now playing screen](screenshots/cat-now-playing.png)
+
+### Visualizer
+
+![Prompt Play ASCII visualizer screen](screenshots/visualizer.png)
+
+### Radio Search
+
+![Prompt Play radio search screen](screenshots/searching-radio.png)
+
+### Radio Music History
+
+![Prompt Play radio music history screen](screenshots/radio-music-history.png)
+
+### Themes
+
+![Prompt Play theme list screen](screenshots/theme-list.png)
+
 ## Requirements
 
 - Node.js compatible with the project dependencies.
