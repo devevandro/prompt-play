@@ -46,6 +46,10 @@ const API = {
     ipcRenderer.invoke('radio:check-stream', url) as Promise<boolean>,
   searchRadios: (term: string) =>
     ipcRenderer.invoke('radio:search', term) as Promise<Radio[]>,
+  exportRadios: (radios: Radio[]) =>
+    ipcRenderer.invoke('radio:export', radios) as Promise<string | null>,
+  importRadios: () =>
+    ipcRenderer.invoke('radio:import') as Promise<Radio[] | null>,
   openExternal: (url: string) =>
     ipcRenderer.invoke('browser:open-external', url) as Promise<void>,
   startRadioMetadata: (radioId: string, url: string, radioName: string) => {

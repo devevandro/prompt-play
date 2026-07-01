@@ -70,7 +70,7 @@ export async function searchBrazilianRadios(term: string): Promise<Radio[]> {
         countrycode: 'BR',
         [field]: searchTerm,
         hidebroken: true,
-        limit: 15,
+        limit: 40,
         order: 'clickcount',
         reverse: true,
       })
@@ -86,5 +86,5 @@ export async function searchBrazilianRadios(term: string): Promise<Radio[]> {
     }
   }
 
-  return [...uniqueRadios.values()].slice(0, 20)
+  return [...uniqueRadios.values()].slice(0, 60)
 }

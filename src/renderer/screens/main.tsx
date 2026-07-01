@@ -1,40 +1,39 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Header } from 'renderer/components/Header'
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Header } from "renderer/components/Header";
 
-import { HelpTab } from 'renderer/components/music-player/help-tab'
-import { MusicListTab } from 'renderer/components/music-player/music-list-tab'
-import { NowPlaying } from 'renderer/components/music-player/now-playing'
-import { PlayerControls } from 'renderer/components/music-player/player-controls'
-import { RadioHistoryTab } from 'renderer/components/music-player/radio-history-tab'
-import { RadioListTab } from 'renderer/components/music-player/radio-list-tab'
-import { StatusFooter } from 'renderer/components/music-player/status-footer'
-import { TerminalPrompt } from 'renderer/components/music-player/terminal-prompt'
-import { TerminalTabs } from 'renderer/components/music-player/terminal-tabs'
-import { TrackList } from 'renderer/components/music-player/track-list'
-import { Visualizer } from 'renderer/components/music-player/visualizer'
-import tuningInSoundUrl from 'shared/sounds/tuning-in.mp3'
+import { HelpTab } from "renderer/components/music-player/help-tab";
+import { MusicListTab } from "renderer/components/music-player/music-list-tab";
+import { NowPlaying } from "renderer/components/music-player/now-playing";
+import { PlayerControls } from "renderer/components/music-player/player-controls";
+import { RadioHistoryTab } from "renderer/components/music-player/radio-history-tab";
+import { RadioListTab } from "renderer/components/music-player/radio-list-tab";
+import { StatusFooter } from "renderer/components/music-player/status-footer";
+import { TerminalPrompt } from "renderer/components/music-player/terminal-prompt";
+import { TerminalTabs } from "renderer/components/music-player/terminal-tabs";
+import { TrackList } from "renderer/components/music-player/track-list";
+import { Visualizer } from "renderer/components/music-player/visualizer";
+import tuningInSoundUrl from "shared/sounds/tuning-in.mp3";
 import {
   useClearStoredValues,
   useSetStoredValue,
   useStoredValue,
-} from 'renderer/hooks/use-app-storage'
-import { useAudioAnalyzer } from 'renderer/hooks/use-audio-analyzer'
-import { useMusicLibrary } from 'renderer/hooks/use-music-library'
-import { usePlayerCommands } from 'renderer/hooks/use-player-commands'
+} from "renderer/hooks/use-app-storage";
+import { useAudioAnalyzer } from "renderer/hooks/use-audio-analyzer";
+import { useMusicLibrary } from "renderer/hooks/use-music-library";
+import { usePlayerCommands } from "renderer/hooks/use-player-commands";
 import {
   createManualRadioFromParts,
   useRadioSource,
-} from 'renderer/hooks/use-radio-source'
-import { PLAYER_SOURCES } from 'renderer/lib/player-sources'
+} from "renderer/hooks/use-radio-source";
+import { PLAYER_SOURCES } from "renderer/lib/player-sources";
 import {
-  generateProgressBar,
   getPlaybackErrorMessage,
   getRandomQueueIndex,
   isExpectedPlaybackAbort,
   normalizeAudioSrc,
-} from 'renderer/lib/player-utils'
-import { getThemeById, THEMES, type ThemeId } from 'renderer/lib/themes'
+} from "renderer/lib/player-utils";
+import { getThemeById, THEMES, type ThemeId } from "renderer/lib/themes";
 import type {
   AppSettings,
   PlayerQueueItem,
@@ -42,178 +41,183 @@ import type {
   PlayerSourceMode,
   RadioHistoryEntry,
   RadioMetadata,
-} from 'shared/types'
-import { version } from '../../../package.json'
+} from "shared/types";
+import { version } from "../../../package.json";
 
 function getTabs(
   source: PlayerSource,
   showHelpTab: boolean,
   showRadioListTab: boolean,
   showRadioHistoryTab: boolean,
-  showMusicListTab: boolean
+  showMusicListTab: boolean,
 ) {
   const tabs = [
-    { id: 'tracks', label: source.listCommand, shortcut: '⌘1' },
-    { id: 'now-playing', label: 'cat now_playing.txt', shortcut: '⌘2' },
-    { id: 'visualizer', label: './visualizer --mode=ascii', shortcut: '⌘3' },
-    { id: 'controls', label: './player-controls', shortcut: '⌘4' },
-  ]
+    { id: "tracks", label: source.listCommand, shortcut: "⌘1" },
+    { id: "now-playing", label: "cat now_playing.txt", shortcut: "⌘2" },
+    { id: "visualizer", label: "./visualizer --mode=ascii", shortcut: "⌘3" },
+    { id: "controls", label: "./player-controls", shortcut: "⌘4" },
+  ];
 
   if (showRadioListTab) {
-    tabs.push({ id: 'radio-list', label: 'radio list', shortcut: ':q' })
+    tabs.push({ id: "radio-list", label: "radio list", shortcut: ":q" });
   }
 
   if (showRadioHistoryTab) {
     tabs.push({
-      id: 'radio-history',
-      label: 'cat radio_history.txt',
-      shortcut: ':q',
-    })
+      id: "radio-history",
+      label: "cat radio_history.txt",
+      shortcut: ":q",
+    });
   }
 
   if (showMusicListTab) {
-    tabs.push({ id: 'music-list', label: 'music lists', shortcut: ':q' })
+    tabs.push({ id: "music-list", label: "music lists", shortcut: ":q" });
   }
 
   if (showHelpTab) {
-    tabs.push({ id: 'help', label: 'Prompt Play Help', shortcut: ':q' })
+    tabs.push({ id: "help", label: "Prompt Play Help", shortcut: ":q" });
   }
 
-  return tabs
+  return tabs;
 }
 
 export function MainScreen() {
-  const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [activeSourceMode, setActiveSourceMode] = useState<PlayerSourceMode>(
     () => {
-      const source = searchParams.get('source')
+      const source = searchParams.get("source");
 
-      if (source === 'radio') {
-        return source
+      if (source === "radio") {
+        return source;
       }
 
-      return 'local'
-    }
-  )
-  const [activeTheme, setActiveTheme] = useState<ThemeId>('default')
-  const [isThemePickerOpen, setIsThemePickerOpen] = useState(false)
-  const [selectedThemeIndex, setSelectedThemeIndex] = useState(0)
-  const [currentItem, setCurrentItem] = useState<PlayerQueueItem | null>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [volume, setVolume] = useState(0.7)
-  const [isShuffleEnabled, setIsShuffleEnabled] = useState(false)
-  const [isRepeatEnabled, setIsRepeatEnabled] = useState(false)
-  const [visualizerMode, setVisualizerMode] = useState<'ascii'>('ascii')
-  const [radioMetadata, setRadioMetadata] = useState<RadioMetadata | null>(null)
+      return "local";
+    },
+  );
+  const [activeTheme, setActiveTheme] = useState<ThemeId>("default");
+  const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
+  const [selectedThemeIndex, setSelectedThemeIndex] = useState(0);
+  const [currentItem, setCurrentItem] = useState<PlayerQueueItem | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(0.7);
+  const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
+  const [isRepeatEnabled, setIsRepeatEnabled] = useState(false);
+  const [visualizerMode, setVisualizerMode] = useState<"ascii">("ascii");
+  const [radioMetadata, setRadioMetadata] = useState<RadioMetadata | null>(
+    null,
+  );
   const [radioMetadataUpdatedAt, setRadioMetadataUpdatedAt] = useState<
     number | null
-  >(null)
-  const [radioHistory, setRadioHistory] = useState<RadioHistoryEntry[]>([])
-  const [relativeTimeNow, setRelativeTimeNow] = useState(Date.now())
-  const [activeTab, setActiveTab] = useState('tracks')
-  const [showHelpTab, setShowHelpTab] = useState(false)
-  const [showRadioListTab, setShowRadioListTab] = useState(false)
-  const [showRadioHistoryTab, setShowRadioHistoryTab] = useState(false)
-  const [showMusicListTab, setShowMusicListTab] = useState(false)
+  >(null);
+  const [radioHistory, setRadioHistory] = useState<RadioHistoryEntry[]>([]);
+  const [relativeTimeNow, setRelativeTimeNow] = useState(Date.now());
+  const [activeTab, setActiveTab] = useState("tracks");
+  const [showHelpTab, setShowHelpTab] = useState(false);
+  const [showRadioListTab, setShowRadioListTab] = useState(false);
+  const [showRadioHistoryTab, setShowRadioHistoryTab] = useState(false);
+  const [showMusicListTab, setShowMusicListTab] = useState(false);
   const [commandHistory, setCommandHistory] = useState<string[]>([
     `[INFO] prompt play v${version}`,
-    "[HINT] Type 'prompt play --init' to start or 'help' for help",
-    '$ ',
-  ])
-  const [isLoading, setIsLoading] = useState(false)
-  const [radioStaticEnabled, setRadioStaticEnabled] = useState(true)
-  const audioRef = useRef<HTMLAudioElement>(null)
-  const radioStaticAudioRef = useRef<HTMLAudioElement>(null)
-  const connectionTimersRef = useRef<number[]>([])
-  const radioStaticTimerRef = useRef<number | null>(null)
-  const connectedRadioItemIdRef = useRef<string | null>(null)
-  const previousTabRef = useRef('tracks')
-  const trackListScrollRef = useRef<HTMLDivElement>(null)
-  const radioListScrollRef = useRef<HTMLDivElement>(null)
-  const radioHistoryScrollRef = useRef<HTMLDivElement>(null)
-  const volumeRef = useRef(volume)
-  const previousVolumeRef = useRef(volume)
-  const currentRadioIdRef = useRef<string | null>(null)
-  const currentRadioNameRef = useRef('')
-  const lastRadioMetadataRef = useRef('')
+    "[HINT] Type 'music', 'radio', or 'help'",
+    "$ ",
+  ]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [radioStaticEnabled, setRadioStaticEnabled] = useState(true);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const radioStaticAudioRef = useRef<HTMLAudioElement>(null);
+  const connectionTimersRef = useRef<number[]>([]);
+  const radioStaticTimerRef = useRef<number | null>(null);
+  const connectedRadioItemIdRef = useRef<string | null>(null);
+  const previousTabRef = useRef("tracks");
+  const trackListScrollRef = useRef<HTMLDivElement>(null);
+  const radioListScrollRef = useRef<HTMLDivElement>(null);
+  const radioHistoryScrollRef = useRef<HTMLDivElement>(null);
+  const volumeRef = useRef(volume);
+  const previousVolumeRef = useRef(volume);
+  const currentRadioIdRef = useRef<string | null>(null);
+  const currentRadioNameRef = useRef("");
+  const lastRadioMetadataRef = useRef("");
+  const lastErrorRef = useRef<string | null>(null);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
-    null
-  )
+    null,
+  );
   const { data: storedTheme, isFetched: hasFetchedStoredTheme } =
-    useStoredValue<ThemeId>('prompt-play-theme')
+    useStoredValue<ThemeId>("prompt-play-theme");
   const { data: storedSettings, isFetched: hasFetchedStoredSettings } =
-    useStoredValue<AppSettings>('prompt-play-settings')
-  const persistTheme = useSetStoredValue<ThemeId>('prompt-play-theme')
-  const persistSettings = useSetStoredValue<AppSettings>('prompt-play-settings')
-  const { mutateAsync: clearStoredValues } = useClearStoredValues()
+    useStoredValue<AppSettings>("prompt-play-settings");
+  const persistTheme = useSetStoredValue<ThemeId>("prompt-play-theme");
+  const persistSettings = useSetStoredValue<AppSettings>(
+    "prompt-play-settings",
+  );
+  const { mutateAsync: clearStoredValues } = useClearStoredValues();
 
   const addToHistory = useCallback((command: string) => {
-    setCommandHistory(prev => [...prev.slice(-30), command])
-  }, [])
+    setCommandHistory((prev) => [...prev.slice(-30), command]);
+  }, []);
 
   const stopRadioStatic = useCallback(() => {
     if (radioStaticTimerRef.current !== null) {
-      window.clearTimeout(radioStaticTimerRef.current)
-      radioStaticTimerRef.current = null
+      window.clearTimeout(radioStaticTimerRef.current);
+      radioStaticTimerRef.current = null;
     }
 
-    const staticAudio = radioStaticAudioRef.current
+    const staticAudio = radioStaticAudioRef.current;
 
     if (staticAudio) {
-      staticAudio.pause()
-      staticAudio.currentTime = 0
+      staticAudio.pause();
+      staticAudio.currentTime = 0;
     }
-  }, [])
+  }, []);
 
   const clearConnectionTimers = useCallback(() => {
-    connectionTimersRef.current.forEach(timerId => {
-      window.clearTimeout(timerId)
-    })
-    connectionTimersRef.current = []
-    stopRadioStatic()
-  }, [stopRadioStatic])
+    connectionTimersRef.current.forEach((timerId) => {
+      window.clearTimeout(timerId);
+    });
+    connectionTimersRef.current = [];
+    stopRadioStatic();
+  }, [stopRadioStatic]);
 
   useEffect(() => {
-    return () => clearConnectionTimers()
-  }, [clearConnectionTimers])
+    return () => clearConnectionTimers();
+  }, [clearConnectionTimers]);
 
   useEffect(() => {
     const interval = window.setInterval(
       () => setRelativeTimeNow(Date.now()),
-      30_000
-    )
+      30_000,
+    );
 
-    return () => window.clearInterval(interval)
-  }, [])
+    return () => window.clearInterval(interval);
+  }, []);
 
   useEffect(() => {
-    return window.App.onRadioMetadata(metadata => {
+    return window.App.onRadioMetadata((metadata) => {
       if (metadata.radioId !== currentRadioIdRef.current) {
-        return
+        return;
       }
 
       const metadataKey = `${metadata.radioId}\u0000${metadata.title}\u0000${
-        metadata.subtitle ?? ''
-      }`
+        metadata.subtitle ?? ""
+      }`;
 
       if (metadataKey === lastRadioMetadataRef.current) {
-        return
+        return;
       }
 
-      const updatedAt = Date.now()
-      lastRadioMetadataRef.current = metadataKey
-      setRadioMetadata(metadata)
-      setRadioMetadataUpdatedAt(updatedAt)
-      setRelativeTimeNow(updatedAt)
+      const updatedAt = Date.now();
+      lastRadioMetadataRef.current = metadataKey;
+      setRadioMetadata(metadata);
+      setRadioMetadataUpdatedAt(updatedAt);
+      setRelativeTimeNow(updatedAt);
       if (
         metadata.isMusic &&
         metadata.title.trim() &&
-        metadata.title.toLowerCase() !== 'unavailable'
+        metadata.title.toLowerCase() !== "unavailable"
       ) {
-        setRadioHistory(prev =>
+        setRadioHistory((prev) =>
           [
             {
               ...metadata,
@@ -222,94 +226,94 @@ export function MainScreen() {
               updatedAt,
             },
             ...prev,
-          ].slice(0, 10)
-        )
+          ].slice(0, 10),
+        );
       }
-      addToHistory(`  ♫ now playing: ${metadata.title}`)
+      addToHistory(`  ♫ now playing: ${metadata.title}`);
 
       if (metadata.subtitle) {
-        addToHistory(`  artist: ${metadata.subtitle}`)
+        addToHistory(`  artist: ${metadata.subtitle}`);
       }
-    })
-  }, [addToHistory])
+    });
+  }, [addToHistory]);
 
   useEffect(() => {
-    const isPlayingRadio = currentItem?.mode === 'radio' && isPlaying
+    const isPlayingRadio = currentItem?.mode === "radio" && isPlaying;
 
-    currentRadioIdRef.current = isPlayingRadio ? currentItem.id : null
-    currentRadioNameRef.current = isPlayingRadio ? currentItem.title : ''
+    currentRadioIdRef.current = isPlayingRadio ? currentItem.id : null;
+    currentRadioNameRef.current = isPlayingRadio ? currentItem.title : "";
 
     if (!isPlayingRadio) {
-      window.App.stopRadioMetadata()
-      return
+      window.App.stopRadioMetadata();
+      return;
     }
 
     window.App.startRadioMetadata(
       currentItem.id,
       currentItem.src,
-      currentItem.title
-    )
+      currentItem.title,
+    );
 
     return () => {
-      window.App.stopRadioMetadata()
-    }
-  }, [currentItem, isPlaying])
+      window.App.stopRadioMetadata();
+    };
+  }, [currentItem, isPlaying]);
 
   const closeHelpTab = useCallback(() => {
-    setShowHelpTab(false)
-    setActiveTab(previousTabRef.current)
-    addToHistory('[OK] Help tab closed')
-  }, [addToHistory])
+    setShowHelpTab(false);
+    setActiveTab(previousTabRef.current);
+    addToHistory("[OK] Help tab closed");
+  }, [addToHistory]);
 
   const closeRadioListTab = useCallback(() => {
-    setShowRadioListTab(false)
-    setActiveTab(previousTabRef.current)
-    addToHistory('[OK] Radio list tab closed')
-  }, [addToHistory])
+    setShowRadioListTab(false);
+    setActiveTab(previousTabRef.current);
+    addToHistory("[OK] Radio list tab closed");
+  }, [addToHistory]);
 
   const closeRadioHistoryTab = useCallback(() => {
-    setShowRadioHistoryTab(false)
-    setActiveTab(previousTabRef.current)
-    addToHistory('[OK] Radio history tab closed')
-  }, [addToHistory])
+    setShowRadioHistoryTab(false);
+    setActiveTab(previousTabRef.current);
+    addToHistory("[OK] Radio history tab closed");
+  }, [addToHistory]);
 
   const closeMusicListTab = useCallback(() => {
-    setShowMusicListTab(false)
-    setActiveTab(previousTabRef.current)
-    addToHistory('[OK] Music lists tab closed')
-  }, [addToHistory])
+    setShowMusicListTab(false);
+    setActiveTab(previousTabRef.current);
+    addToHistory("[OK] Music lists tab closed");
+  }, [addToHistory]);
 
   const openHelpTab = useCallback(() => {
     previousTabRef.current =
-      activeTab === 'help' ? previousTabRef.current : activeTab
-    setShowHelpTab(true)
-    setActiveTab('help')
-    addToHistory('[HELP] Opened Prompt Play Help')
-  }, [activeTab, addToHistory])
+      activeTab === "help" ? previousTabRef.current : activeTab;
+    setShowHelpTab(true);
+    setActiveTab("help");
+    addToHistory("[HELP] Opened Prompt Play Help");
+  }, [activeTab, addToHistory]);
 
   const openRadioListTab = useCallback(() => {
     previousTabRef.current =
-      activeTab === 'radio-list' ? previousTabRef.current : activeTab
-    setShowRadioListTab(true)
-    setActiveTab('radio-list')
-    addToHistory('[INFO] Opened radio list')
-  }, [activeTab, addToHistory])
+      activeTab === "radio-list" ? previousTabRef.current : activeTab;
+    setShowRadioListTab(true);
+    setActiveTab("radio-list");
+    addToHistory("[INFO] Opened radio list");
+  }, [activeTab, addToHistory]);
 
   const openRadioHistoryTab = useCallback(() => {
     previousTabRef.current =
-      activeTab === 'radio-history' ? previousTabRef.current : activeTab
-    setShowRadioHistoryTab(true)
-    setActiveTab('radio-history')
-    addToHistory('[INFO] Opened radio history')
-  }, [activeTab, addToHistory])
+      activeTab === "radio-history" ? previousTabRef.current : activeTab;
+    setShowRadioHistoryTab(true);
+    setActiveTab("radio-history");
+    addToHistory("[INFO] Opened radio history");
+  }, [activeTab, addToHistory]);
 
   const openMusicListTab = useCallback(() => {
     previousTabRef.current =
-      activeTab === 'music-list' ? previousTabRef.current : activeTab
-    setShowMusicListTab(true)
-    setActiveTab('music-list')
-    addToHistory('[INFO] Opened music lists')
-  }, [activeTab, addToHistory])
+      activeTab === "music-list" ? previousTabRef.current : activeTab;
+    setShowMusicListTab(true);
+    setActiveTab("music-list");
+    addToHistory("[INFO] Opened music lists");
+  }, [activeTab, addToHistory]);
 
   const {
     clearMusicLibraries,
@@ -323,12 +327,16 @@ export function MainScreen() {
     openMusicListTab,
     setCurrentItem,
     setIsLoading,
-  })
+  });
   const {
     addManualRadio,
     addSearchResult,
     clearRadios,
     editRadio,
+    exportRadios,
+    importRadios,
+    pinRadio,
+    pinnedRadioItems,
     radioItems,
     radioListItems,
     radioListMode,
@@ -339,50 +347,53 @@ export function MainScreen() {
     searchRadios,
     setRecentRadioIds,
     showSavedRadios,
-  } = useRadioSource({ activeTab, showRadioListTab })
+    unpinRadio,
+  } = useRadioSource({ activeTab, showRadioListTab });
   const openSavedRadioListTab = useCallback(() => {
-    showSavedRadios()
-    openRadioListTab()
-  }, [openRadioListTab, showSavedRadios])
+    showSavedRadios();
+    openRadioListTab();
+  }, [openRadioListTab, showSavedRadios]);
   const localItems = useMemo(
     () => musicLibraries[0]?.items ?? [],
-    [musicLibraries]
-  )
+    [musicLibraries],
+  );
   const items = useMemo(
     () => [...localItems, ...radioItems],
-    [localItems, radioItems]
-  )
+    [localItems, radioItems],
+  );
   const activeSource = useMemo(() => {
-    const source = PLAYER_SOURCES[activeSourceMode]
+    const source = PLAYER_SOURCES[activeSourceMode];
 
-    if (activeSourceMode !== 'local' || musicLibraries.length === 0) {
-      return source
+    if (activeSourceMode !== "local" || musicLibraries.length === 0) {
+      return source;
     }
 
     return {
       ...source,
       locationLabel: musicLibraries[0].path,
-      emptyHint: 'type music -- path pathname to config',
-    }
-  }, [activeSourceMode, musicLibraries])
-  const canAnalyzeAudio = activeSource.supportsSeek
+      emptyHint: "type music -- path pathname to config",
+    };
+  }, [activeSourceMode, musicLibraries]);
+  const canAnalyzeAudio = activeSource.supportsSeek;
   const { frequencyData, isConnected } = useAudioAnalyzer(
     audioElement,
     isPlaying,
-    canAnalyzeAudio
-  )
+    canAnalyzeAudio,
+  );
   const activeItems = useMemo(
-    () => items.filter(item => item.mode === activeSourceMode),
-    [activeSourceMode, items]
-  )
+    () => items.filter((item) => item.mode === activeSourceMode),
+    [activeSourceMode, items],
+  );
+  const visibleRadioItems =
+    pinnedRadioItems.length > 0 ? pinnedRadioItems : recentRadioItems;
   const visibleItems =
-    activeSourceMode === 'radio' ? recentRadioItems : activeItems
+    activeSourceMode === "radio" ? visibleRadioItems : activeItems;
   const queueItems =
-    activeSourceMode === 'radio'
-      ? activeTab === 'radio-list' && showRadioListTab
+    activeSourceMode === "radio"
+      ? activeTab === "radio-list" && showRadioListTab
         ? radioListItems
-        : recentRadioItems
-      : activeItems
+        : visibleRadioItems
+      : activeItems;
   const tabs = useMemo(
     () =>
       getTabs(
@@ -390,7 +401,7 @@ export function MainScreen() {
         showHelpTab,
         showRadioListTab,
         showRadioHistoryTab,
-        showMusicListTab
+        showMusicListTab,
       ),
     [
       activeSource,
@@ -398,439 +409,430 @@ export function MainScreen() {
       showRadioListTab,
       showRadioHistoryTab,
       showMusicListTab,
-    ]
-  )
+    ],
+  );
 
   const cycleTab = useCallback(() => {
-    setActiveTab(currentTab => {
-      const currentIndex = tabs.findIndex(tab => tab.id === currentTab)
+    setActiveTab((currentTab) => {
+      const currentIndex = tabs.findIndex((tab) => tab.id === currentTab);
       const nextIndex =
-        currentIndex === -1 ? 0 : (currentIndex + 1) % tabs.length
+        currentIndex === -1 ? 0 : (currentIndex + 1) % tabs.length;
 
-      return tabs[nextIndex]?.id ?? 'tracks'
-    })
-  }, [tabs])
+      return tabs[nextIndex]?.id ?? "tracks";
+    });
+  }, [tabs]);
 
-  const scrollRadioList = useCallback((direction: 'down' | 'up') => {
+  const scrollRadioList = useCallback((direction: "down" | "up") => {
     radioListScrollRef.current?.scrollBy({
-      top: direction === 'down' ? 48 : -48,
-      behavior: 'smooth',
-    })
-  }, [])
+      top: direction === "down" ? 48 : -48,
+      behavior: "smooth",
+    });
+  }, []);
 
-  const scrollRadioHistory = useCallback((direction: 'down' | 'up') => {
+  const scrollRadioHistory = useCallback((direction: "down" | "up") => {
     radioHistoryScrollRef.current?.scrollBy({
-      top: direction === 'down' ? 72 : -72,
-      behavior: 'smooth',
-    })
-  }, [])
+      top: direction === "down" ? 72 : -72,
+      behavior: "smooth",
+    });
+  }, []);
 
-  const scrollTrackList = useCallback((direction: 'down' | 'up') => {
+  const scrollTrackList = useCallback((direction: "down" | "up") => {
     trackListScrollRef.current?.scrollBy({
-      top: direction === 'down' ? 48 : -48,
-      behavior: 'smooth',
-    })
-  }, [])
+      top: direction === "down" ? 48 : -48,
+      behavior: "smooth",
+    });
+  }, []);
 
   useEffect(() => {
     if (audioRef.current) {
-      setAudioElement(audioRef.current)
+      setAudioElement(audioRef.current);
     }
-  }, [activeSourceMode, currentItem])
+  }, [activeSourceMode, currentItem]);
 
   useEffect(() => {
     if (!hasFetchedStoredTheme) {
-      return
+      return;
     }
 
-    const theme = storedTheme ? getThemeById(storedTheme) : undefined
+    const theme = storedTheme ? getThemeById(storedTheme) : undefined;
 
     if (theme) {
-      setActiveTheme(theme.id)
-      setSelectedThemeIndex(THEMES.findIndex(item => item.id === theme.id))
+      setActiveTheme(theme.id);
+      setSelectedThemeIndex(THEMES.findIndex((item) => item.id === theme.id));
     }
-  }, [hasFetchedStoredTheme, storedTheme])
+  }, [hasFetchedStoredTheme, storedTheme]);
 
   useEffect(() => {
     if (!hasFetchedStoredSettings) {
-      return
+      return;
     }
 
-    setRadioStaticEnabled(storedSettings?.radioStaticEnabled ?? true)
-  }, [hasFetchedStoredSettings, storedSettings])
+    setRadioStaticEnabled(storedSettings?.radioStaticEnabled ?? true);
+  }, [hasFetchedStoredSettings, storedSettings]);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = activeTheme
-  }, [activeTheme])
-
-  const simulateLoading = useCallback(
-    async (
-      messages: { text: string; delay: number }[],
-      onComplete?: () => void
-    ) => {
-      setIsLoading(true)
-
-      for (const message of messages) {
-        addToHistory(message.text)
-        await new Promise(resolve => setTimeout(resolve, message.delay))
-      }
-
-      for (let progress = 0; progress <= 100; progress += 10) {
-        setCommandHistory(prev => {
-          const newHistory = [...prev]
-
-          if (newHistory[newHistory.length - 1]?.includes('[')) {
-            newHistory[newHistory.length - 1] =
-              `[LOADING] ${generateProgressBar(progress)}`
-          } else {
-            newHistory.push(`[LOADING] ${generateProgressBar(progress)}`)
-          }
-
-          return newHistory.slice(-30)
-        })
-        await new Promise(resolve => setTimeout(resolve, 80))
-      }
-
-      setIsLoading(false)
-      onComplete?.()
-    },
-    [addToHistory]
-  )
+    document.documentElement.dataset.theme = activeTheme;
+  }, [activeTheme]);
 
   const selectSource = useCallback(
     (mode: PlayerSourceMode) => {
-      clearConnectionTimers()
-      const nextSource = PLAYER_SOURCES[mode]
+      clearConnectionTimers();
+      const nextSource = PLAYER_SOURCES[mode];
 
-      setActiveSourceMode(mode)
-      setCurrentItem(null)
-      setRadioMetadata(null)
-      setRadioMetadataUpdatedAt(null)
-      lastRadioMetadataRef.current = ''
-      setCurrentTime(0)
-      setDuration(0)
-      setIsPlaying(false)
-      connectedRadioItemIdRef.current = null
-      addToHistory(`[INFO] Active source: ${nextSource.label}`)
-      addToHistory(`[INFO] ${nextSource.description}`)
+      setActiveSourceMode(mode);
+      setCurrentItem(null);
+      setRadioMetadata(null);
+      setRadioMetadataUpdatedAt(null);
+      lastRadioMetadataRef.current = "";
+      setCurrentTime(0);
+      setDuration(0);
+      setIsPlaying(false);
+      connectedRadioItemIdRef.current = null;
+      addToHistory(`[INFO] Active source: ${nextSource.label}`);
+      addToHistory(`[INFO] ${nextSource.description}`);
     },
-    [addToHistory, clearConnectionTimers]
-  )
+    [addToHistory, clearConnectionTimers],
+  );
 
   const clearPlayback = useCallback(() => {
-    clearConnectionTimers()
+    clearConnectionTimers();
 
     if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current.removeAttribute('src')
-      audioRef.current.load()
+      audioRef.current.pause();
+      audioRef.current.removeAttribute("src");
+      audioRef.current.load();
     }
 
-    setCurrentItem(null)
-    setRadioMetadata(null)
-    setRadioMetadataUpdatedAt(null)
-    lastRadioMetadataRef.current = ''
-    setCurrentTime(0)
-    setDuration(0)
-    setIsPlaying(false)
-    connectedRadioItemIdRef.current = null
-    addToHistory('[OK] Cleared playback for radio and music')
-  }, [addToHistory, clearConnectionTimers])
+    setCurrentItem(null);
+    setRadioMetadata(null);
+    setRadioMetadataUpdatedAt(null);
+    lastRadioMetadataRef.current = "";
+    setCurrentTime(0);
+    setDuration(0);
+    setIsPlaying(false);
+    connectedRadioItemIdRef.current = null;
+    addToHistory("[OK] Cleared playback for radio and music");
+  }, [addToHistory, clearConnectionTimers]);
 
   const clearAllPlayback = useCallback(async () => {
-    clearPlayback()
+    clearPlayback();
 
     try {
-      await clearStoredValues()
-      setActiveTheme('default')
-      setRadioStaticEnabled(true)
-      setSelectedThemeIndex(THEMES.findIndex(item => item.id === 'default'))
-      await resetMusicLibraries()
-      addToHistory('[OK] Removed saved Electron Storage data')
+      await clearStoredValues();
+      setActiveTheme("default");
+      setRadioStaticEnabled(true);
+      setSelectedThemeIndex(THEMES.findIndex((item) => item.id === "default"));
+      await resetMusicLibraries();
+      addToHistory("[OK] Removed saved Electron Storage data");
     } catch (error) {
       addToHistory(
         `[ERROR] Could not remove saved Electron Storage data: ${
-          error instanceof Error ? error.message : 'unknown error'
-        }`
-      )
+          error instanceof Error ? error.message : "unknown error"
+        }`,
+      );
     }
-  }, [
-    addToHistory,
-    clearPlayback,
-    clearStoredValues,
-    resetMusicLibraries,
-  ])
+  }, [addToHistory, clearPlayback, clearStoredValues, resetMusicLibraries]);
 
   const applyRadioStaticSetting = useCallback(
     async (enabled: boolean) => {
       const nextSettings = {
         ...(storedSettings ?? {}),
         radioStaticEnabled: enabled,
-      }
+      };
 
       try {
-        await persistSettings(nextSettings)
-        setRadioStaticEnabled(enabled)
+        await persistSettings(nextSettings);
+        setRadioStaticEnabled(enabled);
         if (!enabled) {
-          stopRadioStatic()
+          stopRadioStatic();
         }
-        addToHistory(`[OK] Radio static ${enabled ? 'enabled' : 'disabled'}`)
+        addToHistory(`[OK] Radio static ${enabled ? "enabled" : "disabled"}`);
       } catch (error) {
         addToHistory(
           `[ERROR] Could not save radio static setting: ${
-            error instanceof Error ? error.message : 'unknown error'
-          }`
-        )
+            error instanceof Error ? error.message : "unknown error"
+          }`,
+        );
       }
     },
-    [addToHistory, persistSettings, stopRadioStatic, storedSettings]
-  )
+    [addToHistory, persistSettings, stopRadioStatic, storedSettings],
+  );
 
   const getPlayerDiagnostics = useCallback(async () => {
-    const lines = ['Prompt Play Diagnostic', '']
+    const lines = ["Prompt Play Diagnostic", ""];
     const addStatus = (label: string, isOk: boolean, detail?: string) => {
       lines.push(
-        `${label}: ${isOk ? 'OK' : 'ERROR'}${detail ? ` (${detail})` : ''}`
-      )
-    }
+        `${label}: ${isOk ? "OK" : "ERROR"}${detail ? ` (${detail})` : ""}`,
+      );
+    };
 
-    addStatus('Renderer', typeof window !== 'undefined' && Boolean(window.App))
-    addStatus('Audio Engine', Boolean(audioRef.current))
-    addStatus('Radio Streams', radioItems.length > 0)
+    addStatus("Renderer", typeof window !== "undefined" && Boolean(window.App));
+    addStatus("Audio Engine", Boolean(audioRef.current));
+    addStatus("Radio Streams", radioItems.length > 0);
     try {
-      await window.App.getStorageValue('prompt-play-theme')
-      addStatus('Storage', true)
+      await window.App.getStorageValue("prompt-play-theme");
+      addStatus("Storage", true);
     } catch (error) {
       addStatus(
-        'Storage',
+        "Storage",
         false,
-        error instanceof Error ? error.message : 'unknown error'
-      )
+        error instanceof Error ? error.message : "unknown error",
+      );
     }
 
-    lines.push('')
-    lines.push(`Version: ${version}`)
+    lines.push("");
+    lines.push(`Version: ${version}`);
 
-    return lines
-  }, [radioItems.length])
+    return lines;
+  }, [radioItems.length]);
 
   const openRadioHistorySearch = useCallback(
     async (index: number) => {
-      const entry = radioHistory[index]
+      const entry = radioHistory[index];
 
       if (!entry) {
-        addToHistory(`[ERROR] Radio history item not found: ${index + 1}`)
-        return
+        addToHistory(`[ERROR] Radio history item not found: ${index + 1}`);
+        return;
       }
 
-      const query = [entry.subtitle, entry.title].filter(Boolean).join(' ')
+      const query = [entry.subtitle, entry.title].filter(Boolean).join(" ");
       const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(
-        query
-      )}`
+        query,
+      )}`;
 
-      await window.App.openExternal(url)
-      addToHistory(`[OK] Opened YouTube search for ${query}`)
+      await window.App.openExternal(url);
+      addToHistory(`[OK] Opened YouTube search for ${query}`);
     },
-    [addToHistory, radioHistory]
-  )
+    [addToHistory, radioHistory],
+  );
+
+  const copyLastError = useCallback(async () => {
+    if (!lastErrorRef.current) {
+      addToHistory("[INFO] No playback error to copy");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(lastErrorRef.current);
+      addToHistory("[OK] Copied last error to clipboard");
+    } catch (error) {
+      addToHistory(
+        `[ERROR] Could not copy error: ${
+          error instanceof Error ? error.message : "unknown error"
+        }`,
+      );
+    }
+  }, [addToHistory]);
 
   const playItem = useCallback(
     (item: PlayerQueueItem) => {
-      clearConnectionTimers()
+      clearConnectionTimers();
 
       if (item.mode !== activeSourceMode) {
-        setActiveSourceMode(item.mode)
+        setActiveSourceMode(item.mode);
       }
 
-      setCurrentItem(item)
-      setRadioMetadata(null)
-      setRadioMetadataUpdatedAt(null)
-      lastRadioMetadataRef.current = ''
-      connectedRadioItemIdRef.current = null
-      setCurrentTime(0)
-      setDuration(item.duration ?? 0)
-      setIsPlaying(false)
-      addToHistory(`$ play "${item.title}"`)
-      addToHistory(`[LOADING] Connecting to ${item.title}...`)
+      setCurrentItem(item);
+      setRadioMetadata(null);
+      setRadioMetadataUpdatedAt(null);
+      lastRadioMetadataRef.current = "";
+      connectedRadioItemIdRef.current = null;
+      setCurrentTime(0);
+      setDuration(item.duration ?? 0);
+      setIsPlaying(false);
+      addToHistory(`$ play "${item.title}"`);
+      addToHistory(`[LOADING] Connecting to ${item.title}...`);
 
       const startPlaybackAfterConnected = () => {
-        addToHistory(`[PLAYING] Connected to ${item.title}`)
-        if (item.mode === 'radio') {
-          addToHistory('  ♫ now playing: unavailable')
+        addToHistory(`[PLAYING] Connected to ${item.title}`);
+        if (item.mode === "radio") {
+          addToHistory("  ♫ now playing: unavailable");
         }
         window.requestAnimationFrame(() => {
-          setIsPlaying(true)
-        })
-      }
+          setIsPlaying(true);
+        });
+      };
 
-      if (item.mode === 'radio') {
-        setRecentRadioIds(prev =>
-          [item.id, ...prev.filter(radioId => radioId !== item.id)].slice(0, 5)
-        )
+      if (item.mode === "radio") {
+        setRecentRadioIds((prev) =>
+          [item.id, ...prev.filter((radioId) => radioId !== item.id)].slice(
+            0,
+            5,
+          ),
+        );
         connectionTimersRef.current = [
           window.setTimeout(() => {
-            addToHistory('[LOADING] Buffering...')
+            addToHistory("[LOADING] Buffering...");
           }, 1000),
-        ]
+        ];
         window.requestAnimationFrame(() => {
-          setIsPlaying(true)
-        })
-        return
+          setIsPlaying(true);
+        });
+        return;
       }
 
-      startPlaybackAfterConnected()
+      startPlaybackAfterConnected();
     },
-    [activeSourceMode, addToHistory, clearConnectionTimers, setRecentRadioIds]
-  )
+    [activeSourceMode, addToHistory, clearConnectionTimers, setRecentRadioIds],
+  );
 
   const togglePlay = useCallback(() => {
     if (!currentItem) {
       if (queueItems.length > 0) {
-        playItem(queueItems[0])
+        playItem(queueItems[0]);
       }
-      return
+      return;
     }
 
-    setIsPlaying(prev => {
-      const nextState = !prev
-      addToHistory(nextState ? '$ resume' : '$ pause')
+    setIsPlaying((prev) => {
+      const nextState = !prev;
+      addToHistory(nextState ? "$ resume" : "$ pause");
       if (!nextState) {
-        clearConnectionTimers()
+        clearConnectionTimers();
       }
       addToHistory(
-        nextState ? '[PLAYING] Playback resumed' : '[PAUSED] Playback paused'
-      )
-      return nextState
-    })
-  }, [queueItems, currentItem, playItem, addToHistory, clearConnectionTimers])
+        nextState ? "[PLAYING] Playback resumed" : "[PAUSED] Playback paused",
+      );
+      return nextState;
+    });
+  }, [queueItems, currentItem, playItem, addToHistory, clearConnectionTimers]);
 
   const nextItem = useCallback(() => {
     if (!currentItem || queueItems.length === 0) {
-      return
+      return;
     }
 
     const currentIndex = queueItems.findIndex(
-      item => item.id === currentItem.id
-    )
+      (item) => item.id === currentItem.id,
+    );
     const nextIndex =
       isShuffleEnabled && queueItems.length > 1
         ? getRandomQueueIndex(queueItems.length, currentIndex)
-        : (currentIndex + 1) % queueItems.length
-    addToHistory('$ next')
-    playItem(queueItems[nextIndex])
-  }, [queueItems, currentItem, isShuffleEnabled, playItem, addToHistory])
+        : (currentIndex + 1) % queueItems.length;
+    addToHistory("$ next");
+    playItem(queueItems[nextIndex]);
+  }, [queueItems, currentItem, isShuffleEnabled, playItem, addToHistory]);
 
   const prevItem = useCallback(() => {
     if (!currentItem || queueItems.length === 0) {
-      return
+      return;
     }
 
     const currentIndex = queueItems.findIndex(
-      item => item.id === currentItem.id
-    )
+      (item) => item.id === currentItem.id,
+    );
     const prevIndex =
-      currentIndex <= 0 ? queueItems.length - 1 : currentIndex - 1
-    addToHistory('$ prev')
-    playItem(queueItems[prevIndex])
-  }, [queueItems, currentItem, playItem, addToHistory])
+      currentIndex <= 0 ? queueItems.length - 1 : currentIndex - 1;
+    addToHistory("$ prev");
+    playItem(queueItems[prevIndex]);
+  }, [queueItems, currentItem, playItem, addToHistory]);
 
-  const handleSeek = useCallback(
-    (time: number) => {
-      if (audioRef.current) {
-        audioRef.current.currentTime = time
-        setCurrentTime(time)
-      }
-    },
-    []
-  )
+  const handleSeek = useCallback((time: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+      setCurrentTime(time);
+    }
+  }, []);
 
   const handleVolumeChange = useCallback((newVolume: number) => {
     if (newVolume > 0) {
-      previousVolumeRef.current = newVolume
+      previousVolumeRef.current = newVolume;
     }
 
-    volumeRef.current = newVolume
-    setVolume(newVolume)
+    volumeRef.current = newVolume;
+    setVolume(newVolume);
 
     if (audioRef.current) {
-      audioRef.current.volume = newVolume
+      audioRef.current.volume = newVolume;
     }
-  }, [])
+  }, []);
+
+  const adjustVolumeByPercent = useCallback(
+    (delta: number) => {
+      const nextVolume = Math.max(
+        0,
+        Math.min(100, Math.round(volumeRef.current * 100) + delta),
+      );
+
+      handleVolumeChange(nextVolume / 100);
+      addToHistory(`[OK] Volume set to ${nextVolume}%`);
+    },
+    [addToHistory, handleVolumeChange],
+  );
 
   const muteVolume = useCallback(() => {
     if (volumeRef.current > 0) {
-      previousVolumeRef.current = volumeRef.current
+      previousVolumeRef.current = volumeRef.current;
     }
 
-    handleVolumeChange(0)
-  }, [handleVolumeChange])
+    handleVolumeChange(0);
+  }, [handleVolumeChange]);
 
   const unmuteVolume = useCallback(() => {
-    handleVolumeChange(previousVolumeRef.current || 0.7)
-  }, [handleVolumeChange])
+    handleVolumeChange(previousVolumeRef.current || 0.7);
+  }, [handleVolumeChange]);
 
   const toggleShuffle = useCallback(() => {
-    setIsShuffleEnabled(prev => {
-      const nextValue = !prev
-      addToHistory(`[OK] Shuffle ${nextValue ? 'enabled' : 'disabled'}`)
-      return nextValue
-    })
-  }, [addToHistory])
+    setIsShuffleEnabled((prev) => {
+      const nextValue = !prev;
+      addToHistory(`[OK] Shuffle ${nextValue ? "enabled" : "disabled"}`);
+      return nextValue;
+    });
+  }, [addToHistory]);
 
   const toggleRepeat = useCallback(() => {
-    setIsRepeatEnabled(prev => {
-      const nextValue = !prev
-      addToHistory(`[OK] Repeat ${nextValue ? 'enabled' : 'disabled'}`)
-      return nextValue
-    })
-  }, [addToHistory])
+    setIsRepeatEnabled((prev) => {
+      const nextValue = !prev;
+      addToHistory(`[OK] Repeat ${nextValue ? "enabled" : "disabled"}`);
+      return nextValue;
+    });
+  }, [addToHistory]);
 
   const applyTheme = useCallback(
     async (themeId: string) => {
-      const theme = getThemeById(themeId)
+      const theme = getThemeById(themeId);
 
       if (!theme) {
-        addToHistory(`[ERROR] Theme not found: ${themeId}`)
-        addToHistory("[HINT] Use 'theme list' to see available themes")
-        return
+        addToHistory(`[ERROR] Theme not found: ${themeId}`);
+        addToHistory("[HINT] Use 'theme list' to see available themes");
+        return;
       }
 
       try {
-        await persistTheme(theme.id)
-        setActiveTheme(theme.id)
-        setSelectedThemeIndex(THEMES.findIndex(item => item.id === theme.id))
-        setIsThemePickerOpen(false)
-        addToHistory(`[INFO] Theme changed to ${theme.name}.`)
+        await persistTheme(theme.id);
+        setActiveTheme(theme.id);
+        setSelectedThemeIndex(THEMES.findIndex((item) => item.id === theme.id));
+        setIsThemePickerOpen(false);
+        addToHistory(`[INFO] Theme changed to ${theme.name}.`);
       } catch (error) {
         addToHistory(
           `[ERROR] Could not save theme: ${
-            error instanceof Error ? error.message : 'unknown error'
-          }`
-        )
+            error instanceof Error ? error.message : "unknown error"
+          }`,
+        );
       }
     },
-    [addToHistory, persistTheme]
-  )
+    [addToHistory, persistTheme],
+  );
 
-  const moveThemeSelection = useCallback((direction: 'next' | 'prev') => {
-    setSelectedThemeIndex(prev => {
-      if (direction === 'next') {
-        return (prev + 1) % THEMES.length
+  const moveThemeSelection = useCallback((direction: "next" | "prev") => {
+    setSelectedThemeIndex((prev) => {
+      if (direction === "next") {
+        return (prev + 1) % THEMES.length;
       }
 
-      return prev === 0 ? THEMES.length - 1 : prev - 1
-    })
-  }, [])
+      return prev === 0 ? THEMES.length - 1 : prev - 1;
+    });
+  }, []);
 
   const selectTheme = useCallback(
     (index = selectedThemeIndex) => {
-      void applyTheme(THEMES[index]?.id ?? activeTheme)
+      void applyTheme(THEMES[index]?.id ?? activeTheme);
     },
-    [activeTheme, applyTheme, selectedThemeIndex]
-  )
+    [activeTheme, applyTheme, selectedThemeIndex],
+  );
 
   const handleCommand = usePlayerCommands({
-    activeItems,
     activeSource,
     activeSourceMode,
     activeTab,
@@ -849,11 +851,14 @@ export function MainScreen() {
     closeMusicListTab,
     closeRadioHistoryTab,
     closeRadioListTab,
+    copyLastError,
     currentItem,
     createManualRadioFromParts,
     editRadio,
+    exportRadios,
     getPlayerDiagnostics,
     handleVolumeChange,
+    importRadios,
     isConnected,
     isLoading,
     isRepeatEnabled,
@@ -866,6 +871,8 @@ export function MainScreen() {
     openRadioHistoryTab,
     openRadioHistorySearch,
     openRadioListTab: openSavedRadioListTab,
+    pinRadio,
+    pinnedRadioItems,
     playItem,
     prevItem,
     queueItems,
@@ -887,180 +894,174 @@ export function MainScreen() {
     showMusicListTab,
     showRadioHistoryTab,
     showRadioListTab,
-    simulateLoading,
     tabs,
     toggleRepeat,
     toggleShuffle,
     unmuteVolume,
+    unpinRadio,
     visibleItems,
     visualizerMode,
     volume,
     volumeRef,
-  })
+  });
 
   useEffect(() => {
-    return window.App.onMenuCommand(handleCommand)
-  }, [handleCommand])
+    return window.App.onMenuCommand(handleCommand);
+  }, [handleCommand]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) {
-        return
+        return;
       }
 
       if (
-        (activeTab === 'radio-list' || activeTab === 'tracks') &&
+        (activeTab === "radio-list" || activeTab === "tracks") &&
         !event.altKey &&
         !event.ctrlKey &&
         !event.metaKey &&
         !event.shiftKey &&
-        (event.key === 'ArrowDown' || event.key === 'ArrowUp')
+        (event.key === "ArrowDown" || event.key === "ArrowUp")
       ) {
-        event.preventDefault()
-        const direction = event.key === 'ArrowDown' ? 'down' : 'up'
+        event.preventDefault();
+        const direction = event.key === "ArrowDown" ? "down" : "up";
 
-        if (activeTab === 'radio-list' && showRadioListTab) {
-          scrollRadioList(direction)
-          return
+        if (activeTab === "radio-list" && showRadioListTab) {
+          scrollRadioList(direction);
+          return;
         }
 
-        if (activeTab === 'tracks') {
-          scrollTrackList(direction)
-          return
+        if (activeTab === "tracks") {
+          scrollTrackList(direction);
+          return;
         }
 
-        return
+        return;
       }
 
-      if (event.key === 'Tab' && (event.ctrlKey || event.metaKey)) {
-        event.preventDefault()
-        cycleTab()
-        return
+      if (event.key === "Tab" && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        cycleTab();
+        return;
       }
 
       if (!(event.metaKey || event.ctrlKey)) {
-        return
+        return;
       }
 
       const tabMap: Record<string, string> = {
-        '1': 'tracks',
-        '2': 'now-playing',
-        '3': 'visualizer',
-        '4': 'controls',
-      }
+        "1": "tracks",
+        "2": "now-playing",
+        "3": "visualizer",
+        "4": "controls",
+      };
 
       if (tabMap[event.key]) {
-        event.preventDefault()
-        setActiveTab(tabMap[event.key])
+        event.preventDefault();
+        setActiveTab(tabMap[event.key]);
       }
-    }
+    };
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [
-    activeTab,
-    cycleTab,
-    scrollRadioList,
-    scrollTrackList,
-    showRadioListTab,
-  ])
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeTab, cycleTab, scrollRadioList, scrollTrackList, showRadioListTab]);
 
   useEffect(() => {
-    const audio = audioRef.current
+    const audio = audioRef.current;
 
     if (!audio) {
-      return
+      return;
     }
 
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime)
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
     const startRadioStaticAfterDelay = () => {
-      if (currentItem?.mode !== 'radio' || !radioStaticEnabled) {
-        return
+      if (currentItem?.mode !== "radio" || !radioStaticEnabled) {
+        return;
       }
 
       if (radioStaticTimerRef.current !== null) {
-        return
+        return;
       }
 
       radioStaticTimerRef.current = window.setTimeout(() => {
-        radioStaticTimerRef.current = null
+        radioStaticTimerRef.current = null;
 
-        if (currentItem?.mode !== 'radio' || !radioStaticEnabled) {
-          return
+        if (currentItem?.mode !== "radio" || !radioStaticEnabled) {
+          return;
         }
 
-        const staticAudio = radioStaticAudioRef.current
+        const staticAudio = radioStaticAudioRef.current;
 
         if (!staticAudio) {
-          return
+          return;
         }
 
-        staticAudio.volume = Math.min(volumeRef.current, 1) * 0.45
-        staticAudio.currentTime = 0
+        staticAudio.volume = Math.min(volumeRef.current, 1) * 0.45;
+        staticAudio.currentTime = 0;
         staticAudio.play().catch(() => {
           // The effect is optional; autoplay policy or decode failures should
           // never block the radio stream.
-        })
-      }, 1000)
-    }
+        });
+      }, 1000);
+    };
     const handleRadioReady = () => {
-      if (currentItem?.mode !== 'radio') {
-        return
+      if (currentItem?.mode !== "radio") {
+        return;
       }
 
-      clearConnectionTimers()
+      clearConnectionTimers();
 
       if (connectedRadioItemIdRef.current === currentItem.id) {
-        return
+        return;
       }
 
-      connectedRadioItemIdRef.current = currentItem.id
-      addToHistory(`[PLAYING] Connected to ${currentItem.title}`)
-      addToHistory('  ♫ now playing: unavailable')
-    }
+      connectedRadioItemIdRef.current = currentItem.id;
+      addToHistory(`[PLAYING] Connected to ${currentItem.title}`);
+      addToHistory("  ♫ now playing: unavailable");
+    };
     const handleLoadedMetadata = () => {
       const nextDuration = Number.isFinite(audio.duration)
         ? Math.round(audio.duration)
-        : 0
+        : 0;
 
-      setDuration(nextDuration)
+      setDuration(nextDuration);
 
       if (currentItem) {
-        updateLocalItemDuration(currentItem, nextDuration)
+        updateLocalItemDuration(currentItem, nextDuration);
       }
-    }
+    };
     const handleEnded = () => {
-      addToHistory('[INFO] Item ended')
+      addToHistory("[INFO] Item ended");
       if (isRepeatEnabled && currentItem) {
-        addToHistory('[INFO] Repeating current item')
-        playItem(currentItem)
-        return
+        addToHistory("[INFO] Repeating current item");
+        playItem(currentItem);
+        return;
       }
 
-      nextItem()
-    }
+      nextItem();
+    };
 
-    audio.addEventListener('timeupdate', handleTimeUpdate)
-    audio.addEventListener('loadstart', startRadioStaticAfterDelay)
-    audio.addEventListener('waiting', startRadioStaticAfterDelay)
-    audio.addEventListener('stalled', startRadioStaticAfterDelay)
-    audio.addEventListener('loadeddata', handleRadioReady)
-    audio.addEventListener('canplay', handleRadioReady)
-    audio.addEventListener('playing', handleRadioReady)
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata)
-    audio.addEventListener('ended', handleEnded)
+    audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("loadstart", startRadioStaticAfterDelay);
+    audio.addEventListener("waiting", startRadioStaticAfterDelay);
+    audio.addEventListener("stalled", startRadioStaticAfterDelay);
+    audio.addEventListener("loadeddata", handleRadioReady);
+    audio.addEventListener("canplay", handleRadioReady);
+    audio.addEventListener("playing", handleRadioReady);
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+    audio.addEventListener("ended", handleEnded);
 
     return () => {
-      audio.removeEventListener('timeupdate', handleTimeUpdate)
-      audio.removeEventListener('loadstart', startRadioStaticAfterDelay)
-      audio.removeEventListener('waiting', startRadioStaticAfterDelay)
-      audio.removeEventListener('stalled', startRadioStaticAfterDelay)
-      audio.removeEventListener('loadeddata', handleRadioReady)
-      audio.removeEventListener('canplay', handleRadioReady)
-      audio.removeEventListener('playing', handleRadioReady)
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
-      audio.removeEventListener('ended', handleEnded)
-    }
+      audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("loadstart", startRadioStaticAfterDelay);
+      audio.removeEventListener("waiting", startRadioStaticAfterDelay);
+      audio.removeEventListener("stalled", startRadioStaticAfterDelay);
+      audio.removeEventListener("loadeddata", handleRadioReady);
+      audio.removeEventListener("canplay", handleRadioReady);
+      audio.removeEventListener("playing", handleRadioReady);
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      audio.removeEventListener("ended", handleEnded);
+    };
   }, [
     currentItem,
     isRepeatEnabled,
@@ -1070,63 +1071,69 @@ export function MainScreen() {
     clearConnectionTimers,
     radioStaticEnabled,
     updateLocalItemDuration,
-  ])
+  ]);
 
   useEffect(() => {
-    const audio = audioRef.current
+    const audio = audioRef.current;
 
     if (!audio || !currentItem) {
-      return
+      return;
     }
 
-    const nextSrc = normalizeAudioSrc(currentItem.src)
-    audio.volume = volumeRef.current
+    const nextSrc = normalizeAudioSrc(currentItem.src);
+    audio.volume = volumeRef.current;
 
     if (audio.src !== nextSrc && audio.currentSrc !== nextSrc) {
-      audio.src = nextSrc
-      audio.load()
+      audio.src = nextSrc;
+      audio.load();
     }
-  }, [currentItem])
+  }, [currentItem]);
 
   useEffect(() => {
-    const audio = audioRef.current
+    const audio = audioRef.current;
 
     if (!audio) {
-      return
+      return;
     }
 
-    audio.volume = volume
+    audio.volume = volume;
     if (radioStaticAudioRef.current) {
-      radioStaticAudioRef.current.volume = Math.min(volume, 1) * 0.45
+      radioStaticAudioRef.current.volume = Math.min(volume, 1) * 0.45;
     }
-    volumeRef.current = volume
-  }, [volume])
+    volumeRef.current = volume;
+  }, [volume]);
 
   useEffect(() => {
-    const audio = audioRef.current
+    const audio = audioRef.current;
 
     if (!audio || !currentItem) {
-      return
+      return;
     }
 
     if (isPlaying) {
       audio.play().catch((error: unknown) => {
         if (isExpectedPlaybackAbort(error)) {
-          return
+          return;
         }
 
-        const errorMessage = getPlaybackErrorMessage(error)
+        const errorMessage = getPlaybackErrorMessage(error);
+        const errorDetails = [
+          `Failed to play audio: ${errorMessage}`,
+          `Source: ${audio.currentSrc || audio.src}`,
+        ].join("\n");
 
-        console.error('[audio] playback failed:', error)
-        clearConnectionTimers()
-        setIsPlaying(false)
-        addToHistory(`[ERROR] Failed to play audio: ${errorMessage}`)
-        addToHistory(`[ERROR] Source: ${audio.currentSrc || audio.src}`)
-      })
+        console.error("[audio] playback failed:", error);
+        clearConnectionTimers();
+        setIsPlaying(false);
+        lastErrorRef.current = errorDetails;
+        addToHistory(`[ERROR] Failed to play audio: ${errorMessage}`);
+        addToHistory(`[ERROR] Source: ${audio.currentSrc || audio.src}`);
+        addToHistory("[HINT] Type 'copy error' to copy details");
+      });
     } else {
-      audio.pause()
+      audio.pause();
     }
-  }, [currentItem, addToHistory, clearConnectionTimers, isPlaying])
+  }, [currentItem, addToHistory, clearConnectionTimers, isPlaying]);
 
   const renderPlayerControls = () => (
     <PlayerControls
@@ -1150,11 +1157,11 @@ export function MainScreen() {
       source={activeSource}
       volume={volume}
     />
-  )
+  );
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'tracks':
+      case "tracks":
         return (
           <TrackList
             currentItem={currentItem}
@@ -1164,8 +1171,8 @@ export function MainScreen() {
             scrollContainerRef={trackListScrollRef}
             source={activeSource}
           />
-        )
-      case 'now-playing':
+        );
+      case "now-playing":
         return (
           <NowPlaying
             isPlaying={isPlaying}
@@ -1175,8 +1182,8 @@ export function MainScreen() {
             relativeTimeNow={relativeTimeNow}
             source={activeSource}
           />
-        )
-      case 'visualizer':
+        );
+      case "visualizer":
         return (
           <Visualizer
             currentTime={currentTime}
@@ -1186,10 +1193,10 @@ export function MainScreen() {
             mode={visualizerMode}
             source={activeSource}
           />
-        )
-      case 'controls':
-        return renderPlayerControls()
-      case 'radio-list':
+        );
+      case "controls":
+        return renderPlayerControls();
+      case "radio-list":
         return (
           <RadioListTab
             currentItem={currentItem}
@@ -1201,38 +1208,42 @@ export function MainScreen() {
             scrollContainerRef={radioListScrollRef}
             searchTerm={radioSearchTerm}
           />
-        )
-      case 'radio-history':
+        );
+      case "radio-history":
         return (
           <RadioHistoryTab
             entries={radioHistory}
             scrollContainerRef={radioHistoryScrollRef}
           />
-        )
-      case 'music-list':
-        return <MusicListTab libraries={musicLibraries} />
-      case 'help':
-        return <HelpTab source={activeSource} />
+        );
+      case "music-list":
+        return <MusicListTab libraries={musicLibraries} />;
+      case "help":
+        return <HelpTab source={activeSource} />;
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   return (
     <>
-      <Header />
+      <Header
+        title={`prompt-play:/${
+          activeSourceMode === "radio" ? "radio" : "music"
+        }`}
+      />
       <main className="flex items-center justify-center bg-background">
         <div className="min-h-0 w-full max-w-4xl">
           <div className="flex h-[calc(100vh-2rem)] max-h-130 min-h-125 flex-col overflow-hidden rounded-lg bg-background shadow-2xl md:h-[calc(100vh-4rem)]">
             <TerminalTabs
               activeTab={activeTab}
-              mouseEnabled={activeTab === 'controls'}
+              mouseEnabled={activeTab === "controls"}
               onTabChange={setActiveTab}
               tabs={tabs}
             />
             <div
               className={`relative min-h-0 flex-1 overflow-hidden bg-background ${
-                activeTab === 'controls' ? '' : 'pointer-events-none'
+                activeTab === "controls" ? "" : "pointer-events-none"
               }`}
             >
               {renderTabContent()}
@@ -1240,16 +1251,17 @@ export function MainScreen() {
             <TerminalPrompt
               history={commandHistory}
               onArrowNavigation={
-                activeTab === 'radio-list' && showRadioListTab
+                activeTab === "radio-list" && showRadioListTab
                   ? scrollRadioList
-                  : activeTab === 'radio-history' && showRadioHistoryTab
+                  : activeTab === "radio-history" && showRadioHistoryTab
                     ? scrollRadioHistory
                     : undefined
               }
               onCommand={handleCommand}
               onCycleTab={cycleTab}
+              onVolumeShortcut={adjustVolumeByPercent}
               promptContext={
-                activeSourceMode === 'local' ? 'music' : activeSourceMode
+                activeSourceMode === "local" ? "music" : activeSourceMode
               }
               themePicker={
                 isThemePickerOpen
@@ -1293,5 +1305,5 @@ export function MainScreen() {
         </div>
       </main>
     </>
-  )
+  );
 }
