@@ -27,16 +27,18 @@ source. The current commands are `sources`, `source local`, `source radio`,
 `radio search [term]`, `radio add [number]`,
 `radio add Name | City | State | URL | Frequency`,
 `radio edit [number] Name | City | State | URL | Frequency`,
-`radio remove [number]`, `radio clear`, `radio history`,
+`radio remove [number]`, `radio clear`, `radio export`, `radio import`,
+`radio import external`, `radio pin [number]`, `radio pins`,
+`radio unpin [number]`, `radio history`,
 `radio search music [number]`, `play`, `play [number]`, `play [name]`,
 `resume`, `pause`, `stop`, `list`, `ls`, `ls -la`, `ls -ra`, `status`, `info`,
 `next`, `n`, `prev`, `p`, `shuffle`, `repeat`, `vol [0-100]`, `vol +[number]`,
-`vol -[number]`, `mute`, `unmute`, `theme list`, `ls -th`,
+`vol -[number]`, `+`, `=`, `-`, `mute`, `unmute`, `theme list`, `ls -th`,
 `theme use [theme]`, `settings radio.static on`,
 `settings radio.static off`, `open now-playing`, `open visualizer`,
 `visualizer ascii`, `open controls`, `tab [number]`, `home`, `exit`, `quit`,
-`clear`, `clear playback`, `clear all`, `version`, `help`, `h`, `?`, and
-`:q`.
+`clear`, `clear playback`, `clear all`, `copy error`, `version`, `help`, `h`,
+`?`, and `:q`.
 
 Radio is live streaming and should not expose seek controls; local files can
 expose duration and seeking. The radio `ls -la` source tab shows the 5 most
@@ -46,7 +48,12 @@ pattern as help. `radio search [term]` uses Radio Browser in the main process
 to search Brazilian stations by name, state, and tag; it switches the radio
 list into search mode. `radio add [number]` saves a search result, while the
 pipe-separated `radio add` and `radio edit` forms manage manual stations.
-Saved stations are persisted under `prompt-play-radios`. Radio `next` and
+Saved stations are persisted under `prompt-play-radios`. `radio export` writes
+saved stations as timestamped JSON in Downloads, and `radio import` /
+`radio import external` merges stations from JSON through a native open dialog.
+`radio pin [number]`, `radio pins`, and `radio unpin [number]` manage which
+saved radios appear in the radio `ls -la` list; without pins, `ls -la` falls
+back to recent radios. Radio `next` and
 `prev` must use the visible radio context: recent radios on `ls -la`, and the
 visible saved/search list while the temporary `radio list` tab is active.
 `radio clear` removes saved radios and recent-radio state. The optional radio

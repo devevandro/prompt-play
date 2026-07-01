@@ -61,6 +61,12 @@ or `source radio` to change modes.
 | `radio edit [number] Name \| City \| State \| URL \| Frequency` | Replaces the details for a saved station while keeping its saved id. |
 | `radio remove [number]` | Removes one saved radio and clears it from recent-radio state. |
 | `radio clear` | Removes all saved radios and clears recent-radio state. |
+| `radio export` | Exports saved radios as a timestamped JSON file in Downloads. |
+| `radio import` | Imports saved radios from a JSON file through a native open dialog. |
+| `radio import external` | Alias for importing externally prepared radio JSON. |
+| `radio pin [number]` | Pins a saved radio so it appears in the radio `ls -la` list. |
+| `radio pins` | Lists radios currently pinned for `ls -la`. |
+| `radio unpin [number]` | Removes one pinned radio from the radio `ls -la` list. |
 | `radio history` | Opens the temporary `cat radio_history.txt` tab with up to 10 valid songs heard during the current app session. |
 | `radio search music [number]` | Opens a YouTube search in the browser for a radio-history song. |
 | `settings radio.static on` | Enables the optional tuning sound while radio buffering takes longer than 1 second. |
@@ -90,6 +96,11 @@ remain available in `music list`, but they are not merged into the active music
 list.
 
 Saved radios are persisted in Electron Storage under `prompt-play-radios`.
+Use `radio export` to save the current station list as JSON in Downloads, and
+`radio import` or `radio import external` to merge a previously exported or
+externally prepared JSON file into saved radios. Use `radio pin [number]` to
+choose which saved radios appear in radio `ls -la`; if no radios are pinned,
+`ls -la` falls back to the 5 most recently played saved radios.
 Manual station commands use pipe-separated fields:
 
 ```text
@@ -107,6 +118,8 @@ optional radio tuning sound setting is persisted under `prompt-play-settings`.
 | `vol [0-100]` | Sets the player volume. Example: `vol 70`. |
 | `vol +[number]` | Increases the current volume by a relative amount. Example: `vol +10`. |
 | `vol -[number]` | Decreases the current volume by a relative amount. Example: `vol -10`. |
+| `+` or `=` | Increases volume by 5 when the terminal input is empty. |
+| `-` | Decreases volume by 5 when the terminal input is empty. |
 | `mute` | Mutes the player and remembers the previous non-zero volume. |
 | `unmute` | Restores the volume saved before muting, or 70% when no previous volume exists. |
 
@@ -121,6 +134,7 @@ optional radio tuning sound setting is persisted under `prompt-play-settings`.
 | `clear` | Clears terminal history. |
 | `clear playback` | Stops and clears the current playback state without removing saved data. |
 | `clear all` | Stops and clears the current playback state, then removes saved Electron Storage data. |
+| `copy error` | Copies the most recent playback error details to the clipboard. |
 | `music clear` or `music reset` | Removes saved music folders and cached music lists. |
 | `radio clear` | Removes saved radios. |
 | `settings radio.static on` | Enables the radio tuning sound during slow buffering. |
@@ -187,7 +201,6 @@ the theme name, such as `theme use dark-soul` or `theme use dark soul`.
 
 | Command | Description |
 | --- | --- |
-| `zsh-player --init` or `init` | Simulates player initialization. |
 | `version` | Shows project and audio engine version info. |
 | `help`, `h`, or `?` | Opens the temporary help tab. |
 | `:q` | Closes the active temporary tab. |
