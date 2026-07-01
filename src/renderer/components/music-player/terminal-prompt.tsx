@@ -12,6 +12,7 @@ interface TerminalPromptProps {
   onCommand: (command: string) => void
   onArrowNavigation?: (direction: 'down' | 'up') => void
   onCycleTab: () => void
+  onVolumeShortcut?: (delta: number) => void
   promptLabel?: string
   promptContext: string
   themePicker?: TerminalThemePicker
@@ -22,6 +23,7 @@ export function TerminalPrompt({
   onCommand,
   onArrowNavigation,
   onCycleTab,
+  onVolumeShortcut,
   promptLabel,
   promptContext,
   themePicker,
@@ -44,6 +46,7 @@ export function TerminalPrompt({
     onArrowNavigation,
     onCommand,
     onCycleTab,
+    onVolumeShortcut,
     themePicker,
   })
 

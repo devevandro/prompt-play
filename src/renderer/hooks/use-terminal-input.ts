@@ -20,12 +20,14 @@ export function useTerminalInput({
   onArrowNavigation,
   onCommand,
   onCycleTab,
+  onVolumeShortcut,
   themePicker,
 }: {
   history: string[]
   onArrowNavigation?: (direction: 'down' | 'up') => void
   onCommand: (command: string) => void
   onCycleTab: () => void
+  onVolumeShortcut?: (delta: number) => void
   themePicker?: TerminalThemePicker
 }) {
   const [input, setInput] = useState('')
@@ -86,6 +88,20 @@ export function useTerminalInput({
   }
 
   const handleKeyDown = (event: KeyboardEvent) => {
+    if (
+      onVolumeShortcut &&
+      !input &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.shiftKey &&
+      (event.key === '+' || event.key === '=' || event.key === '-')
+    ) {
+      event.preventDefault()
+      onVolumeShortcut(event.key === '-' ? -5 : 5)
+      return
+    }
+
     if (event.key === 'Tab' && (event.ctrlKey || event.metaKey)) {
       event.preventDefault()
       onCycleTab()

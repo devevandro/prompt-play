@@ -89,8 +89,14 @@ export function getSourceCommandMode(
     cmd === 'radio list' ||
     cmd === 'radio history' ||
     cmd === 'radio clear' ||
+    cmd === 'radio export' ||
+    cmd === 'radio import' ||
+    cmd === 'radio import external' ||
+    cmd === 'radio pins' ||
     cmd.startsWith('radio add') ||
     cmd.startsWith('radio edit ') ||
+    cmd.startsWith('radio pin ') ||
+    cmd.startsWith('radio unpin ') ||
     cmd.startsWith('radio remove ') ||
     cmd.startsWith('radio search ') ||
     cmd === 'ls -ra' ||

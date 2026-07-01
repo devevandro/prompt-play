@@ -28,6 +28,12 @@ export function HelpTab({ source }: { source: PlayerSource }) {
       'radio edit 1 Name | City | State | URL | Frequency',
       'radio remove 1',
       'radio clear',
+      'radio export',
+      'radio import',
+      'radio import external',
+      'radio pin 1',
+      'radio pins',
+      'radio unpin 1',
       'radio history',
       'radio search music 1',
       'ls -ra',
@@ -38,6 +44,9 @@ export function HelpTab({ source }: { source: PlayerSource }) {
       'prev',
       'shuffle',
       'repeat',
+      '+',
+      '-',
+      'copy error',
     ],
   }
 
