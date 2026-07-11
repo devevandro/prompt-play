@@ -1116,6 +1116,47 @@ export function MainScreen() {
           return;
         }
 
+        if (currentItem.mode === "radio") {
+          void window.App.resolveRadioStreamUrl(currentItem.src).then(
+            (resolvedUrl) => {
+              if (!resolvedUrl || resolvedUrl === currentItem.src) {
+                const errorMessage = getPlaybackErrorMessage(error);
+                const source = audio.currentSrc || audio.src;
+
+                const errorDetails = [
+                  `Failed to play audio: ${errorMessage}`,
+                  `Source: ${source}`,
+                ].join("\n");
+
+                console.error("[audio] playback failed:", error);
+                clearConnectionTimers();
+                setIsPlaying(false);
+                lastErrorRef.current = errorDetails;
+                addToHistory(`[ERROR] Failed to play audio: ${errorMessage}`);
+                addToHistory(`[ERROR] Source: ${source}`);
+                addToHistory("[HINT] Type 'copy error' to copy details");
+                return;
+              }
+
+              addToHistory("[INFO] Retrying radio with resolved stream URL");
+              setCurrentItem((prev) =>
+                prev?.id === currentItem.id
+                  ? {
+                      ...prev,
+                      src: resolvedUrl,
+                      details: prev.details?.map((detail) =>
+                        detail.label === "url"
+                          ? { ...detail, value: resolvedUrl }
+                          : detail,
+                      ),
+                    }
+                  : prev,
+              );
+            },
+          );
+          return;
+        }
+
         const errorMessage = getPlaybackErrorMessage(error);
         const errorDetails = [
           `Failed to play audio: ${errorMessage}`,
