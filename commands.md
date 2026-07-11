@@ -147,8 +147,9 @@ that window, playback advances to the next station in the current radio queue.
 | `settings radio.static off` | Disables the radio tuning sound. |
 | `version` | Shows the current project version. |
 | `open now-playing` | Opens the `cat now_playing.txt` tab. |
-| `open visualizer` | Opens the terminal-green `./visualizer --mode=ascii` TUI. |
+| `open visualizer` | Opens the terminal-green visualizer tab with the current mode. |
 | `visualizer ascii` | Opens the visualizer and keeps the visualizer mode as ASCII. |
+| `visualizer pixel` | Opens the visualizer and switches it to the pixel-grid mode. |
 | `open controls` | Opens the `./player-controls` tab. |
 | `tab [number]` | Opens a tab by 1-based position in the current tab strip. |
 | `music list` | Opens the temporary `music lists` tab next to `./player-controls`. |
@@ -165,7 +166,7 @@ tab and active source:
 | --- | --- |
 | Source list tab | Total source items and total duration, or live streaming status for radio. |
 | `cat now_playing.txt` | Current source item status. In radio mode, shows station, state, city, live song metadata, and relative update time. |
-| `./visualizer --mode=ascii` | Terminal-green 48-band ASCII/TUI spectrum with input, source, peak, average, and playback state. |
+| `./visualizer --mode=ascii` / `./visualizer --mode=pixel` | Terminal-green 48-band spectrum with input, source, peak, average, and playback state. |
 | `./player-controls` tab | `player-controls ready`. |
 | `radio list` | Saved/search radio list status and `:q` close hint. |
 | `cat radio_history.txt` | In-session radio song history and `:q` close hint. |
