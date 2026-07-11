@@ -1,5 +1,6 @@
 import { Terminal } from 'lucide-react'
 
+import type { VisualizerMode } from 'renderer/components/music-player/visualizer'
 import type { PlayerQueueItem, PlayerSource } from '../../../shared/types'
 
 interface StatusFooterProps {
@@ -8,6 +9,7 @@ interface StatusFooterProps {
   isPlaying: boolean
   items: PlayerQueueItem[]
   source: PlayerSource
+  visualizerMode: VisualizerMode
   volume: number
 }
 
@@ -24,6 +26,7 @@ export function StatusFooter({
   isPlaying,
   items,
   source,
+  visualizerMode,
   volume,
 }: StatusFooterProps) {
   const totalDuration = items.reduce(
@@ -39,7 +42,7 @@ export function StatusFooter({
     'now-playing': currentItem
       ? `${source.itemLabel}: ${isPlaying ? 'playing' : 'paused'}`
       : `${source.itemLabel}: waiting for selection`,
-    visualizer: `${source.label} ascii: 48 bands sr: 44.1khz 16bit`,
+    visualizer: `${source.label} ${visualizerMode}: 48 bands sr: 44.1khz 16bit`,
     controls: 'player-controls ready',
     'radio-list': 'radio list open, press :q to close',
     'radio-history': 'radio history open, press :q to close',

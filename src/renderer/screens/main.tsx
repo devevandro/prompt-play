@@ -12,7 +12,10 @@ import { StatusFooter } from "renderer/components/music-player/status-footer";
 import { TerminalPrompt } from "renderer/components/music-player/terminal-prompt";
 import { TerminalTabs } from "renderer/components/music-player/terminal-tabs";
 import { TrackList } from "renderer/components/music-player/track-list";
-import { Visualizer } from "renderer/components/music-player/visualizer";
+import {
+  Visualizer,
+  type VisualizerMode,
+} from "renderer/components/music-player/visualizer";
 import tuningInSoundUrl from "shared/sounds/tuning-in.mp3";
 import {
   useClearStoredValues,
@@ -46,6 +49,7 @@ import { version } from "../../../package.json";
 
 function getTabs(
   source: PlayerSource,
+  visualizerMode: VisualizerMode,
   showHelpTab: boolean,
   showRadioListTab: boolean,
   showRadioHistoryTab: boolean,
@@ -54,7 +58,11 @@ function getTabs(
   const tabs = [
     { id: "tracks", label: source.listCommand, shortcut: "⌘1" },
     { id: "now-playing", label: "cat now_playing.txt", shortcut: "⌘2" },
-    { id: "visualizer", label: "./visualizer --mode=ascii", shortcut: "⌘3" },
+    {
+      id: "visualizer",
+      label: `./visualizer --mode=${visualizerMode}`,
+      shortcut: "⌘3",
+    },
     { id: "controls", label: "./player-controls", shortcut: "⌘4" },
   ];
 
@@ -108,7 +116,8 @@ export function MainScreen() {
   const [artistQueueFilter, setArtistQueueFilter] = useState<string | null>(
     null,
   );
-  const [visualizerMode, setVisualizerMode] = useState<"ascii">("ascii");
+  const [visualizerMode, setVisualizerMode] =
+    useState<VisualizerMode>("ascii");
   const [radioMetadata, setRadioMetadata] = useState<RadioMetadata | null>(
     null,
   );
@@ -356,6 +365,7 @@ export function MainScreen() {
     exportRadios,
     importRadios,
     pinRadio,
+    pinRadioItem,
     pinnedRadioItems,
     radioItems,
     radioListItems,
@@ -363,9 +373,9 @@ export function MainScreen() {
     radioSearchTerm,
     radioStatuses,
     recentRadioItems,
+    rememberRecentRadio,
     removeRadio,
     searchRadios,
-    setRecentRadioIds,
     showSavedRadios,
     unpinRadio,
   } = useRadioSource({ activeTab, showRadioListTab });
@@ -432,6 +442,7 @@ export function MainScreen() {
     () =>
       getTabs(
         activeSource,
+        visualizerMode,
         showHelpTab,
         showRadioListTab,
         showRadioHistoryTab,
@@ -439,6 +450,7 @@ export function MainScreen() {
       ),
     [
       activeSource,
+      visualizerMode,
       showHelpTab,
       showRadioListTab,
       showRadioHistoryTab,
@@ -690,12 +702,7 @@ export function MainScreen() {
       };
 
       if (item.mode === "radio") {
-        setRecentRadioIds((prev) =>
-          [item.id, ...prev.filter((radioId) => radioId !== item.id)].slice(
-            0,
-            5,
-          ),
-        );
+        rememberRecentRadio(item);
         connectionTimersRef.current = [
           window.setTimeout(() => {
             addToHistory("[LOADING] Buffering...");
@@ -709,7 +716,7 @@ export function MainScreen() {
 
       startPlaybackAfterConnected();
     },
-    [activeSourceMode, addToHistory, clearConnectionTimers, setRecentRadioIds],
+    [activeSourceMode, addToHistory, clearConnectionTimers, rememberRecentRadio],
   );
 
   const playArtist = useCallback(
@@ -1018,12 +1025,14 @@ export function MainScreen() {
     openRadioHistorySearch,
     openRadioListTab: openSavedRadioListTab,
     pinRadio,
+    pinRadioItem,
     pinnedRadioItems,
     playArtist,
     playItem,
     prevItem,
     queueItems,
     recentRadioItems,
+    rememberRecentRadio,
     radioStaticEnabled,
     radioHistory,
     removeRadio,
@@ -1452,6 +1461,7 @@ export function MainScreen() {
               isPlaying={isPlaying}
               items={activeItems}
               source={activeSource}
+              visualizerMode={visualizerMode}
               volume={volume}
             />
           </div>

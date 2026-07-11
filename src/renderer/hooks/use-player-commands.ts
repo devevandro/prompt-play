@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import type { NavigateFunction } from 'react-router-dom'
 
+import type { VisualizerMode } from 'renderer/components/music-player/visualizer'
 import { PLAYER_SOURCES } from 'renderer/lib/player-sources'
 import {
   clampVolumePercent,
@@ -25,7 +26,6 @@ interface PlayerTab {
 }
 
 type AddToHistory = (command: string) => void
-type VisualizerMode = 'ascii'
 
 export function usePlayerCommands({
   activeSource,
@@ -68,12 +68,14 @@ export function usePlayerCommands({
   openRadioHistorySearch,
   openRadioListTab,
   pinRadio,
+  pinRadioItem,
   pinnedRadioItems,
   playArtist,
   playItem,
   prevItem,
   queueItems,
   recentRadioItems,
+  rememberRecentRadio,
   radioHistory,
   radioStaticEnabled,
   removeRadio,
@@ -141,12 +143,14 @@ export function usePlayerCommands({
   openRadioHistorySearch: (index: number) => Promise<void>
   openRadioListTab: () => void
   pinRadio: (index: number) => Promise<PlayerQueueItem | null>
+  pinRadioItem: (item: PlayerQueueItem) => Promise<PlayerQueueItem | null>
   pinnedRadioItems: PlayerQueueItem[]
   playArtist: (artist: string) => void
   playItem: (item: PlayerQueueItem) => void
   prevItem: () => void
   queueItems: PlayerQueueItem[]
   recentRadioItems: PlayerQueueItem[]
+  rememberRecentRadio: (item: PlayerQueueItem) => void
   radioHistory: RadioHistoryEntry[]
   radioStaticEnabled: boolean
   removeRadio: (index: number) => Promise<PlayerQueueItem | null>
@@ -364,11 +368,24 @@ export function usePlayerCommands({
           return
         }
 
-        void pinRadio(itemIndex - 1).then(item => {
+        const pinItems =
+          activeSourceMode === 'radio' &&
+          (activeTab !== 'radio-list' || !showRadioListTab)
+            ? visibleItems
+            : activeSourceMode === 'radio'
+              ? queueItems
+              : []
+        const targetItem = pinItems[itemIndex - 1]
+        const pinAction = targetItem
+          ? pinRadioItem(targetItem)
+          : pinRadio(itemIndex - 1)
+
+        void pinAction.then(item => {
           if (item) {
+            rememberRecentRadio(item)
             addToHistory(`[OK] Pinned radio for ls -la: ${item.title}`)
           } else {
-            addToHistory('[ERROR] Saved radio not found')
+            addToHistory('[ERROR] Radio not found')
           }
         })
       } else if (cmd.startsWith('radio unpin ')) {
@@ -502,15 +519,18 @@ export function usePlayerCommands({
       } else if (cmd === 'radio history') {
         openRadioHistoryTab()
       } else if (cmd.startsWith('visualizer ')) {
-        const mode = cmd.slice(11).trim() as VisualizerMode
+        const mode = cmd
+          .slice(11)
+          .trim()
+          .replace(/^--mode[=\s]+/, '') as VisualizerMode
 
-        if (mode === 'ascii') {
+        if (mode === 'ascii' || mode === 'pixel') {
           setVisualizerMode(mode)
           setActiveTab('visualizer')
           addToHistory(`[OK] Visualizer set to ${mode}`)
         } else {
           addToHistory(
-            '[ERROR] Use visualizer ascii'
+            '[ERROR] Use visualizer ascii or visualizer pixel'
           )
         }
       } else if (cmd === 'ls -la') {
@@ -728,12 +748,14 @@ export function usePlayerCommands({
       openRadioHistorySearch,
       openRadioListTab,
       pinRadio,
+      pinRadioItem,
       pinnedRadioItems,
       playArtist,
       playItem,
       prevItem,
       queueItems,
       recentRadioItems,
+      rememberRecentRadio,
       radioHistory.length,
       radioStaticEnabled,
       removeRadio,

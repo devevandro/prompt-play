@@ -104,7 +104,7 @@ export function HelpTab({ source }: { source: PlayerSource }) {
 
         <section className="space-y-2">
           <h2 className="text-terminal-yellow text-xs">Visualizer Commands</h2>
-          {['visualizer ascii'].map(
+          {['visualizer ascii', 'visualizer pixel'].map(
             command => (
               <div className="text-terminal-white" key={command}>
                 {command}

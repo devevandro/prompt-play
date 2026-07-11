@@ -134,7 +134,9 @@ export function useRadioSource({
   const [radioStatuses, setRadioStatuses] = useState<
     Record<string, RadioStreamStatus>
   >({})
-  const [recentRadioIds, setRecentRadioIds] = useState<string[]>([])
+  const [recentRadioItems, setRecentRadioItems] = useState<PlayerQueueItem[]>(
+    []
+  )
   const [searchItems, setSearchItems] = useState<PlayerQueueItem[]>([])
   const [radioListMode, setRadioListMode] = useState<'saved' | 'search'>(
     'saved'
@@ -165,14 +167,6 @@ export function useRadioSource({
         .map(id => radioItems.find(item => item.id === id))
         .filter((item): item is PlayerQueueItem => Boolean(item)),
     [pinnedRadioIds, radioItems]
-  )
-
-  const recentRadioItems = useMemo(
-    () =>
-      recentRadioIds
-        .map(id => radioItems.find(item => item.id === id))
-        .filter((item): item is PlayerQueueItem => Boolean(item)),
-    [radioItems, recentRadioIds]
   )
 
   const searchRadios = useCallback(
@@ -266,8 +260,8 @@ export function useRadioSource({
       await persistRadioPins(
         pinnedRadioIds.filter(radioId => radioId !== removedRadio.id)
       )
-      setRecentRadioIds(prev =>
-        prev.filter(radioId => radioId !== removedRadio.id)
+      setRecentRadioItems(prev =>
+        prev.filter(item => item.id !== removedRadio.id)
       )
 
       return radioToItem(removedRadio)
@@ -278,7 +272,7 @@ export function useRadioSource({
   const clearRadios = useCallback(async () => {
     await persistRadios([])
     await persistRadioPins([])
-    setRecentRadioIds([])
+    setRecentRadioItems([])
     showSavedRadios()
   }, [persistRadioPins, persistRadios, showSavedRadios])
 
@@ -324,6 +318,35 @@ export function useRadioSource({
     },
     [persistRadioPins, pinnedRadioIds, savedRadios]
   )
+
+  const pinRadioItem = useCallback(
+    async (item: PlayerQueueItem) => {
+      const radio = savedRadios.find(savedRadio => savedRadio.id === item.id)
+      const nextRadio = radio ?? itemToRadio(item)
+
+      if (!radio) {
+        await saveRadio(nextRadio)
+      }
+
+      await persistRadioPins([
+        nextRadio.id,
+        ...pinnedRadioIds.filter(radioId => radioId !== nextRadio.id),
+      ])
+
+      return radioToItem(nextRadio)
+    },
+    [persistRadioPins, pinnedRadioIds, saveRadio, savedRadios]
+  )
+
+  const rememberRecentRadio = useCallback((item: PlayerQueueItem) => {
+    if (item.mode !== 'radio') {
+      return
+    }
+
+    setRecentRadioItems(prev =>
+      [item, ...prev.filter(radioItem => radioItem.id !== item.id)].slice(0, 5)
+    )
+  }, [])
 
   const unpinRadio = useCallback(
     async (index: number) => {
@@ -391,6 +414,7 @@ export function useRadioSource({
     exportRadios,
     importRadios,
     pinRadio,
+    pinRadioItem,
     pinnedRadioItems,
     radioItems,
     radioListItems,
@@ -398,10 +422,10 @@ export function useRadioSource({
     radioSearchTerm,
     radioStatuses,
     recentRadioItems,
+    rememberRecentRadio,
     removeRadio,
     searchItems,
     searchRadios,
-    setRecentRadioIds,
     showSavedRadios,
     unpinRadio,
   }
