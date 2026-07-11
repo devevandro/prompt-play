@@ -9,6 +9,9 @@ export function HelpTab({ source }: { source: PlayerSource }) {
       'music list',
       'music clear',
       'source local',
+      'artist <name>',
+      'play artist <name>',
+      'artist clear',
       'play',
       'play 1',
       'list',
@@ -64,6 +67,7 @@ export function HelpTab({ source }: { source: PlayerSource }) {
             'quit',
             'clear playback',
             'clear all',
+            'cat now_playing.txt',
             ':q',
           ].map(command => (
             <div className="text-terminal-white" key={command}>
@@ -100,7 +104,7 @@ export function HelpTab({ source }: { source: PlayerSource }) {
 
         <section className="space-y-2">
           <h2 className="text-terminal-yellow text-xs">Visualizer Commands</h2>
-          {['visualizer ascii'].map(
+          {['visualizer ascii', 'visualizer pixel'].map(
             command => (
               <div className="text-terminal-white" key={command}>
                 {command}

@@ -8,7 +8,7 @@ const BAR_IDS = Array.from({ length: BAR_COUNT }, (_, index) => `bar-${index}`)
 const ROW_IDS = Array.from({ length: ROW_COUNT }, (_, index) => `row-${index}`)
 const LEVEL_CHARACTERS = ['░', '▒', '▓', '█'] as const
 
-type VisualizerMode = 'ascii'
+export type VisualizerMode = 'ascii' | 'pixel'
 
 interface VisualizerProps {
   isPlaying: boolean
@@ -159,6 +159,33 @@ export function Visualizer({
       }),
     [animatedBars]
   )
+  const pixelRows = useMemo(
+    () =>
+      ROW_IDS.map((rowId, rowIndex) => {
+        const threshold = ROW_COUNT - rowIndex
+
+        return {
+          id: rowId,
+          cells: BAR_IDS.map((id, columnIndex) => {
+            const level = (animatedBars[columnIndex] / 100) * ROW_COUNT
+            const distance = level - threshold
+
+            return {
+              id: `${rowId}-${id}`,
+              intensity:
+                level >= threshold
+                  ? 'high'
+                  : distance >= -0.35
+                    ? 'mid'
+                    : distance >= -0.7
+                      ? 'low'
+                      : 'off',
+            }
+          }),
+        }
+      }),
+    [animatedBars]
+  )
   const peak = Math.round(Math.max(...animatedBars))
   const average = Math.round(
     animatedBars.reduce((total, value) => total + value, 0) /
@@ -211,32 +238,63 @@ export function Visualizer({
               </span>
             </div>
 
-            <div
-              aria-label={`ASCII spectrum visualizer, peak ${peak} percent`}
-              className="space-y-0 overflow-hidden leading-[0.72rem] sm:leading-[0.9rem]"
-              role="img"
-            >
-              {asciiRows.map(row => (
-                <div
-                  className="grid grid-cols-[repeat(48,minmax(0,1fr))] text-center"
-                  key={row.id}
-                >
-                  {row.cells.map(cell => (
-                    <span
-                      aria-hidden="true"
-                      className={
-                        cell.isActive
-                          ? 'text-terminal-green'
-                          : 'text-terminal-green/10'
-                      }
-                      key={cell.id}
-                    >
-                      {cell.character}
-                    </span>
-                  ))}
-                </div>
-              ))}
-            </div>
+            {mode === 'ascii' ? (
+              <div
+                aria-label={`ASCII spectrum visualizer, peak ${peak} percent`}
+                className="space-y-0 overflow-hidden leading-[0.72rem] sm:leading-[0.9rem]"
+                role="img"
+              >
+                {asciiRows.map(row => (
+                  <div
+                    className="grid grid-cols-[repeat(48,minmax(0,1fr))] text-center"
+                    key={row.id}
+                  >
+                    {row.cells.map(cell => (
+                      <span
+                        aria-hidden="true"
+                        className={
+                          cell.isActive
+                            ? 'text-terminal-green'
+                            : 'text-terminal-green/10'
+                        }
+                        key={cell.id}
+                      >
+                        {cell.character}
+                      </span>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div
+                aria-label={`Pixel spectrum visualizer, peak ${peak} percent`}
+                className="grid gap-1 overflow-hidden"
+                role="img"
+              >
+                {pixelRows.map(row => (
+                  <div
+                    className="grid grid-cols-[repeat(48,minmax(0,1fr))] gap-1"
+                    key={row.id}
+                  >
+                    {row.cells.map(cell => (
+                      <span
+                        aria-hidden="true"
+                        className={`aspect-square min-h-1 rounded-[1px] ${
+                          cell.intensity === 'high'
+                            ? 'bg-terminal-green shadow-[0_0_8px_var(--terminal-green)]'
+                            : cell.intensity === 'mid'
+                              ? 'bg-terminal-green/70'
+                              : cell.intensity === 'low'
+                                ? 'bg-terminal-green/35'
+                                : 'bg-terminal-green/10'
+                        }`}
+                        key={cell.id}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="mt-2 grid grid-cols-6 text-[8px] text-terminal-green/50">
               <span>20Hz</span>
@@ -249,15 +307,21 @@ export function Visualizer({
           </div>
 
           <div className="flex justify-between text-terminal-green/60">
-            <span>└─ ░ LOW ▒ MID ▓ HIGH █ PEAK</span>
+            <span>
+              └─{' '}
+              {mode === 'ascii'
+                ? '░ LOW ▒ MID ▓ HIGH █ PEAK'
+                : 'PIXEL GRID AMPLITUDE'}
+            </span>
             <span>{isPlaying ? 'LIVE' : 'STANDBY'} ─┘</span>
           </div>
 
           <div className="mt-3 text-center text-[9px] text-terminal-green/40">
-            rendering textual amplitude map · no graphics pipeline
+            rendering {mode === 'ascii' ? 'textual' : 'pixel'} amplitude map ·
+            no graphics pipeline
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

@@ -10,6 +10,7 @@ import {
   startRadioMetadataMonitor,
   stopRadioMetadataMonitor,
 } from 'main/radio/radio-metadata'
+import { resolveRadioStreamUrl } from 'main/radio/resolve-stream-url'
 import {
   clearStoredValues,
   getStoredValue,
@@ -63,6 +64,10 @@ export function registerPlayerIpc() {
 
   ipcMain.handle('radio:search', (_event, term: string) =>
     searchBrazilianRadios(term)
+  )
+
+  ipcMain.handle('radio:resolve-stream-url', (_event, url: string) =>
+    resolveRadioStreamUrl(url)
   )
 
   ipcMain.handle('radio:export', async (_event, radios: Radio[]) => {

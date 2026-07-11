@@ -36,7 +36,8 @@ source. The current commands are `sources`, `source local`, `source radio`,
 `vol -[number]`, `+`, `=`, `-`, `mute`, `unmute`, `theme list`, `ls -th`,
 `theme use [theme]`, `settings radio.static on`,
 `settings radio.static off`, `open now-playing`, `open visualizer`,
-`visualizer ascii`, `open controls`, `tab [number]`, `home`, `exit`, `quit`,
+`visualizer ascii`, `visualizer pixel`, `open controls`, `tab [number]`,
+`home`, `exit`, `quit`,
 `clear`, `clear playback`, `clear all`, `copy error`, `version`, `help`, `h`,
 `?`, and `:q`.
 
@@ -82,10 +83,12 @@ external YouTube search for the selected history item.
 
 Player tab changes should be terminal-driven through commands such as
 `tab [number]`, `open now-playing`, `open visualizer`, `visualizer ascii`,
+`visualizer pixel`,
 `open controls`, and temporary-tab commands. Do not add mouse-only navigation
-as the primary path. The visualizer uses a terminal-green 48-band ASCII/TUI
-presentation identified as `./visualizer --mode=ascii`; do not add extra
-visualizer modes unless the command set and docs are updated together.
+as the primary path. The visualizer uses terminal-green 48-band presentations
+identified as `./visualizer --mode=ascii` and `./visualizer --mode=pixel`; do
+not add extra visualizer modes unless the command set and docs are updated
+together.
 
 Local audio files must be played through the privileged `local-audio:` protocol
 registered in `src/main/index.ts`, not directly through `file://`. The protocol
