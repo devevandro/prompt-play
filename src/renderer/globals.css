@@ -219,6 +219,52 @@
   --sidebar-ring: #ee93cf;
 }
 
+[data-theme="claude-code"] {
+  --terminal-font-family:
+    "DM Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --background: #11100e;
+  --foreground: #f2eee6;
+  --card: #171512;
+  --card-foreground: #f2eee6;
+  --popover: #1d1915;
+  --popover-foreground: #f2eee6;
+  --primary: #d97757;
+  --primary-foreground: #18120f;
+  --secondary: #2a241d;
+  --secondary-foreground: #efe7dc;
+  --muted: #211d18;
+  --muted-foreground: #a89f94;
+  --accent: #e4b45f;
+  --accent-foreground: #18120f;
+  --destructive: #ef6f64;
+  --destructive-foreground: #18120f;
+  --border: #3a3027;
+  --input: #2a241d;
+  --ring: #d97757;
+  --chart-1: #d97757;
+  --chart-2: #e4b45f;
+  --chart-3: #78b892;
+  --chart-4: #8fb8de;
+  --chart-5: #d08bd8;
+  --terminal-green: #78b892;
+  --terminal-cyan: #8fb8de;
+  --terminal-yellow: #e4b45f;
+  --terminal-magenta: #d08bd8;
+  --terminal-red: #ef6f64;
+  --terminal-blue: #8fb8de;
+  --terminal-white: #f2eee6;
+  --terminal-gray: #a89f94;
+  --terminal-tab-inactive: #c2a477;
+  --sidebar: #171512;
+  --sidebar-foreground: #f2eee6;
+  --sidebar-primary: #d97757;
+  --sidebar-primary-foreground: #18120f;
+  --sidebar-accent: #211d18;
+  --sidebar-accent-foreground: #f2eee6;
+  --sidebar-border: #3a3027;
+  --sidebar-ring: #d97757;
+}
+
 @theme inline {
   --font-sans: ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--terminal-font-family);
