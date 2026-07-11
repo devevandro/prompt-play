@@ -57,6 +57,7 @@ export const TERMINAL_COMMANDS = [
   'clear all',
   'copy error',
   'version',
+  'cat now_playing.txt',
   'open now-playing',
   'open visualizer',
   'open controls',

@@ -295,7 +295,7 @@ export function usePlayerCommands({
         void clearAllPlayback()
       } else if (cmd === 'clear') {
         setCommandHistory(['$ '])
-      } else if (cmd === 'open now-playing') {
+      } else if (cmd === 'open now-playing' || cmd === 'cat now_playing.txt') {
         setActiveTab('now-playing')
         addToHistory('[OK] Selected cat now_playing.txt tab')
       } else if (cmd === 'open visualizer') {
@@ -571,6 +571,9 @@ export function usePlayerCommands({
 
         if (found) {
           playItem(found)
+          if (found.mode === 'radio' && Number.isInteger(itemIndex)) {
+            setActiveTab('now-playing')
+          }
         } else {
           addToHistory(
             `[ERROR] Item not found in ${activeSource.label}: ${query}`

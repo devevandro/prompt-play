@@ -64,6 +64,7 @@ export function HelpTab({ source }: { source: PlayerSource }) {
             'quit',
             'clear playback',
             'clear all',
+            'cat now_playing.txt',
             ':q',
           ].map(command => (
             <div className="text-terminal-white" key={command}>
