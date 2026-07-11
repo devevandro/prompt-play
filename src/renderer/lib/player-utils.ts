@@ -78,6 +78,9 @@ export function getSourceCommandMode(
     cmd === 'music clear' ||
     cmd === 'music reset' ||
     cmd === 'music list' ||
+    cmd === 'artist clear' ||
+    cmd.startsWith('artist ') ||
+    cmd.startsWith('play artist ') ||
     pathCommandSource === 'music'
   ) {
     return 'local'

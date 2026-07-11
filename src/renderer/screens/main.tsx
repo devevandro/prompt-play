@@ -105,6 +105,9 @@ export function MainScreen() {
   const [volume, setVolume] = useState(0.7);
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
   const [isRepeatEnabled, setIsRepeatEnabled] = useState(false);
+  const [artistQueueFilter, setArtistQueueFilter] = useState<string | null>(
+    null,
+  );
   const [visualizerMode, setVisualizerMode] = useState<"ascii">("ascii");
   const [radioMetadata, setRadioMetadata] = useState<RadioMetadata | null>(
     null,
@@ -130,6 +133,8 @@ export function MainScreen() {
   const radioStaticAudioRef = useRef<HTMLAudioElement>(null);
   const connectionTimersRef = useRef<number[]>([]);
   const radioStaticTimerRef = useRef<number | null>(null);
+  const radioFallbackTimerRef = useRef<number | null>(null);
+  const radioFallbackItemIdRef = useRef<string | null>(null);
   const connectedRadioItemIdRef = useRef<string | null>(null);
   const previousTabRef = useRef("tracks");
   const trackListScrollRef = useRef<HTMLDivElement>(null);
@@ -177,6 +182,11 @@ export function MainScreen() {
       window.clearTimeout(timerId);
     });
     connectionTimersRef.current = [];
+    if (radioFallbackTimerRef.current !== null) {
+      window.clearTimeout(radioFallbackTimerRef.current);
+      radioFallbackTimerRef.current = null;
+    }
+    radioFallbackItemIdRef.current = null;
     stopRadioStatic();
   }, [stopRadioStatic]);
 
@@ -258,6 +268,16 @@ export function MainScreen() {
       window.App.stopRadioMetadata();
     };
   }, [currentItem, isPlaying]);
+
+  const normalizeArtistFilter = useCallback(
+    (artist: string) =>
+      artist
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, ""),
+    [],
+  );
 
   const closeHelpTab = useCallback(() => {
     setShowHelpTab(false);
@@ -384,6 +404,20 @@ export function MainScreen() {
     () => items.filter((item) => item.mode === activeSourceMode),
     [activeSourceMode, items],
   );
+  const artistQueueItems = useMemo(() => {
+    if (!artistQueueFilter || activeSourceMode !== "local") {
+      return activeItems;
+    }
+
+    return activeItems.filter((item) =>
+      normalizeArtistFilter(item.artist).includes(artistQueueFilter),
+    );
+  }, [
+    activeItems,
+    activeSourceMode,
+    artistQueueFilter,
+    normalizeArtistFilter,
+  ]);
   const visibleRadioItems =
     pinnedRadioItems.length > 0 ? pinnedRadioItems : recentRadioItems;
   const visibleItems =
@@ -393,7 +427,7 @@ export function MainScreen() {
       ? activeTab === "radio-list" && showRadioListTab
         ? radioListItems
         : visibleRadioItems
-      : activeItems;
+      : artistQueueItems;
   const tabs = useMemo(
     () =>
       getTabs(
@@ -481,6 +515,7 @@ export function MainScreen() {
 
       setActiveSourceMode(mode);
       setCurrentItem(null);
+      setArtistQueueFilter(null);
       setRadioMetadata(null);
       setRadioMetadataUpdatedAt(null);
       lastRadioMetadataRef.current = "";
@@ -504,6 +539,7 @@ export function MainScreen() {
     }
 
     setCurrentItem(null);
+    setArtistQueueFilter(null);
     setRadioMetadata(null);
     setRadioMetadataUpdatedAt(null);
     lastRadioMetadataRef.current = "";
@@ -676,6 +712,45 @@ export function MainScreen() {
     [activeSourceMode, addToHistory, clearConnectionTimers, setRecentRadioIds],
   );
 
+  const playArtist = useCallback(
+    (artist: string) => {
+      const artistFilter = normalizeArtistFilter(artist);
+
+      if (!artistFilter) {
+        addToHistory("[ERROR] Use artist <name>");
+        return;
+      }
+
+      const matchingItems = activeItems.filter(
+        (item) =>
+          item.mode === "local" &&
+          normalizeArtistFilter(item.artist).includes(artistFilter),
+      );
+
+      if (matchingItems.length === 0) {
+        addToHistory(`[ERROR] Artist not found: ${artist}`);
+        return;
+      }
+
+      setArtistQueueFilter(artistFilter);
+      addToHistory(
+        `[OK] Artist queue: ${matchingItems[0].artist} (${matchingItems.length} items)`,
+      );
+      playItem(matchingItems[0]);
+    },
+    [activeItems, addToHistory, normalizeArtistFilter, playItem],
+  );
+
+  const clearArtistQueue = useCallback(() => {
+    if (!artistQueueFilter) {
+      addToHistory("[INFO] Artist queue is not active");
+      return;
+    }
+
+    setArtistQueueFilter(null);
+    addToHistory("[OK] Artist queue cleared");
+  }, [addToHistory, artistQueueFilter]);
+
   const togglePlay = useCallback(() => {
     if (!currentItem) {
       if (queueItems.length > 0) {
@@ -726,6 +801,76 @@ export function MainScreen() {
     addToHistory("$ prev");
     playItem(queueItems[prevIndex]);
   }, [queueItems, currentItem, playItem, addToHistory]);
+
+  const startRadioFallback = useCallback(
+    (
+      item: PlayerQueueItem,
+      reason: "buffering" | "playback failed",
+      staticDelay = 1000,
+    ) => {
+      if (item.mode !== "radio") {
+        return;
+      }
+
+      if (
+        radioFallbackTimerRef.current === null ||
+        radioFallbackItemIdRef.current !== item.id
+      ) {
+        if (radioFallbackTimerRef.current !== null) {
+          window.clearTimeout(radioFallbackTimerRef.current);
+        }
+
+        radioFallbackItemIdRef.current = item.id;
+        addToHistory(`[LOADING] Searching radio signal (${reason})...`);
+        radioFallbackTimerRef.current = window.setTimeout(() => {
+          radioFallbackTimerRef.current = null;
+          radioFallbackItemIdRef.current = null;
+
+          if (
+            currentRadioIdRef.current !== item.id ||
+            connectedRadioItemIdRef.current === item.id
+          ) {
+            return;
+          }
+
+          addToHistory(
+            "[WARN] Radio not found after 30s, trying next station",
+          );
+          nextItem();
+        }, 30_000);
+      }
+
+      if (!radioStaticEnabled || radioStaticTimerRef.current !== null) {
+        return;
+      }
+
+      radioStaticTimerRef.current = window.setTimeout(() => {
+        radioStaticTimerRef.current = null;
+
+        if (
+          currentRadioIdRef.current !== item.id ||
+          connectedRadioItemIdRef.current === item.id ||
+          !radioStaticEnabled
+        ) {
+          return;
+        }
+
+        const staticAudio = radioStaticAudioRef.current;
+
+        if (!staticAudio) {
+          return;
+        }
+
+        staticAudio.volume = Math.min(volumeRef.current, 1) * 0.45;
+        staticAudio.currentTime = 0;
+        staticAudio.play().catch(() => {
+          // The effect is optional; autoplay policy or decode failures should
+          // never block the radio stream.
+        });
+      }, staticDelay);
+    },
+    [addToHistory, nextItem, radioStaticEnabled],
+  );
 
   const handleSeek = useCallback((time: number) => {
     if (audioRef.current) {
@@ -843,6 +988,7 @@ export function MainScreen() {
     addManualRadio,
     addSearchResult,
     clearAllPlayback,
+    clearArtistQueue,
     clearMusicLibraries,
     clearPlayback,
     clearRadios,
@@ -873,6 +1019,7 @@ export function MainScreen() {
     openRadioListTab: openSavedRadioListTab,
     pinRadio,
     pinnedRadioItems,
+    playArtist,
     playItem,
     prevItem,
     queueItems,
@@ -974,35 +1121,12 @@ export function MainScreen() {
     }
 
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
-    const startRadioStaticAfterDelay = () => {
-      if (currentItem?.mode !== "radio" || !radioStaticEnabled) {
+    const startRadioFallbackAfterDelay = () => {
+      if (currentItem?.mode !== "radio") {
         return;
       }
 
-      if (radioStaticTimerRef.current !== null) {
-        return;
-      }
-
-      radioStaticTimerRef.current = window.setTimeout(() => {
-        radioStaticTimerRef.current = null;
-
-        if (currentItem?.mode !== "radio" || !radioStaticEnabled) {
-          return;
-        }
-
-        const staticAudio = radioStaticAudioRef.current;
-
-        if (!staticAudio) {
-          return;
-        }
-
-        staticAudio.volume = Math.min(volumeRef.current, 1) * 0.45;
-        staticAudio.currentTime = 0;
-        staticAudio.play().catch(() => {
-          // The effect is optional; autoplay policy or decode failures should
-          // never block the radio stream.
-        });
-      }, 1000);
+      startRadioFallback(currentItem, "buffering");
     };
     const handleRadioReady = () => {
       if (currentItem?.mode !== "radio") {
@@ -1042,9 +1166,9 @@ export function MainScreen() {
     };
 
     audio.addEventListener("timeupdate", handleTimeUpdate);
-    audio.addEventListener("loadstart", startRadioStaticAfterDelay);
-    audio.addEventListener("waiting", startRadioStaticAfterDelay);
-    audio.addEventListener("stalled", startRadioStaticAfterDelay);
+    audio.addEventListener("loadstart", startRadioFallbackAfterDelay);
+    audio.addEventListener("waiting", startRadioFallbackAfterDelay);
+    audio.addEventListener("stalled", startRadioFallbackAfterDelay);
     audio.addEventListener("loadeddata", handleRadioReady);
     audio.addEventListener("canplay", handleRadioReady);
     audio.addEventListener("playing", handleRadioReady);
@@ -1053,9 +1177,9 @@ export function MainScreen() {
 
     return () => {
       audio.removeEventListener("timeupdate", handleTimeUpdate);
-      audio.removeEventListener("loadstart", startRadioStaticAfterDelay);
-      audio.removeEventListener("waiting", startRadioStaticAfterDelay);
-      audio.removeEventListener("stalled", startRadioStaticAfterDelay);
+      audio.removeEventListener("loadstart", startRadioFallbackAfterDelay);
+      audio.removeEventListener("waiting", startRadioFallbackAfterDelay);
+      audio.removeEventListener("stalled", startRadioFallbackAfterDelay);
       audio.removeEventListener("loadeddata", handleRadioReady);
       audio.removeEventListener("canplay", handleRadioReady);
       audio.removeEventListener("playing", handleRadioReady);
@@ -1069,7 +1193,7 @@ export function MainScreen() {
     playItem,
     addToHistory,
     clearConnectionTimers,
-    radioStaticEnabled,
+    startRadioFallback,
     updateLocalItemDuration,
   ]);
 
@@ -1129,12 +1253,11 @@ export function MainScreen() {
                 ].join("\n");
 
                 console.error("[audio] playback failed:", error);
-                clearConnectionTimers();
-                setIsPlaying(false);
                 lastErrorRef.current = errorDetails;
-                addToHistory(`[ERROR] Failed to play audio: ${errorMessage}`);
+                addToHistory(`[WARN] Failed to play audio: ${errorMessage}`);
                 addToHistory(`[ERROR] Source: ${source}`);
                 addToHistory("[HINT] Type 'copy error' to copy details");
+                startRadioFallback(currentItem, "playback failed", 0);
                 return;
               }
 
@@ -1174,7 +1297,13 @@ export function MainScreen() {
     } else {
       audio.pause();
     }
-  }, [currentItem, addToHistory, clearConnectionTimers, isPlaying]);
+  }, [
+    currentItem,
+    addToHistory,
+    clearConnectionTimers,
+    isPlaying,
+    startRadioFallback,
+  ]);
 
   const renderPlayerControls = () => (
     <PlayerControls

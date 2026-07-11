@@ -23,6 +23,10 @@ export const THEMES = [
     id: 'shell-pink',
     name: 'Shell Pink',
   },
+  {
+    id: 'claude-code',
+    name: 'Claude Code',
+  },
 ] as const
 
 export type ThemeId = (typeof THEMES)[number]['id']

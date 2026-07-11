@@ -9,6 +9,9 @@ export const TERMINAL_COMMANDS = [
   'p',
   'shuffle',
   'repeat',
+  'artist',
+  'artist clear',
+  'play artist',
   'list',
   'ls',
   'ls -la',
@@ -69,6 +72,7 @@ export const TERMINAL_COMMANDS = [
   'theme use synthwave',
   'theme use dark-petroleum-blue',
   'theme use shell-pink',
+  'theme use claude-code',
   'settings radio.static on',
   'settings radio.static off',
 ]

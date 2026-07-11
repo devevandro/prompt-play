@@ -38,6 +38,7 @@ export function usePlayerCommands({
   applyTheme,
   applyRadioStaticSetting,
   clearAllPlayback,
+  clearArtistQueue,
   clearMusicLibraries,
   clearPlayback,
   clearRadios,
@@ -68,6 +69,7 @@ export function usePlayerCommands({
   openRadioListTab,
   pinRadio,
   pinnedRadioItems,
+  playArtist,
   playItem,
   prevItem,
   queueItems,
@@ -109,6 +111,7 @@ export function usePlayerCommands({
   applyTheme: (themeId: string) => Promise<void>
   applyRadioStaticSetting: (enabled: boolean) => Promise<void>
   clearAllPlayback: () => Promise<void>
+  clearArtistQueue: () => void
   clearMusicLibraries: () => Promise<void>
   clearPlayback: () => void
   clearRadios: () => Promise<void>
@@ -139,6 +142,7 @@ export function usePlayerCommands({
   openRadioListTab: () => void
   pinRadio: (index: number) => Promise<PlayerQueueItem | null>
   pinnedRadioItems: PlayerQueueItem[]
+  playArtist: (artist: string) => void
   playItem: (item: PlayerQueueItem) => void
   prevItem: () => void
   queueItems: PlayerQueueItem[]
@@ -544,6 +548,12 @@ export function usePlayerCommands({
         nextItem()
       } else if (cmd === 'prev' || cmd === 'p') {
         prevItem()
+      } else if (cmd === 'artist clear') {
+        clearArtistQueue()
+      } else if (cmd.startsWith('artist ')) {
+        playArtist(rawCommand.slice(7).trim())
+      } else if (cmd.startsWith('play artist ')) {
+        playArtist(rawCommand.slice(12).trim())
       } else if (cmd === 'shuffle') {
         toggleShuffle()
       } else if (cmd === 'repeat') {
@@ -688,6 +698,7 @@ export function usePlayerCommands({
       applyTheme,
       applyRadioStaticSetting,
       clearAllPlayback,
+      clearArtistQueue,
       clearMusicLibraries,
       clearPlayback,
       clearRadios,
@@ -718,6 +729,7 @@ export function usePlayerCommands({
       openRadioListTab,
       pinRadio,
       pinnedRadioItems,
+      playArtist,
       playItem,
       prevItem,
       queueItems,
