@@ -19,6 +19,9 @@ Reference for commands accepted by the Prompt Play terminal input.
 | `play` | Starts playback. If no item is selected, plays the first item from the active source. |
 | `play [number]` | Plays the item by its 1-based position in the active source list. Example: `play 1`. |
 | `play [name]` | Plays the first item from the active source matching title, artist, station, or city. |
+| `artist [name]` | In local music mode, builds an artist-only queue and plays the first matching item. |
+| `play artist [name]` | Alias for `artist [name]`. |
+| `artist clear` | Clears the artist-only queue and returns `next`/`prev` to the full local library. |
 | `resume` | Resumes the current item. |
 | `pause` | Pauses playback. |
 | `stop` | Pauses playback. |
@@ -110,6 +113,9 @@ radio edit 1 Name | City | State | URL | Frequency
 
 `Frequency` can be omitted when the stream has no FM label or codec detail. The
 optional radio tuning sound setting is persisted under `prompt-play-settings`.
+When a radio stalls or fails to start, the player starts the tuning sound and
+keeps searching for up to 30 seconds. If the stream does not become playable in
+that window, playback advances to the next station in the current radio queue.
 
 ## Volume
 
@@ -192,6 +198,7 @@ for `MediaElementAudioSource`.
 | `theme use dark-petroleum-blue` | Applies the Dark Petroleum Blue theme. |
 | `theme use shell-pink` | Applies the Shell Pink theme. |
 | `theme use synthwave` | Applies the Synthwave theme. |
+| `theme use claude-code` | Applies the Claude Code theme. |
 
 Theme picker controls: `Up`/`Down` selects a theme, `Enter` applies it, and
 `Esc` closes the picker. `theme use [theme]` accepts either the command id or
