@@ -170,11 +170,13 @@ export function useRadioSource({
   )
 
   const searchRadios = useCallback(
-    async (term: string) => {
-      const results = await window.App.searchRadios(term)
+    async (term: string, country?: string) => {
+      const results = country
+        ? await window.App.searchRadiosByCountry(country, term)
+        : await window.App.searchRadios(term)
       setSearchItems(results.map(radioToItem))
       setRadioListMode('search')
-      setRadioSearchTerm(term)
+      setRadioSearchTerm(country ? `${country}: ${term}` : term)
 
       return results.length
     },

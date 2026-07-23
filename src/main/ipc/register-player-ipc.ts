@@ -5,7 +5,10 @@ import { join } from 'node:path'
 
 import { scanMusicFolder } from 'main/audio/music-scanner'
 import { checkStreamUrl } from 'main/radio/check-stream'
-import { searchBrazilianRadios } from 'main/radio/radio-browser'
+import {
+  searchBrazilianRadios,
+  searchWorldRadios,
+} from 'main/radio/radio-browser'
 import {
   startRadioMetadataMonitor,
   stopRadioMetadataMonitor,
@@ -17,7 +20,12 @@ import {
   removeStoredValue,
   setStoredValue,
 } from 'main/storage/app-storage'
-import type { AppStorageKey, AppStorageRequest, Radio } from 'shared/types'
+import type {
+  AppStorageKey,
+  AppStorageRequest,
+  NowPlayingSnapshot,
+  Radio,
+} from 'shared/types'
 
 function getSafeJsonFilename(name: string) {
   const safeName = name
@@ -66,6 +74,12 @@ export function registerPlayerIpc() {
     searchBrazilianRadios(term)
   )
 
+  ipcMain.handle(
+    'radio:search-country',
+    (_event, request: { country: string; term: string }) =>
+      searchWorldRadios(request.country, request.term)
+  )
+
   ipcMain.handle('radio:resolve-stream-url', (_event, url: string) =>
     resolveRadioStreamUrl(url)
   )
@@ -102,6 +116,17 @@ export function registerPlayerIpc() {
 
   ipcMain.handle('browser:open-external', (_event, url: string) =>
     shell.openExternal(url)
+  )
+
+  ipcMain.handle(
+    'player:write-now-playing',
+    async (_event, snapshot: NowPlayingSnapshot) => {
+      const filePath = join(app.getPath('userData'), 'now_playing.json')
+
+      await writeFile(filePath, `${JSON.stringify(snapshot, null, 2)}\n`)
+
+      return filePath
+    }
   )
 
   ipcMain.on(

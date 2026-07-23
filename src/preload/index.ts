@@ -5,6 +5,7 @@ import type {
   AppStorageKey,
   AppStorageRequest,
   MusicLibrary,
+  NowPlayingSnapshot,
   Radio,
   RadioMetadata,
 } from 'shared/types'
@@ -46,6 +47,11 @@ const API = {
     ipcRenderer.invoke('radio:check-stream', url) as Promise<boolean>,
   searchRadios: (term: string) =>
     ipcRenderer.invoke('radio:search', term) as Promise<Radio[]>,
+  searchRadiosByCountry: (country: string, term: string) =>
+    ipcRenderer.invoke('radio:search-country', {
+      country,
+      term,
+    }) as Promise<Radio[]>,
   resolveRadioStreamUrl: (url: string) =>
     ipcRenderer.invoke('radio:resolve-stream-url', url) as Promise<string>,
   exportRadios: (radios: Radio[]) =>
@@ -54,6 +60,11 @@ const API = {
     ipcRenderer.invoke('radio:import') as Promise<Radio[] | null>,
   openExternal: (url: string) =>
     ipcRenderer.invoke('browser:open-external', url) as Promise<void>,
+  writeNowPlaying: (snapshot: NowPlayingSnapshot) =>
+    ipcRenderer.invoke(
+      'player:write-now-playing',
+      snapshot
+    ) as Promise<string>,
   startRadioMetadata: (radioId: string, url: string, radioName: string) => {
     ipcRenderer.send('radio:metadata:start', { radioId, radioName, url })
   },

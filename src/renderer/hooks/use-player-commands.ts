@@ -27,6 +27,29 @@ interface PlayerTab {
 
 type AddToHistory = (command: string) => void
 
+function parseCountryRadioSearch(rawCommand: string) {
+  const input = rawCommand.slice(21).trim()
+  const quotedCountryMatch = /^"([^"]+)"\s+(.+)$/.exec(input)
+
+  if (quotedCountryMatch) {
+    return {
+      country: quotedCountryMatch[1].trim(),
+      term: quotedCountryMatch[2].trim().replace(/^"|"$/g, ''),
+    }
+  }
+
+  const match = /^(\S+)\s+(.+)$/.exec(input)
+
+  if (!match) {
+    return null
+  }
+
+  return {
+    country: match[1].trim(),
+    term: match[2].trim().replace(/^"|"$/g, ''),
+  }
+}
+
 export function usePlayerCommands({
   activeSource,
   activeSourceMode,
@@ -45,6 +68,7 @@ export function usePlayerCommands({
   clearConnectionTimers,
   closeHelpTab,
   closeMusicListTab,
+  closeNowPlayingJsonTab,
   closeRadioHistoryTab,
   closeRadioListTab,
   copyLastError,
@@ -64,6 +88,7 @@ export function usePlayerCommands({
   nextItem,
   openHelpTab,
   openMusicListTab,
+  openNowPlayingJsonTab,
   openRadioHistoryTab,
   openRadioHistorySearch,
   openRadioListTab,
@@ -91,6 +116,7 @@ export function usePlayerCommands({
   setVisualizerMode,
   showHelpTab,
   showMusicListTab,
+  showNowPlayingJsonTab,
   showRadioHistoryTab,
   showRadioListTab,
   tabs,
@@ -120,6 +146,7 @@ export function usePlayerCommands({
   clearConnectionTimers: () => void
   closeHelpTab: () => void
   closeMusicListTab: () => void
+  closeNowPlayingJsonTab: () => void
   closeRadioHistoryTab: () => void
   closeRadioListTab: () => void
   copyLastError: () => Promise<void>
@@ -139,6 +166,7 @@ export function usePlayerCommands({
   nextItem: () => void
   openHelpTab: () => void
   openMusicListTab: () => void
+  openNowPlayingJsonTab: () => void
   openRadioHistoryTab: () => void
   openRadioHistorySearch: (index: number) => Promise<void>
   openRadioListTab: () => void
@@ -155,7 +183,7 @@ export function usePlayerCommands({
   radioStaticEnabled: boolean
   removeRadio: (index: number) => Promise<PlayerQueueItem | null>
   scanMusicPath: (folderPath: string) => Promise<void>
-  searchRadios: (term: string) => Promise<number>
+  searchRadios: (term: string, country?: string) => Promise<number>
   selectMusicFolder: () => Promise<void>
   selectSource: (mode: PlayerSourceMode) => void
   setActiveTab: (tab: string) => void
@@ -168,6 +196,7 @@ export function usePlayerCommands({
   setVisualizerMode: (mode: VisualizerMode) => void
   showHelpTab: boolean
   showMusicListTab: boolean
+  showNowPlayingJsonTab: boolean
   showRadioHistoryTab: boolean
   showRadioListTab: boolean
   tabs: PlayerTab[]
@@ -197,6 +226,8 @@ export function usePlayerCommands({
           closeRadioListTab()
         } else if (activeTab === 'music-list' && showMusicListTab) {
           closeMusicListTab()
+        } else if (activeTab === 'now-playing' && showNowPlayingJsonTab) {
+          closeNowPlayingJsonTab()
         } else if (showHelpTab) {
           closeHelpTab()
         } else if (showRadioHistoryTab) {
@@ -205,6 +236,8 @@ export function usePlayerCommands({
           closeRadioListTab()
         } else if (showMusicListTab) {
           closeMusicListTab()
+        } else if (showNowPlayingJsonTab) {
+          closeNowPlayingJsonTab()
         } else {
           addToHistory('[INFO] No temporary tab is open')
         }
@@ -304,8 +337,18 @@ export function usePlayerCommands({
       } else if (cmd === 'clear') {
         setCommandHistory(['$ '])
       } else if (cmd === 'open now-playing' || cmd === 'cat now_playing.txt') {
+        if (showNowPlayingJsonTab) {
+          closeNowPlayingJsonTab()
+          return
+        }
+
         setActiveTab('now-playing')
         addToHistory('[OK] Selected cat now_playing.txt tab')
+      } else if (
+        cmd === 'cat now_playing.json' ||
+        cmd === 'open now-playing-json'
+      ) {
+        openNowPlayingJsonTab()
       } else if (cmd === 'open visualizer') {
         setActiveTab('visualizer')
         addToHistory(`[OK] Selected ./visualizer --mode=${visualizerMode} tab`)
@@ -415,6 +458,34 @@ export function usePlayerCommands({
         } else {
           addToHistory('[ERROR] Use radio search music <history-number>')
         }
+      } else if (cmd.startsWith('radio search country ')) {
+        const search = parseCountryRadioSearch(rawCommand)
+
+        if (!search?.country || !search.term) {
+          addToHistory(
+            '[ERROR] Use radio search country <country-code-or-name> "station, city, state or tag"'
+          )
+          addToHistory('[HINT] Quote multi-word countries: "United States"')
+          return
+        }
+
+        selectSource('radio')
+        openRadioListTab()
+        addToHistory(
+          `[INFO] Searching Radio Browser for ${search.country}: ${search.term}`
+        )
+        void searchRadios(search.term, search.country)
+          .then(count => {
+            addToHistory(`[OK] Found ${count} radios`)
+            addToHistory("[HINT] Use 'radio add 1' to save a result")
+          })
+          .catch(error => {
+            addToHistory(
+              `[ERROR] Radio Browser search failed: ${
+                error instanceof Error ? error.message : 'unknown error'
+              }`
+            )
+          })
       } else if (cmd.startsWith('radio search ')) {
         const term = rawCommand.slice(13).trim().replace(/^"|"$/g, '')
 
@@ -725,6 +796,7 @@ export function usePlayerCommands({
       clearConnectionTimers,
       closeHelpTab,
       closeMusicListTab,
+      closeNowPlayingJsonTab,
       closeRadioHistoryTab,
       closeRadioListTab,
       copyLastError,
@@ -744,6 +816,7 @@ export function usePlayerCommands({
       nextItem,
       openHelpTab,
       openMusicListTab,
+      openNowPlayingJsonTab,
       openRadioHistoryTab,
       openRadioHistorySearch,
       openRadioListTab,
@@ -771,6 +844,7 @@ export function usePlayerCommands({
       setVisualizerMode,
       showHelpTab,
       showMusicListTab,
+      showNowPlayingJsonTab,
       showRadioHistoryTab,
       showRadioListTab,
       tabs,
