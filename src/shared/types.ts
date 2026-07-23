@@ -75,6 +75,22 @@ export interface RadioMetadata {
   subtitle?: string
 }
 
+export interface NowPlayingSnapshot {
+  updateAt: string
+  source: PlayerSourceMode
+  isPlaying: boolean
+  item: Pick<
+    PlayerQueueItem,
+    'id' | 'mode' | 'title' | 'sourceDetail' | 'src'
+  > | null
+  radioMetadata: Partial<RadioMetadata>
+  playback: {
+    currentTime: number
+    duration: number | null
+    volume: number
+  }
+}
+
 export interface RadioHistoryEntry extends RadioMetadata {
   id: string
   radioName: string

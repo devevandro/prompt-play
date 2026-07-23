@@ -26,6 +26,7 @@ export function HelpTab({ source }: { source: PlayerSource }) {
       'source radio',
       'radio list',
       'radio search "CBN"',
+      'radio search country US "jazz"',
       'radio add 1',
       'radio add Name | City | State | URL | Frequency',
       'radio edit 1 Name | City | State | URL | Frequency',
@@ -68,6 +69,7 @@ export function HelpTab({ source }: { source: PlayerSource }) {
             'clear playback',
             'clear all',
             'cat now_playing.txt',
+            'cat now_playing.json',
             ':q',
           ].map(command => (
             <div className="text-terminal-white" key={command}>

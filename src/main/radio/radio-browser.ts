@@ -56,18 +56,26 @@ function stationToRadio(station: {
   }
 }
 
-export async function searchBrazilianRadios(term: string): Promise<Radio[]> {
+async function searchRadiosByCountry(
+  country: { code?: string; name?: string },
+  term: string
+): Promise<Radio[]> {
   const searchTerm = term.trim()
+  const countryCode = cleanValue(country.code).toUpperCase()
+  const countryName = cleanValue(country.name)
 
-  if (!searchTerm) {
+  if (!searchTerm || (!countryCode && !countryName)) {
     return []
   }
 
   const fields: SearchField[] = ['name', 'state', 'tag']
+  const countryFilter = countryCode
+    ? { countrycodeexact: countryCode }
+    : { country: countryName }
   const results = await Promise.all(
     fields.map(field =>
       RadioBrowser.searchStations({
-        countrycode: 'BR',
+        ...countryFilter,
         [field]: searchTerm,
         hidebroken: true,
         limit: 40,
@@ -87,4 +95,21 @@ export async function searchBrazilianRadios(term: string): Promise<Radio[]> {
   }
 
   return [...uniqueRadios.values()].slice(0, 60)
+}
+
+export async function searchBrazilianRadios(term: string): Promise<Radio[]> {
+  return searchRadiosByCountry({ code: 'BR' }, term)
+}
+
+export async function searchWorldRadios(
+  country: string,
+  term: string
+): Promise<Radio[]> {
+  const normalizedCountry = cleanValue(country)
+
+  if (/^[a-z]{2}$/i.test(normalizedCountry)) {
+    return searchRadiosByCountry({ code: normalizedCountry }, term)
+  }
+
+  return searchRadiosByCountry({ name: normalizedCountry }, term)
 }

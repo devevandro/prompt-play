@@ -5,6 +5,7 @@ import { Header } from "renderer/components/Header";
 import { HelpTab } from "renderer/components/music-player/help-tab";
 import { MusicListTab } from "renderer/components/music-player/music-list-tab";
 import { NowPlaying } from "renderer/components/music-player/now-playing";
+import { NowPlayingJsonTab } from "renderer/components/music-player/now-playing-json-tab";
 import { PlayerControls } from "renderer/components/music-player/player-controls";
 import { RadioHistoryTab } from "renderer/components/music-player/radio-history-tab";
 import { RadioListTab } from "renderer/components/music-player/radio-list-tab";
@@ -39,6 +40,7 @@ import {
 import { getThemeById, THEMES, type ThemeId } from "renderer/lib/themes";
 import type {
   AppSettings,
+  NowPlayingSnapshot,
   PlayerQueueItem,
   PlayerSource,
   PlayerSourceMode,
@@ -54,10 +56,17 @@ function getTabs(
   showRadioListTab: boolean,
   showRadioHistoryTab: boolean,
   showMusicListTab: boolean,
+  showNowPlayingJsonTab: boolean,
 ) {
   const tabs = [
     { id: "tracks", label: source.listCommand, shortcut: "⌘1" },
-    { id: "now-playing", label: "cat now_playing.txt", shortcut: "⌘2" },
+    {
+      id: "now-playing",
+      label: showNowPlayingJsonTab
+        ? "cat now_playing.json"
+        : "cat now_playing.txt",
+      shortcut: "⌘2",
+    },
     {
       id: "visualizer",
       label: `./visualizer --mode=${visualizerMode}`,
@@ -131,6 +140,7 @@ export function MainScreen() {
   const [showRadioListTab, setShowRadioListTab] = useState(false);
   const [showRadioHistoryTab, setShowRadioHistoryTab] = useState(false);
   const [showMusicListTab, setShowMusicListTab] = useState(false);
+  const [showNowPlayingJsonTab, setShowNowPlayingJsonTab] = useState(false);
   const [commandHistory, setCommandHistory] = useState<string[]>([
     `[INFO] prompt play v${version}`,
     "[HINT] Type 'music', 'radio', or 'help'",
@@ -155,6 +165,11 @@ export function MainScreen() {
   const currentRadioNameRef = useRef("");
   const lastRadioMetadataRef = useRef("");
   const lastErrorRef = useRef<string | null>(null);
+  const playbackSnapshotRef = useRef({
+    currentTime: 0,
+    duration: 0,
+    volume,
+  });
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
     null,
   );
@@ -202,6 +217,74 @@ export function MainScreen() {
   useEffect(() => {
     return () => clearConnectionTimers();
   }, [clearConnectionTimers]);
+
+  useEffect(() => {
+    playbackSnapshotRef.current = {
+      currentTime,
+      duration,
+      volume,
+    };
+  }, [currentTime, duration, volume]);
+
+  const createNowPlayingSnapshot = useCallback(
+    (playback = playbackSnapshotRef.current): NowPlayingSnapshot => ({
+      updateAt: new Date().toISOString(),
+      source: activeSourceMode,
+      isPlaying,
+      item: currentItem
+        ? {
+            id: currentItem.id,
+            mode: currentItem.mode,
+            title: currentItem.title,
+            sourceDetail: currentItem.sourceDetail,
+            src: currentItem.src,
+          }
+        : null,
+      radioMetadata:
+        currentItem?.mode === "radio" && radioMetadata ? radioMetadata : {},
+      playback: {
+        currentTime: Math.round(playback.currentTime),
+        duration:
+          Number.isFinite(playback.duration) && playback.duration > 0
+            ? Math.round(playback.duration)
+            : null,
+        volume: Math.round(playback.volume * 100),
+      },
+    }),
+    [activeSourceMode, currentItem, isPlaying, radioMetadata],
+  );
+
+  const nowPlayingJsonSnapshot = useMemo(
+    () =>
+      createNowPlayingSnapshot({
+        currentTime,
+        duration,
+        volume,
+      }),
+    [createNowPlayingSnapshot, currentTime, duration, volume],
+  );
+
+  const writeNowPlayingSnapshot = useCallback(() => {
+    const snapshot = createNowPlayingSnapshot();
+
+    void window.App.writeNowPlaying(snapshot).catch((error: unknown) => {
+      console.warn("[now-playing] Could not write now_playing.json:", error);
+    });
+  }, [createNowPlayingSnapshot]);
+
+  useEffect(() => {
+    writeNowPlayingSnapshot();
+  }, [writeNowPlayingSnapshot]);
+
+  useEffect(() => {
+    if (!isPlaying) {
+      return;
+    }
+
+    const interval = window.setInterval(writeNowPlayingSnapshot, 5000);
+
+    return () => window.clearInterval(interval);
+  }, [isPlaying, writeNowPlayingSnapshot]);
 
   useEffect(() => {
     const interval = window.setInterval(
@@ -312,6 +395,12 @@ export function MainScreen() {
     addToHistory("[OK] Music lists tab closed");
   }, [addToHistory]);
 
+  const closeNowPlayingJsonTab = useCallback(() => {
+    setShowNowPlayingJsonTab(false);
+    setActiveTab("now-playing");
+    addToHistory("[OK] Returned to cat now_playing.txt");
+  }, [addToHistory]);
+
   const openHelpTab = useCallback(() => {
     previousTabRef.current =
       activeTab === "help" ? previousTabRef.current : activeTab;
@@ -343,6 +432,12 @@ export function MainScreen() {
     setActiveTab("music-list");
     addToHistory("[INFO] Opened music lists");
   }, [activeTab, addToHistory]);
+
+  const openNowPlayingJsonTab = useCallback(() => {
+    setShowNowPlayingJsonTab(true);
+    setActiveTab("now-playing");
+    addToHistory("[INFO] Selected cat now_playing.json");
+  }, [addToHistory]);
 
   const {
     clearMusicLibraries,
@@ -447,6 +542,7 @@ export function MainScreen() {
         showRadioListTab,
         showRadioHistoryTab,
         showMusicListTab,
+        showNowPlayingJsonTab,
       ),
     [
       activeSource,
@@ -455,6 +551,7 @@ export function MainScreen() {
       showRadioListTab,
       showRadioHistoryTab,
       showMusicListTab,
+      showNowPlayingJsonTab,
     ],
   );
 
@@ -1002,6 +1099,7 @@ export function MainScreen() {
     clearConnectionTimers,
     closeHelpTab,
     closeMusicListTab,
+    closeNowPlayingJsonTab,
     closeRadioHistoryTab,
     closeRadioListTab,
     copyLastError,
@@ -1021,6 +1119,7 @@ export function MainScreen() {
     nextItem,
     openHelpTab,
     openMusicListTab,
+    openNowPlayingJsonTab,
     openRadioHistoryTab,
     openRadioHistorySearch,
     openRadioListTab: openSavedRadioListTab,
@@ -1048,6 +1147,7 @@ export function MainScreen() {
     setVisualizerMode,
     showHelpTab,
     showMusicListTab,
+    showNowPlayingJsonTab,
     showRadioHistoryTab,
     showRadioListTab,
     tabs,
@@ -1352,7 +1452,12 @@ export function MainScreen() {
           />
         );
       case "now-playing":
-        return (
+        return showNowPlayingJsonTab ? (
+          <NowPlayingJsonTab
+            snapshot={nowPlayingJsonSnapshot}
+            source={activeSource}
+          />
+        ) : (
           <NowPlaying
             isPlaying={isPlaying}
             item={currentItem}
@@ -1422,7 +1527,10 @@ export function MainScreen() {
             />
             <div
               className={`relative min-h-0 flex-1 overflow-hidden bg-background ${
-                activeTab === "controls" ? "" : "pointer-events-none"
+                activeTab === "controls" ||
+                (activeTab === "now-playing" && showNowPlayingJsonTab)
+                  ? ""
+                  : "pointer-events-none"
               }`}
             >
               {renderTabContent()}
