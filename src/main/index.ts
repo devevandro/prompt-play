@@ -10,6 +10,7 @@ import {
 } from 'main/audio/local-audio-protocol'
 import { registerPlayerIpc } from 'main/ipc/register-player-ipc'
 import { registerAppMenu } from 'main/menu/app-menu'
+import { registerGlobalShortcut } from 'main/shortcuts/global-shortcut'
 import {
   startRendererStaticServer,
   stopRendererStaticServer,
@@ -26,6 +27,7 @@ makeAppWithSingleInstanceLock(async () => {
   registerPlayerIpc()
   registerLocalAudioProtocol()
   registerAppMenu()
+  registerGlobalShortcut()
 
   if (!ENVIRONMENT.IS_DEV) {
     await startRendererStaticServer(join(__dirname, '../renderer'))

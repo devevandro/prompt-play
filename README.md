@@ -231,15 +231,18 @@ typography tokens and is persisted for the next launch.
 
 | Theme | Command id | Font family |
 | --- | --- | --- |
-| Default | `default` | DM Mono |
+| Claude Code (default) | `claude-code` | DM Mono |
 | Tokyo Night | `tokyo-night` | Space Mono |
 | Dark Soul | `dark-soul` | Cousine |
-| Dark Petroleum Blue | `dark-petroleum-blue` | Chivo Mono |
-| Shell Pink | `shell-pink` | Lekton |
 | Synthwave | `synthwave` | Cousine |
 
-Shell Pink uses a slightly larger text scale and line height so Lekton remains
-readable in the terminal interface.
+The home screen title uses Inconsolata in lowercase.
+
+## Keyboard Shortcut
+
+Press `Cmd+Option+P` (macOS) or `Ctrl+Alt+P` (Windows/Linux) from anywhere to
+open and focus Prompt Play without the mouse. Pressing it again while the app
+is focused hides the window.
 
 ## Suggested Release
 
@@ -258,8 +261,7 @@ presentation, and error handling.
   appear in radio `ls -la`.
 - Radio Browser search now returns a larger deduplicated result set.
 - Header text now reflects the active terminal session.
-- Home uses a terminal-style presentation with the Bitcount Prop Double title
-  font.
+- Home uses a terminal-style presentation with an Inconsolata lowercase title.
 - `+`, `=`, and `-` adjust volume from an empty terminal prompt.
 - `copy error` copies the most recent playback error details.
 - `radio search music [number]` for opening a YouTube search from radio

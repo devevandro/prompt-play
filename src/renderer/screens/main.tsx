@@ -37,7 +37,12 @@ import {
   isExpectedPlaybackAbort,
   normalizeAudioSrc,
 } from "renderer/lib/player-utils";
-import { getThemeById, THEMES, type ThemeId } from "renderer/lib/themes";
+import {
+  DEFAULT_THEME_ID,
+  getThemeById,
+  THEMES,
+  type ThemeId,
+} from "renderer/lib/themes";
 import type {
   AppSettings,
   NowPlayingSnapshot,
@@ -112,7 +117,7 @@ export function MainScreen() {
       return "local";
     },
   );
-  const [activeTheme, setActiveTheme] = useState<ThemeId>("default");
+  const [activeTheme, setActiveTheme] = useState<ThemeId>(DEFAULT_THEME_ID);
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
   const [selectedThemeIndex, setSelectedThemeIndex] = useState(0);
   const [currentItem, setCurrentItem] = useState<PlayerQueueItem | null>(null);
@@ -664,9 +669,11 @@ export function MainScreen() {
 
     try {
       await clearStoredValues();
-      setActiveTheme("default");
+      setActiveTheme(DEFAULT_THEME_ID);
       setRadioStaticEnabled(true);
-      setSelectedThemeIndex(THEMES.findIndex((item) => item.id === "default"));
+      setSelectedThemeIndex(
+        THEMES.findIndex((item) => item.id === DEFAULT_THEME_ID),
+      );
       await resetMusicLibraries();
       addToHistory("[OK] Removed saved Electron Storage data");
     } catch (error) {

@@ -87,22 +87,6 @@
   --sidebar-ring: oklch(0.75 0.18 145);
 }
 
-[data-theme="default"] {
-  --terminal-font-family:
-    "DM Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  --background: #050505;
-  --card: #0d0d0d;
-  --muted: #151515;
-
-  --primary: #40fb43;
-  --accent: #22d3ee;
-
-  --terminal-green: #40fb43;
-  --terminal-cyan: #22d3ee;
-  --terminal-yellow: #facc15;
-  --terminal-red: #ef4444;
-}
-
 [data-theme="tokyo-night"] {
   --terminal-font-family:
     "Space Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
@@ -149,74 +133,6 @@
   --terminal-cyan: #00f6ff;
   --terminal-magenta: #ff4fd8;
   --terminal-yellow: #ffe066;
-}
-
-[data-theme="dark-petroleum-blue"] {
-  --terminal-font-family:
-    "Chivo Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
-    monospace;
-  --background: #071014;
-  --card: #0b1820;
-  --muted: #10232c;
-
-  --primary: #00bcd4;
-  --accent: #00e5ff;
-
-  --terminal-green: #4ade80;
-  --terminal-cyan: #22d3ee;
-  --terminal-blue: #38bdf8;
-}
-
-[data-theme="shell-pink"] {
-  --terminal-font-family:
-    "Lekton", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  --terminal-text-xs: 0.875rem;
-  --terminal-text-xs-line-height: 1.375rem;
-  --terminal-text-sm: 1rem;
-  --terminal-text-sm-line-height: 1.5rem;
-  --terminal-text-base: 1.125rem;
-  --terminal-text-base-line-height: 1.75rem;
-  --background: #0f0f0f;
-  --foreground: #b3b3b3;
-  --card: #171717;
-  --card-foreground: #b3b3b3;
-  --popover: #181818;
-  --popover-foreground: #b3b3b3;
-  --primary: #ee93cf;
-  --primary-foreground: #121212;
-  --secondary: #262626;
-  --secondary-foreground: #b3b3b3;
-  --muted: #202020;
-  --muted-foreground: #b3b3b3;
-  --accent: #648ab0;
-  --accent-foreground: #121212;
-  --destructive: #ee93cf;
-  --destructive-foreground: #121212;
-  --border: #333333;
-  --input: #242424;
-  --ring: #ee93cf;
-  --chart-1: #ee93cf;
-  --chart-2: #40fb43;
-  --chart-3: #648ab0;
-  --chart-4: #b3b3b3;
-  --chart-5: #ee93cf;
-  --terminal-green: #40fb43;
-  --terminal-cyan: #22d3ee;
-  --terminal-yellow: #facc15;
-  --terminal-magenta: #e27ac1;
-  --terminal-red: #f87171;
-  --terminal-blue: #648ab0;
-  --terminal-white: #b3b3b3;
-  --terminal-gray: #7c7c7c;
-  --terminal-tab-inactive: #93edee;
-  --sidebar: #121212;
-  --sidebar-foreground: #b3b3b3;
-  --sidebar-primary: #ee93cf;
-  --sidebar-primary-foreground: #121212;
-  --sidebar-accent: #202020;
-  --sidebar-accent-foreground: #b3b3b3;
-  --sidebar-border: #333333;
-  --sidebar-ring: #ee93cf;
 }
 
 [data-theme="claude-code"] {
@@ -347,7 +263,7 @@
 
 .home-computer-title {
   font-family:
-    "Bitcount Prop Double", "DM Mono", "SFMono-Regular", Consolas,
+    "Inconsolata", "DM Mono", "SFMono-Regular", Consolas,
     "Liberation Mono", Menlo, monospace;
   letter-spacing: 0;
 }
