@@ -115,17 +115,16 @@ Current theme font mapping:
 
 | Theme | Font family |
 | --- | --- |
-| Default | DM Mono |
+| Claude Code (default) | DM Mono |
 | Tokyo Night | Space Mono |
 | Dark Soul | Cousine |
-| Dark Petroleum Blue | Chivo Mono |
-| Shell Pink | Lekton |
 | Synthwave | Cousine |
 
 Theme font files are loaded from Google Fonts in `src/renderer/index.html`.
-Shell Pink uses larger theme-specific text scale variables in `globals.css`
-because Lekton renders visually smaller and tighter than the other monospace
-fonts. Theme selection is persisted under `prompt-play-theme`;
+The default theme id is `claude-code` (`DEFAULT_THEME_ID`). The home title uses
+Inconsolata in lowercase. A global shortcut (`CommandOrControl+Alt+P`,
+`src/main/shortcuts/global-shortcut.ts`) shows, focuses, or hides the main
+window. Theme selection is persisted under `prompt-play-theme`;
 `theme use [theme]` should accept both theme ids and human-readable names after
 normalization.
 

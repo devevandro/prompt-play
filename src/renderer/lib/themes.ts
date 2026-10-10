@@ -1,7 +1,9 @@
+export const DEFAULT_THEME_ID = 'claude-code'
+
 export const THEMES = [
   {
-    id: 'default',
-    name: 'Default',
+    id: 'claude-code',
+    name: 'Claude Code',
   },
   {
     id: 'tokyo-night',
@@ -12,20 +14,8 @@ export const THEMES = [
     name: 'Dark Soul',
   },
   {
-    id: 'dark-petroleum-blue',
-    name: 'Dark Petroleum Blue',
-  },
-  {
     id: 'synthwave',
     name: 'Synthwave',
-  },
-  {
-    id: 'shell-pink',
-    name: 'Shell Pink',
-  },
-  {
-    id: 'claude-code',
-    name: 'Claude Code',
   },
 ] as const
 

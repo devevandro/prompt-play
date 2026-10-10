@@ -109,8 +109,8 @@ export function HomeScreen() {
               prompt-play:/home
             </div>
             <div className="min-h-96 space-y-2 px-4 py-4 text-sm">
-              <div className="home-computer-title pb-4 text-terminal-cyan text-xl sm:text-4xl uppercase">
-                Prompt Play
+              <div className="home-computer-title pb-4 text-terminal-cyan text-xl sm:text-4xl">
+                prompt play
               </div>
               {history.map((line) => (
                 <p
